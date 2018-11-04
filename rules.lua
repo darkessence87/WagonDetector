@@ -25,28 +25,28 @@ ruleTypes = {
 local function getRuleDescription(rule)
 	if rule.type == "EV_DAMAGETAKEN" then
 		if rule.arg1 > 0 then
-			return string.format("taking >=%d damage by %s", rule.arg1, getSpellLinkById(rule.arg0))
+			return string.format(WD_RULE_DAMAGE_TAKEN, rule.arg1, getSpellLinkById(rule.arg0))
 		else
-			return string.format("taking damage by %s", getSpellLinkById(rule.arg0))
+			return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, getSpellLinkById(rule.arg0))
 		end
 	elseif rule.type == "EV_DEATH" then
-		return string.format("death by %s", getSpellLinkById(rule.arg0))
+		return string.format(WD_RULE_DEATH, getSpellLinkById(rule.arg0))
 	elseif rule.type == "EV_AURA" then
 		if rule.arg1 == "apply" then
-			return string.format("gaining %s aura", getSpellLinkById(rule.arg0))
+			return string.format(WD_RULE_APPLY_AURA, getSpellLinkById(rule.arg0))
 		else
-			return string.format("losing %s aura", getSpellLinkById(rule.arg0))
+			return string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(rule.arg0))
 		end
 	elseif rule.type == "EV_AURA_STACKS" then
-		return string.format("gaining %d stacks of %s aura", rule.arg1, getSpellLinkById(rule.arg0))
+		return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkById(rule.arg0))
 	elseif rule.type == "EV_START_CAST" then
-		return string.format("unit %s starts cast %s", rule.arg1, getSpellLinkById(rule.arg0))
+		return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkById(rule.arg0))
 	elseif rule.type == "EV_CAST" then
-		return string.format("unit %s casted %s", rule.arg1, getSpellLinkById(rule.arg0))
+		return string.format(WD_RULE_CAST, rule.arg1, getSpellLinkById(rule.arg0))
 	elseif rule.type == "EV_INTERRUPTED_CAST" then
-		return string.format("%s interrupted by %s", getSpellLinkById(rule.arg0), rule.arg1)
+		return string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(rule.arg0), rule.arg1)
 	elseif rule.type == "EV_DEATH_UNIT" then
-		return string.format("%s death", rule.arg0)
+		return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
 	end
 	
 	return "Unsupported rule"
@@ -137,64 +137,42 @@ local function updateRuleLines(self)
 			ruleLine.rule = v
 			ruleLine:SetSize(maxWidth, 20)
 			ruleLine:SetPoint("TOPLEFT", self.scroller.scrollerChild, "TOPLEFT", x, y)
+			ruleLine.column = {}
 			
-			ruleLine.checkBox = createCheckButton(ruleLine)
-			ruleLine.checkBox:SetSize(18, 18)
-			ruleLine.checkBox:SetPoint("TOPLEFT", ruleLine, "TOPLEFT", 1, -1)
-			ruleLine.checkBox:SetChecked(v.isActive)
-			ruleLine.checkBox:SetScript("OnClick", function() v.isActive = not v.isActive end)
+			local index = 1
+			ruleLine.column[index] = createCheckButton(ruleLine)
+			ruleLine.column[index]:SetSize(18, 18)
+			ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine, "TOPLEFT", 1, -1)
+			ruleLine.column[index]:SetChecked(v.isActive)
+			ruleLine.column[index]:SetScript("OnClick", function() v.isActive = not v.isActive end)
 			
-			ruleLine.encounter = createButton(ruleLine)
-			ruleLine.encounter:EnableMouse(false)
-			ruleLine.encounter:SetSize(75, 20)
-			ruleLine.encounter:SetPoint("TOPLEFT", ruleLine.checkBox, "TOPRIGHT", 2, 1)
-			ruleLine.encounter.t:SetColorTexture(.2, .2, .2, .5)
-			ruleLine.encounter.txt = createFont(ruleLine.encounter, "CENTER", v.encounter)
-			ruleLine.encounter.txt:SetAllPoints()
-		
-			ruleLine.descr = createButton(ruleLine)
-			ruleLine.descr:EnableMouse(false)
-			ruleLine.descr:SetSize(300, 20)
-			ruleLine.descr:SetPoint("TOPLEFT", ruleLine.encounter, "TOPRIGHT", 1, 0)
-			ruleLine.descr.t:SetColorTexture(.2, .2, .2, .5)
-			ruleLine.descr.txt = createFont(ruleLine.descr, "LEFT", getRuleDescription(v))
-			ruleLine.descr.txt:SetPoint("LEFT", 5, 0)
-		
-			ruleLine.points = createButton(ruleLine)
-			ruleLine.points:EnableMouse(false)
-			ruleLine.points:SetSize(50, 20)
-			ruleLine.points:SetPoint("TOPLEFT", ruleLine.descr, "TOPRIGHT", 1, 0)
-			ruleLine.points.t:SetColorTexture(.2, .2, .2, .5)
-			ruleLine.points.txt = createFont(ruleLine.points, "CENTER", v.points)
-			ruleLine.points.txt:SetAllPoints()
-		
-			ruleLine.edit = createButton(ruleLine)
-			ruleLine.edit:EnableMouse(true)
-			ruleLine.edit:SetSize(50, 20)
-			ruleLine.edit:SetPoint("TOPLEFT", ruleLine.points, "TOPRIGHT", 1, 0)
-			ruleLine.edit:SetScript('OnClick', function() editRuleLine(ruleLine); end)
-			ruleLine.edit.t:SetColorTexture(.2, 1, .2, .5)
-			ruleLine.edit.txt = createFont(ruleLine.edit, "CENTER", "Edit")
-			ruleLine.edit.txt:SetAllPoints()
-
-			ruleLine.delete = createButton(ruleLine)
-			ruleLine.delete:EnableMouse(true)
-			ruleLine.delete:SetSize(50, 20)
-			ruleLine.delete:SetPoint("TOPLEFT", ruleLine.edit, "TOPRIGHT", 1, 0)
-			ruleLine.delete:SetScript('OnClick', function() table.remove(WD.db.profile.rules, k); updateRuleLines(self); end)
-			ruleLine.delete.t:SetColorTexture(1, .2, .2, .5)
-			ruleLine.delete.txt = createFont(ruleLine.delete, "CENTER", "Delete")
-			ruleLine.delete.txt:SetAllPoints()
+			index = index + 1
+			addNextColumn(self, ruleLine, index, "CENTER", v.encounter)
+			ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine.column[index-1], "TOPRIGHT", 2, 1)
+			index = index + 1
+			addNextColumn(self, ruleLine, index, "LEFT", getRuleDescription(v))
+			index = index + 1
+			addNextColumn(self, ruleLine, index, "CENTER", v.points)
+			index = index + 1
+			addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_EDIT)
+			ruleLine.column[index]:EnableMouse(true)
+			ruleLine.column[index]:SetScript('OnClick', function() editRuleLine(ruleLine); end)
+			ruleLine.column[index].t:SetColorTexture(.2, 1, .2, .5)
+			index = index + 1
+			addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_DELETE)
+			ruleLine.column[index]:EnableMouse(true)
+			ruleLine.column[index]:SetScript('OnClick', function() table.remove(WD.db.profile.rules, k); updateRuleLines(self); end)
+			ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
 
 			table.insert(self.rules, ruleLine)
 		else
 			local ruleLine = self.rules[k]
-			ruleLine.checkBox:SetChecked(v.isActive)
-			ruleLine.checkBox:SetScript("OnClick", function() v.isActive = not v.isActive end)
-			ruleLine.encounter.txt:SetText(v.encounter)
-			ruleLine.descr.txt:SetText(getRuleDescription(v))
-			ruleLine.points.txt:SetText(v.points)
-			ruleLine.edit:SetScript('OnClick', function() editRuleLine(ruleLine); end)
+			ruleLine.column[1]:SetChecked(v.isActive)
+			ruleLine.column[1]:SetScript("OnClick", function() v.isActive = not v.isActive end)
+			ruleLine.column[2].txt:SetText(v.encounter)
+			ruleLine.column[3].txt:SetText(getRuleDescription(v))
+			ruleLine.column[4].txt:SetText(v.points)
+			ruleLine.column[5]:SetScript('OnClick', function() editRuleLine(ruleLine); end)
 			ruleLine:Show()
 			updateScroller(self.scroller.slider, #WD.db.profile.rules)
 		end
@@ -359,8 +337,8 @@ end
 local function notifyEncounterRules(encounter)
 	for _,v in pairs(WD.db.profile.rules) do
 		if v.encounter == encounter and v.isActive == true then
-			local msg msg = string.format("[%s] %d penalty points for %s", v.encounter, v.points, getRuleDescription(v))
-			sendMessage(msg, WD.db.profile.chat)
+			local msg = string.format(WD_NOTIFY_RULE, v.encounter, v.points, getRuleDescription(v))
+			sendMessage(msg)
 		end
 	end
 end
@@ -397,10 +375,10 @@ function WD:InitEncountersModule(parent)
 
 	-- new rule button
 	parent.addRule = createButton(parent)
-	parent.addRule:SetPoint("TOPLEFT", parent, "TOPLEFT", 30, -5)
+	parent.addRule:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -5)
 	parent.addRule:SetSize(125, 20)
 	parent.addRule:SetScript("OnClick", function() WD:OpenNewRuleMenu() end)
-	parent.addRule.txt = createFont(parent.addRule, "CENTER", "New rule")
+	parent.addRule.txt = createFont(parent.addRule, "CENTER", WD_BUTTON_NEW_RULE)
 	parent.addRule.txt:SetAllPoints()
 
 	-- notify rules button
@@ -408,18 +386,18 @@ function WD:InitEncountersModule(parent)
 	parent.notify:SetPoint("TOPLEFT", parent.addRule, "TOPRIGHT", 1, 0)
 	parent.notify:SetSize(125, 20)
 	parent.notify:SetScript("OnClick", function() WD:OpenNotifyRuleMenu() end)
-	parent.notify.txt = createFont(parent.notify, "CENTER", "Notify rules")
+	parent.notify.txt = createFont(parent.notify, "CENTER", WD_BUTTON_NOTIFY_RULES)
 	parent.notify.txt:SetAllPoints()
 
 	-- headers
-	local x, y = 30, -30
+	local x, y = 1, -30
 	parent.headers = {}
-	createTableHeader(parent, '', x, y, 20, 20)
-	createTableHeader(parent, 'Encounter', x + 21, y, 75, 20)
-	createTableHeader(parent, 'Rule', x + 97, y, 300, 20)
-	createTableHeader(parent, 'Points', x + 398, y, 50, 20)
-	createTableHeader(parent, '', x + 449, y, 50, 20)
-	createTableHeader(parent, '', x + 500, y, 50, 20)
+	local h = createTableHeader(parent, '', x, y, 20, 20)
+	h = createTableHeader(parent, WD_BUTTON_ENCOUNTER, x + 21, y, 75, 20)
+	h = createTableHeaderNext(parent, h, WD_BUTTON_REASON, 400, 20)
+	h = createTableHeaderNext(parent, h, WD_BUTTON_POINTS_SHORT, 50, 20)
+	h = createTableHeaderNext(parent, h, '', 50, 20)
+	createTableHeaderNext(parent, h, '', 50, 20)
 
 	initNewRuleWindow(parent)
 	initNotifyRuleWindow(parent)

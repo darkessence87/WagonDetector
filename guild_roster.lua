@@ -145,5 +145,5 @@ function WD:ResetGuildStatistics()
 	
 	self:OnGuildRosterUpdate()
 	
-	sendMessage("Guild statistics has been reseted")
+	sendMessage(WD_RESET_GUILD_ROSTER)
 end

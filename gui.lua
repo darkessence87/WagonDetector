@@ -8,7 +8,7 @@ WD.options.args.configButton = {
 chatTypes = {
 	"OFFICER",
 	"RAID",
-	"FIRST_CHAT_WINDOW"
+	"PRINT"
 }
 
 local function initMainModule(mainF)
@@ -17,8 +17,8 @@ local function initMainModule(mainF)
 	mainF.lockButton:SetPoint("TOPLEFT", mainF, "TOPLEFT", 5, -5)
 	mainF.lockButton:SetChecked(WD.db.profile.isLocked)
 	mainF.lockButton:SetScript("OnClick", function() WD:LockConfig() end)
-    mainF.lockButton.txt = createFont(mainF.lockButton, "LEFT", "Lock config")
-    mainF.lockButton.txt:SetSize(100, 20)
+    mainF.lockButton.txt = createFont(mainF.lockButton, "LEFT", WD_BUTTON_LOCK_GUI)
+    mainF.lockButton.txt:SetSize(200, 20)
 	mainF.lockButton.txt:SetPoint("LEFT", mainF.lockButton, "RIGHT", 5, 0)
 
 	-- default chat selector
@@ -28,8 +28,8 @@ local function initMainModule(mainF)
 		local item = { name = chatTypes[i], func = function() WD.db.profile.chat = mainF.dropFrame.txt:GetText() end }
 		table.insert(items, item)
 	end
-	updateDropDownMenu(mainF.dropFrame, "Default notifications chat", items)
-	mainF.dropFrame:SetSize(200, 20)
+	updateDropDownMenu(mainF.dropFrame, WD_BUTTON_DEFAULT_CHAT, items)
+	mainF.dropFrame:SetSize(250, 20)
 	mainF.dropFrame:SetPoint("TOPLEFT", mainF.lockButton, "BOTTOMLEFT", 0, -5)
 	mainF.dropFrame:SetScript('OnShow', function() mainF.dropFrame.txt:SetText(WD.db.profile.chat) end)
 
@@ -38,8 +38,8 @@ local function initMainModule(mainF)
 	mainF.enableButton:SetPoint("TOPLEFT", mainF.dropFrame, "BOTTOMLEFT", 0, -5)
 	mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
 	mainF.enableButton:SetScript("OnClick", function() WD:EnableConfig() end)
-    mainF.enableButton.txt = createFont(mainF.enableButton, "LEFT", "Enable config")
-    mainF.enableButton.txt:SetSize(100, 20)
+    mainF.enableButton.txt = createFont(mainF.enableButton, "LEFT", WD_BUTTON_ENABLE_CONFIG)
+    mainF.enableButton.txt:SetSize(200, 20)
 	mainF.enableButton.txt:SetPoint("LEFT", mainF.enableButton, "RIGHT", 5, 0)
 
     -- check immediate fail button
@@ -47,8 +47,8 @@ local function initMainModule(mainF)
 	mainF.immediateButton:SetPoint("TOPLEFT", mainF.enableButton, "BOTTOMLEFT", 0, -5)
 	mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
 	mainF.immediateButton:SetScript("OnClick", function() WD.db.profile.sendFailImmediately = not WD.db.profile.sendFailImmediately end)
-    mainF.immediateButton.txt = createFont(mainF.immediateButton, "LEFT", "Enable immediate fails")
-    mainF.immediateButton.txt:SetSize(150, 20)
+    mainF.immediateButton.txt = createFont(mainF.immediateButton, "LEFT", WD_BUTTON_IMMEDIATE_NOTIFY)
+    mainF.immediateButton.txt:SetSize(200, 20)
 	mainF.immediateButton.txt:SetPoint("LEFT", mainF.immediateButton, "RIGHT", 5, 0)
 
     -- check penalties button
@@ -56,13 +56,13 @@ local function initMainModule(mainF)
 	mainF.penaltyButton:SetPoint("TOPLEFT", mainF.immediateButton, "BOTTOMLEFT", 0, -5)
 	mainF.penaltyButton:SetChecked(WD.db.profile.enablePenalties)
 	mainF.penaltyButton:SetScript("OnClick", function() WD.db.profile.enablePenalties = not WD.db.profile.enablePenalties end)
-    mainF.penaltyButton.txt = createFont(mainF.penaltyButton, "LEFT", "Enable penalties")
-    mainF.penaltyButton.txt:SetSize(150, 20)
+    mainF.penaltyButton.txt = createFont(mainF.penaltyButton, "LEFT", WD_BUTTON_ENABLE_PENALTIES)
+    mainF.penaltyButton.txt:SetSize(200, 20)
 	mainF.penaltyButton.txt:SetPoint("LEFT", mainF.penaltyButton, "RIGHT", 5, 0)
 
 	-- max deaths button
-	mainF.maxDeathsTxt = createFontDefault(mainF, "CENTER", "Max deaths for stop tracking:")
-	mainF.maxDeathsTxt:SetSize(150, 20)
+	mainF.maxDeathsTxt = createFontDefault(mainF, "CENTER", WD_BUTTON_MAX_DEATHS)
+	mainF.maxDeathsTxt:SetSize(200, 20)
 	mainF.maxDeathsTxt:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 0, -5)
 	mainF.maxDeaths = createDropDownMenu(mainF)
 	local items2 = {}
@@ -72,7 +72,7 @@ local function initMainModule(mainF)
 	end
 	updateDropDownMenu(mainF.maxDeaths, WD.db.profile.maxDeaths, items2)
 	mainF.maxDeaths:SetSize(50, 20)
-	mainF.maxDeaths:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 150, -5)
+	mainF.maxDeaths:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 200, -5)
 	mainF.maxDeaths:SetScript('OnShow', function() mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths) end)
 end
 
@@ -164,7 +164,7 @@ local function updateGuildRosterFrame(self)
 end
 
 local function initGuildRosterModule(self)
-	local x, y = 30, -30
+	local x, y = 1, -30
 	self.headers = {}
 	self.members = {}
 	
@@ -177,11 +177,11 @@ local function initGuildRosterModule(self)
 		self.sorted = param
 	end
 	
-	local h = createTableHeader(self, 'Name', x, y, 150, 20, function() headerButtonFunction("BY_NAME") end)
-	h = createTableHeaderNext(self, h, 'Rank', 75, 20, function() headerButtonFunction("BY_RANK") end)
-	h = createTableHeaderNext(self, h, 'Penalty Points', 75, 20, function() headerButtonFunction("BY_POINTS") end)
-	h = createTableHeaderNext(self, h, 'Pulls', 75, 20, function() headerButtonFunction("BY_PULLS") end)
-	createTableHeaderNext(self, h, 'PP per pull', 75, 20, function() headerButtonFunction("BY_RESULT") end)
+	local h = createTableHeader(self, WD_BUTTON_NAME, x, y, 150, 20, function() headerButtonFunction("BY_NAME") end)
+	h = createTableHeaderNext(self, h, WD_BUTTON_RANK, 75, 20, function() headerButtonFunction("BY_RANK") end)
+	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS, 75, 20, function() headerButtonFunction("BY_POINTS") end)
+	h = createTableHeaderNext(self, h, WD_BUTTON_PULLS, 75, 20, function() headerButtonFunction("BY_PULLS") end)
+	createTableHeaderNext(self, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
 	
 	WD.cache = {}
 	WD.cache.roster = {}
@@ -201,26 +201,26 @@ local function initGuildRosterModule(self)
 end
 
 local function initLastEncounterModule(self)
-	local x, y = 30, -30
+	local x, y = 1, -30
 
 	self.headers = {}
-	local h = createTableHeader(self, 'Time', x, y, 70, 20)
-	h = createTableHeaderNext(self, h, 'Player', 100, 20)
-	h = createTableHeaderNext(self, h, 'PP', 25, 20)
-	createTableHeaderNext(self, h, 'Reason', 300, 20)
+	local h = createTableHeader(self, WD_BUTTON_TIME, x, y, 70, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_NAME, 100, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS_SHORT, 25, 20)
+	createTableHeaderNext(self, h, WD_BUTTON_REASON, 300, 20)
 	
 	self:SetScript('OnShow', function(self) WD:RefreshLastEncounterFrame() end)
 end
 
 local function initHistoryModule(self)
-	local x, y = 30, -30
+	local x, y = 1, -30
 
 	self.headers = {}
-	local h = createTableHeader(self, 'Time', x, y, 70, 20)
-	h = createTableHeaderNext(self, h, 'Encounter', 150, 20)
-	h = createTableHeaderNext(self, h, 'Player', 100, 20)
-	h = createTableHeaderNext(self, h, 'PP', 25, 20)
-	h = createTableHeaderNext(self, h, 'Reason', 300, 20)
+	local h = createTableHeader(self, WD_BUTTON_TIME, x, y, 70, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_ENCOUNTER, 150, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_NAME, 100, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS_SHORT, 25, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_REASON, 300, 20)
 	h = createTableHeaderNext(self, h, '', 40, 20)
 	createTableHeaderNext(self, h, '', 40, 20)
 	
@@ -283,7 +283,7 @@ function WD:CreateGuiFrame()
 	gui:SetScript("OnDragStart", gui.StartMoving)
 	gui:SetScript("OnDragStop", gui.StopMovingOrSizing)
 	-- gui background
-	gui.bg = createColorTexture(gui, "TEXTURE", 0, 0, 0, .5)
+	gui.bg = createColorTexture(gui, "TEXTURE", 0, 0, 0, .99)
 	gui.bg:ClearAllPoints()
 	gui.bg:SetPoint("TOPLEFT", gui, "TOPLEFT", 0, 0)
 	gui.bg:SetAllPoints()
@@ -292,15 +292,15 @@ function WD:CreateGuiFrame()
 
 	-- modules frames
 	local mainF = createModuleFrame(gui, 'main')
-	createModuleButton(mainF, "Main options", 20, -30)
+	createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, 20, -30)
 	local encF = createModuleFrame(gui, 'encounters')
-	createModuleButton(encF, "Encounters", 20, -51)
+	createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, 20, -51)
 	local pointsF = createModuleFrame(gui, 'guild_roster')
-	createModuleButton(pointsF, "Guild roster", 20, -72)
+	createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, 20, -72)
 	local lastEncF = createModuleFrame(gui, 'last_encounter')
-	createModuleButton(lastEncF, "Last encounter", 20, -93)
+	createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, 20, -93)
 	local historyF = createModuleFrame(gui, 'history')
-	createModuleButton(historyF, "History", 20, -114)
+	createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, 20, -114)
 	
 	WD:HideModules()
 	gui:Hide()
@@ -454,13 +454,13 @@ function WD:RefreshHistoryFrame()
 			addNextColumn(self, member, index, "LEFT", v.reason)
 		
 			index = index + 1
-			addNextColumn(self, member, index, "CENTER", "Revert")
+			addNextColumn(self, member, index, "CENTER", WD_BUTTON_REVERT)
 			member.column[index]:EnableMouse(true)
 			member.column[index].t:SetColorTexture(.2, .6, .2, .7)
 			member.column[index]:SetScript('OnClick', function() WD:RevertHistory(v) end)
 		
 			index = index + 1
-			addNextColumn(self, member, index, "CENTER", "Delete")
+			addNextColumn(self, member, index, "CENTER", WD_BUTTON_DELETE)
 			member.column[index]:EnableMouse(true)
 			member.column[index].t:SetColorTexture(.6, .2, .2, .7)
 			member.column[index]:SetScript('OnClick', function() WD:DeleteHistory(v) end)

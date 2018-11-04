@@ -49,7 +49,7 @@ function WD:LoadDefaults()
 			isEnabled = false,
 			isLocked = true,
 			rules = {},
-			chat = "FIRST_CHAT_WINDOW",
+			chat = "PRINT",
 			history = {},
 			sendFailImmediately = false,
 			enablePenalties = true,
@@ -77,14 +77,9 @@ function WD:SlashHandler(msg, box)
 	elseif cmd == 'interrupt' then
 		if self.mainFrame then
 			self.mainFrame.encounter.interrupted = 1
-			sendMessage('Current encounter statistics interrupted')
+			sendMessage(WD_ENCOUNTER_INTERRUPTED)
 		end
 	else
-		print('Доступные команды:')
-		print('/wd config - открывает меню конфигурации')
-		print('/wd start - запускает тест боя')
-		print('/wd stop - останавливает тест боя')
-		print('/wd wipe - сбрасывает статистику очков гильдии')
-		print('/wd interrupt - прерывает сбор статистики на текущем пуле')
+		print(WD_HELP)
 	end
 end

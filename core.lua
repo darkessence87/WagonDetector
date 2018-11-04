@@ -88,7 +88,7 @@ end
 
 local function printFuckups()
 	for _,v in pairs(WDMF.encounter.fuckers) do
-		local msg = string.format("%s [FAIL] %s: %s (%d penalty points)", v.timestamp, getShortCharacterName(v.name), v.reason, v.points)
+		local msg = string.format(WD_PRINT_FAILURE, v.timestamp, getShortCharacterName(v.name), v.reason, v.points)
 		sendMessage(msg)
 	end
 end
@@ -123,7 +123,7 @@ local function addFail(timestamp, name, msg, points)
 	WDMF.encounter.fuckers[#WDMF.encounter.fuckers+1] = fucker
 	
 	if WD.db.profile.sendFailImmediately == true then
-		local txt = string.format("%s [FAIL] %s: %s (%d penalty points)", fucker.timestamp, getShortCharacterName(fucker.name), fucker.reason, fucker.points)
+		local txt = string.format(WD_PRINT_FAILURE, fucker.timestamp, getShortCharacterName(fucker.name), fucker.reason, fucker.points)
 		sendMessage(txt)
 
 		WD:SavePenaltyPointsToGuildRoster(fucker)
@@ -231,7 +231,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
 	local pullId = 1
 	if WD.db.profile.encounters[encounterName] then pullId = WD.db.profile.encounters[encounterName] + 1 end
 	
-	sendMessage(string.format("Started encounter '%s' pull:%d (ENCOUNTER_ID:%s)", encounterName, pullId, encounterID))
+	sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
 	self.encounter.id = encounterID
 	self.encounter.name = date("%d/%m").." "..encounterName..' ('..pullId..')'
 	self.encounter.startTime = time()
@@ -274,7 +274,7 @@ function WDMF:StopEncounter()
 	end
 
 	self.encounter.stopped = 1
-	sendMessage(string.format("Stopped encounter %s. Elapsed time: %s", self.encounter.name, getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)))
+	sendMessage(string.format(WD_ENCOUNTER_STOP, self.encounter.name, getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)))
 end
 
 function WDMF:ResetEncounter()
@@ -293,11 +293,11 @@ function WD:EnableConfig()
 		WDMF:RegisterEvent('ENCOUNTER_START')
 		WDMF:RegisterEvent('ENCOUNTER_END')
 		WD.db.profile.isEnabled = true
-		sendMessage("Fucker control enabled")
+		sendMessage(WD_ENABLED)
 	else
 		WDMF:UnregisterEvent('ENCOUNTER_START')
 		WDMF:UnregisterEvent('ENCOUNTER_END')
 		WD.db.profile.isEnabled = false
-		sendMessage("Fucker control disabled")
+		sendMessage(WD_DISABLED)
 	end
 end

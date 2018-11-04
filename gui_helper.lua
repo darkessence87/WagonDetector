@@ -3,7 +3,7 @@ local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
 
 function sendMessage(msg)
 	local chatType = WD.db.profile.chat
-	if not chatType or chatType == "PRINT" then
+	if not chatType or chatType == "FIRST_CHAT_WINDOW" then
 		print(msg)
 	else
 		SendChatMessage(msg, chatType, nil, 0)

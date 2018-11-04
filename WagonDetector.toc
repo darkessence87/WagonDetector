@@ -7,6 +7,9 @@
 ## SavedVariablesPerCharacter: WD_DB_Char
 ## OptionalDeps: Ace3
 
+localization-en.lua
+localization-ru.lua
+
 gui_helper.lua
 
 loader.lua

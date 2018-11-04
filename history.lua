@@ -10,10 +10,10 @@ function WD:RevertHistory(v)
 	WD:DeleteHistory(v)
 	
 	if v.isReverted == true then
-		v.reason = string.match(v.reason, '%[REVERT%]%s(.*)')
+		v.reason = string.match(v.reason, '%['..WD_REVERT_STR..'%]%s(.*)')
 		v.isReverted = false
 	else
-		v.reason = '[REVERT] '..v.reason
+		v.reason = '['..WD_REVERT_STR..'] '..v.reason
 		v.isReverted = true
 	end
 	

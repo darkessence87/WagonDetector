@@ -35,6 +35,16 @@ function WD:OnInitialize()
 		self.mainFrame:RegisterEvent('ENCOUNTER_START')
 		self.mainFrame:RegisterEvent('ENCOUNTER_END')
 		self.mainFrame:SetScript('OnEvent', function(self, ...) self:OnEvent(...); end)
+		
+		if not WD.db.profile.minGuildRank then
+			local gRanks = WD:GetGuildRanks()
+			for k,v in pairs(gRanks) do
+				if v.id == 0 then
+					WD.db.profile.minGuildRank = v
+					break
+				end
+			end
+		end
 	end
 	
 	-- reload history

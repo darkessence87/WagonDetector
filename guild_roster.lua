@@ -32,10 +32,12 @@ function WD:FindMain(name)
 end
 
 function WD:OnGuildRosterUpdate()
+	WD.cache.roster = {}
+	WD.cache.rosterkeys = {}
 	local altInfos = {}
 	for i=1,GetNumGuildMembers() do
 		local name, rank, rankIndex, _, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
-		if officernote and rankIndex < 6 then
+		if officernote and (rankIndex == 0 or rankIndex <= WD.db.profile.minGuildRank.id) then
 			local info = {}
 			info.index = i
 			info.name, info.class, info.rank = name, class, rank
@@ -45,8 +47,7 @@ function WD:OnGuildRosterUpdate()
 				if info.pulls == 0 then
 					info.coef = info.points
 				else
-					local mult = 10^2
-					info.coef = math.floor((info.points * 1.0 / info.pulls) * mult + 0.5) / mult
+					info.coef = calculateCoef(info.points, info.pulls)
 				end
 				
 				if not WD.cache.roster[name] then
@@ -65,7 +66,9 @@ function WD:OnGuildRosterUpdate()
 	
 	for _,v in pairs(altInfos) do
 		mainName = getFullCharacterName(v.main)
-		table.insert(WD.cache.roster[mainName].alts, v.name)
+		if WD.cache.roster[mainName] then
+			table.insert(WD.cache.roster[mainName].alts, v.name)
+		end
 	end
 end
 
@@ -146,4 +149,21 @@ function WD:ResetGuildStatistics()
 	self:OnGuildRosterUpdate()
 	
 	sendMessage(WD_RESET_GUILD_ROSTER)
+end
+
+function WD:GetGuildRanks()
+	local ranks = {}
+	local temp = {}
+	for i=1,GetNumGuildMembers() do
+		local _, rank, rankIndex = GetGuildRosterInfo(i)
+		temp[rankIndex] = rank
+	end
+	
+	for k,v in pairs(temp) do
+		local rank = { id = k, name = v }
+		table.insert(ranks, rank)
+
+	end
+	
+	return ranks
 end

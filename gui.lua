@@ -11,73 +11,15 @@ chatTypes = {
 	"PRINT"
 }
 
-local function initMainModule(mainF)
-    -- check lock button
-    mainF.lockButton = createCheckButton(mainF)
-	mainF.lockButton:SetPoint("TOPLEFT", mainF, "TOPLEFT", 5, -5)
-	mainF.lockButton:SetChecked(WD.db.profile.isLocked)
-	mainF.lockButton:SetScript("OnClick", function() WD:LockConfig() end)
-    mainF.lockButton.txt = createFont(mainF.lockButton, "LEFT", WD_BUTTON_LOCK_GUI)
-    mainF.lockButton.txt:SetSize(200, 20)
-	mainF.lockButton.txt:SetPoint("LEFT", mainF.lockButton, "RIGHT", 5, 0)
-
-	-- default chat selector
-	mainF.dropFrame = createDropDownMenu(mainF)
-	local items = {}
-	for i=1,#chatTypes do
-		local item = { name = chatTypes[i], func = function() WD.db.profile.chat = mainF.dropFrame.txt:GetText() end }
-		table.insert(items, item)
-	end
-	updateDropDownMenu(mainF.dropFrame, WD_BUTTON_DEFAULT_CHAT, items)
-	mainF.dropFrame:SetSize(250, 20)
-	mainF.dropFrame:SetPoint("TOPLEFT", mainF.lockButton, "BOTTOMLEFT", 0, -5)
-	mainF.dropFrame:SetScript('OnShow', function() mainF.dropFrame.txt:SetText(WD.db.profile.chat) end)
-
-    -- check enable button
-    mainF.enableButton = createCheckButton(mainF)
-	mainF.enableButton:SetPoint("TOPLEFT", mainF.dropFrame, "BOTTOMLEFT", 0, -5)
-	mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
-	mainF.enableButton:SetScript("OnClick", function() WD:EnableConfig() end)
-    mainF.enableButton.txt = createFont(mainF.enableButton, "LEFT", WD_BUTTON_ENABLE_CONFIG)
-    mainF.enableButton.txt:SetSize(200, 20)
-	mainF.enableButton.txt:SetPoint("LEFT", mainF.enableButton, "RIGHT", 5, 0)
-
-    -- check immediate fail button
-    mainF.immediateButton = createCheckButton(mainF)
-	mainF.immediateButton:SetPoint("TOPLEFT", mainF.enableButton, "BOTTOMLEFT", 0, -5)
-	mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
-	mainF.immediateButton:SetScript("OnClick", function() WD.db.profile.sendFailImmediately = not WD.db.profile.sendFailImmediately end)
-    mainF.immediateButton.txt = createFont(mainF.immediateButton, "LEFT", WD_BUTTON_IMMEDIATE_NOTIFY)
-    mainF.immediateButton.txt:SetSize(200, 20)
-	mainF.immediateButton.txt:SetPoint("LEFT", mainF.immediateButton, "RIGHT", 5, 0)
-
-    -- check penalties button
-    mainF.penaltyButton = createCheckButton(mainF)
-	mainF.penaltyButton:SetPoint("TOPLEFT", mainF.immediateButton, "BOTTOMLEFT", 0, -5)
-	mainF.penaltyButton:SetChecked(WD.db.profile.enablePenalties)
-	mainF.penaltyButton:SetScript("OnClick", function() WD.db.profile.enablePenalties = not WD.db.profile.enablePenalties end)
-    mainF.penaltyButton.txt = createFont(mainF.penaltyButton, "LEFT", WD_BUTTON_ENABLE_PENALTIES)
-    mainF.penaltyButton.txt:SetSize(200, 20)
-	mainF.penaltyButton.txt:SetPoint("LEFT", mainF.penaltyButton, "RIGHT", 5, 0)
-
-	-- max deaths button
-	mainF.maxDeathsTxt = createFontDefault(mainF, "CENTER", WD_BUTTON_MAX_DEATHS)
-	mainF.maxDeathsTxt:SetSize(200, 20)
-	mainF.maxDeathsTxt:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 0, -5)
-	mainF.maxDeaths = createDropDownMenu(mainF)
-	local items2 = {}
-	for i=1,9 do
-		local item = { name = i+1, func = function() WD.db.profile.maxDeaths = tonumber(mainF.maxDeaths.txt:GetText()) end }
-		table.insert(items2, item)
-	end
-	updateDropDownMenu(mainF.maxDeaths, WD.db.profile.maxDeaths, items2)
-	mainF.maxDeaths:SetSize(50, 20)
-	mainF.maxDeaths:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 200, -5)
-	mainF.maxDeaths:SetScript('OnShow', function() mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths) end)
-end
-
 local function updateGuildRosterFrame(self)
-	if #WD.cache.rosterkeys == 0 then return end
+	if #WD.cache.rosterkeys == 0 then 
+		if #self.members then
+			for i=1, #self.members do
+				self.members[i]:Hide()
+			end
+		end
+		return
+	end
 
 	local maxWidth = 30
 	local maxHeight = 545
@@ -161,6 +103,89 @@ local function updateGuildRosterFrame(self)
 			self.members[i]:Hide()
 		end
 	end
+end
+
+local function initMainModule(mainF)
+    -- check lock button
+    mainF.lockButton = createCheckButton(mainF)
+	mainF.lockButton:SetPoint("TOPLEFT", mainF, "TOPLEFT", 5, -5)
+	mainF.lockButton:SetChecked(WD.db.profile.isLocked)
+	mainF.lockButton:SetScript("OnClick", function() WD:LockConfig() end)
+    mainF.lockButton.txt = createFont(mainF.lockButton, "LEFT", WD_BUTTON_LOCK_GUI)
+    mainF.lockButton.txt:SetSize(200, 20)
+	mainF.lockButton.txt:SetPoint("LEFT", mainF.lockButton, "RIGHT", 5, 0)
+
+	-- default chat selector
+	mainF.dropFrame0 = createDropDownMenu(mainF)
+	local items = {}
+	for i=1,#chatTypes do
+		local item = { name = chatTypes[i], func = function() WD.db.profile.chat = mainF.dropFrame0.txt:GetText() end }
+		table.insert(items, item)
+	end
+	updateDropDownMenu(mainF.dropFrame0, WD_BUTTON_DEFAULT_CHAT, items)
+	mainF.dropFrame0:SetSize(250, 20)
+	mainF.dropFrame0:SetPoint("TOPLEFT", mainF.lockButton, "BOTTOMLEFT", 0, -5)
+	mainF.dropFrame0:SetScript('OnShow', function() mainF.dropFrame0.txt:SetText(WD.db.profile.chat) end)
+
+    -- check enable button
+    mainF.enableButton = createCheckButton(mainF)
+	mainF.enableButton:SetPoint("TOPLEFT", mainF.dropFrame0, "BOTTOMLEFT", 0, -5)
+	mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
+	mainF.enableButton:SetScript("OnClick", function() WD:EnableConfig() end)
+    mainF.enableButton.txt = createFont(mainF.enableButton, "LEFT", WD_BUTTON_ENABLE_CONFIG)
+    mainF.enableButton.txt:SetSize(200, 20)
+	mainF.enableButton.txt:SetPoint("LEFT", mainF.enableButton, "RIGHT", 5, 0)
+
+    -- check immediate fail button
+    mainF.immediateButton = createCheckButton(mainF)
+	mainF.immediateButton:SetPoint("TOPLEFT", mainF.enableButton, "BOTTOMLEFT", 0, -5)
+	mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
+	mainF.immediateButton:SetScript("OnClick", function() WD.db.profile.sendFailImmediately = not WD.db.profile.sendFailImmediately end)
+    mainF.immediateButton.txt = createFont(mainF.immediateButton, "LEFT", WD_BUTTON_IMMEDIATE_NOTIFY)
+    mainF.immediateButton.txt:SetSize(200, 20)
+	mainF.immediateButton.txt:SetPoint("LEFT", mainF.immediateButton, "RIGHT", 5, 0)
+
+    -- check penalties button
+    mainF.penaltyButton = createCheckButton(mainF)
+	mainF.penaltyButton:SetPoint("TOPLEFT", mainF.immediateButton, "BOTTOMLEFT", 0, -5)
+	mainF.penaltyButton:SetChecked(WD.db.profile.enablePenalties)
+	mainF.penaltyButton:SetScript("OnClick", function() WD.db.profile.enablePenalties = not WD.db.profile.enablePenalties end)
+    mainF.penaltyButton.txt = createFont(mainF.penaltyButton, "LEFT", WD_BUTTON_ENABLE_PENALTIES)
+    mainF.penaltyButton.txt:SetSize(200, 20)
+	mainF.penaltyButton.txt:SetPoint("LEFT", mainF.penaltyButton, "RIGHT", 5, 0)
+
+	-- max deaths button
+	mainF.maxDeathsTxt = createFontDefault(mainF, "CENTER", WD_BUTTON_MAX_DEATHS)
+	mainF.maxDeathsTxt:SetSize(200, 20)
+	mainF.maxDeathsTxt:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 0, -5)
+	mainF.maxDeaths = createDropDownMenu(mainF)
+	local items2 = {}
+	for i=1,9 do
+		local item = { name = i+1, func = function() WD.db.profile.maxDeaths = tonumber(mainF.maxDeaths.txt:GetText()) end }
+		table.insert(items2, item)
+	end
+	updateDropDownMenu(mainF.maxDeaths, WD.db.profile.maxDeaths, items2)
+	mainF.maxDeaths:SetSize(50, 20)
+	mainF.maxDeaths:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 200, -5)
+	mainF.maxDeaths:SetScript('OnShow', function() mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths) end)
+
+	-- default guild rank selector
+	mainF.dropFrame1 = createDropDownMenu(mainF)
+	local items = {}
+	local gRanks = WD:GetGuildRanks()
+	for k,v in pairs(gRanks) do
+		local item = { name = v.name, func = function() 
+			WD.db.profile.minGuildRank = v
+			mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name)
+			WD:OnGuildRosterUpdate()
+			updateGuildRosterFrame(WD.guiFrame.module['guild_roster'])
+		end }
+		table.insert(items, item)
+	end
+	updateDropDownMenu(mainF.dropFrame1, "GuildRanks", items)
+	mainF.dropFrame1:SetSize(250, 20)
+	mainF.dropFrame1:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 0, -5)
+	mainF.dropFrame1:SetScript('OnShow', function() mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name) end)
 end
 
 local function initGuildRosterModule(self)

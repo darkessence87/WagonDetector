@@ -144,37 +144,37 @@ function WDMF:OnCombatEvent(...)
 	
 	if event == 'SPELL_AURA_APPLIED' and rules['EV_AURA'][spell_id] and rules['EV_AURA'][spell_id]["apply"] then
 		local p = rules['EV_AURA'][spell_id]["apply"]
-		addFail(timestamp, dst_name, string.format("gaining %s aura", getSpellLinkById(spell_id)), p)
+		addFail(timestamp, dst_name, string.format(WD_RULE_APPLY_AURA, getSpellLinkById(spell_id)), p)
 	end
 
 	if event == 'SPELL_AURA_REMOVED' and rules['EV_AURA'][spell_id] and rules['EV_AURA'][spell_id]["remove"] then
 		local p = rules['EV_AURA'][spell_id]["remove"]
-		addFail(timestamp, dst_name, string.format("losing %s aura", getSpellLinkById(spell_id)), p)
+		addFail(timestamp, dst_name, string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(spell_id)), p)
 	end
 	
 	if event == 'SPELL_AURA_APPLIED_DOSE' then
 		local stacks = tonumber(arg[16])
 		if rules['EV_AURA_STACKS'][spell_id] and rules['EV_AURA_STACKS'][spell_id][stacks] then
 			local p = rules['EV_AURA'][spell_id]["remove"][stacks]
-			addFail(timestamp, dst_name, string.format("gaining %d stacks of %s aura", stacks, getSpellLinkById(spell_id)), p)
+			addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkById(spell_id)), p)
 		end
 	end
 	
 	if event == 'SPELL_CAST_START' and rules['EV_START_CAST'][spell_id] and rules['EV_START_CAST'][spell_id][src_name] then
 		local p = rules['EV_START_CAST'][spell_id][src_name]
-		addSuccess(timestamp, src_name, string.format("unit %s starts cast %s", src_name, getSpellLinkById(spell_id)), p)
+		addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_START, src_name, getSpellLinkById(spell_id)), p)
 	end
 	
 	if event == 'SPELL_CAST_SUCCESS' and rules['EV_CAST'][spell_id] and rules['EV_CAST'][spell_id][src_name] then
 		local p = rules['EV_CAST'][spell_id][src_name]
-		addSuccess(timestamp, src_name, string.format("unit %s casted %s", src_name, getSpellLinkById(spell_id)), p)
+		addSuccess(timestamp, src_name, string.format(WD_RULE_CAST, src_name, getSpellLinkById(spell_id)), p)
 	end
 	
 	if event == 'SPELL_INTERRUPT' then
 		local target_spell_id = tonumber(arg[14])
 		if rules['EV_INTERRUPTED_CAST'][target_spell_id] and rules['EV_INTERRUPTED_CAST'][target_spell_id][dst_name] then
 			local p = rules['EV_CAST'][spell_id][dst_name]
-			addSuccess(timestamp, src_name, string.format("%s interrupted by %s", getSpellLinkById(spell_id)), src_name, p)
+			addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(spell_id)), src_name, p)
 		end
 	end
 	
@@ -188,13 +188,13 @@ function WDMF:OnCombatEvent(...)
         
         if death_rule and overkill > -1 then
 			local p = death_rule
-            addFail(timestamp, dst_name, string.format("death by %s", getSpellLinkById(spell_id)), p)
+            addFail(timestamp, dst_name, string.format(WD_RULE_DEATH, getSpellLinkById(spell_id)), p)
         elseif damagetaken_rule then
 			local p = damagetaken_rule.points
 			if damagetaken_rule.amount > 0 and total > damagetaken_rule.amount then 
-				addFail(timestamp, dst_name, string.format("taking >=%d damage by %s", damagetaken_rule.amount, getSpellLinkById(spell_id)), p)
+				addFail(timestamp, dst_name, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, getSpellLinkById(spell_id)), p)
 			elseif damagetaken_rule.amount == 0 and total > 0 then
-				addFail(timestamp, dst_name, string.format("taking damage by %s", getSpellLinkById(spell_id)), p)
+				addFail(timestamp, dst_name, string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkById(spell_id)), p)
 			end
         end
 	end
@@ -208,7 +208,7 @@ function WDMF:OnCombatEvent(...)
 		end
 	
 		if rules['EV_DEATH_UNIT'].unit == dst_name then
-			addSuccess(timestamp, dst_name, string.format("%s died", dst_name, rules['EV_DEATH_UNIT'].points))
+			addSuccess(timestamp, dst_name, string.format(WD_RULE_DEATH_UNIT, dst_name), rules['EV_DEATH_UNIT'].points)
 		end
 	end
 end

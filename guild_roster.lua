@@ -32,6 +32,16 @@ function WD:FindMain(name)
 end
 
 function WD:OnGuildRosterUpdate()
+	if not WD.db.profile.minGuildRank then
+		local gRanks = WD:GetGuildRanks()
+		for k,v in pairs(gRanks) do
+			if v.id == 0 then
+				WD.db.profile.minGuildRank = v
+				break
+			end
+		end
+	end
+
 	WD.cache.roster = {}
 	WD.cache.rosterkeys = {}
 	local altInfos = {}

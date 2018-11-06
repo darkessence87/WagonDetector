@@ -48,6 +48,7 @@ WD_BUTTON_REVERT = "Отмена"
 WD_BUTTON_NEW_RULE = "Новое правило"
 WD_BUTTON_NOTIFY_RULES = "Объявить правила"
 WD_BUTTON_EDIT = "Изменить"
+WD_BUTTON_SELECT_RANK = "Мин. звание:"
 
 WD_RULE_DAMAGE_TAKEN = "получение >=%d урона от %s"
 WD_RULE_DAMAGE_TAKEN_AMOUNT = "получение урона от %s"

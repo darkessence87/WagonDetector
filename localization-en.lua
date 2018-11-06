@@ -44,6 +44,7 @@ WD_BUTTON_REVERT = "Revert"
 WD_BUTTON_NEW_RULE = "New rule"
 WD_BUTTON_NOTIFY_RULES = "Notify rules"
 WD_BUTTON_EDIT = "Edit"
+WD_BUTTON_SELECT_RANK = "Lowest rank:"
 
 WD_RULE_DAMAGE_TAKEN = "taking >=%d damage by %s"
 WD_RULE_DAMAGE_TAKEN_AMOUNT = "taking damage by %s"

@@ -155,7 +155,7 @@ local function initMainModule(mainF)
 	mainF.penaltyButton.txt:SetPoint("LEFT", mainF.penaltyButton, "RIGHT", 5, 0)
 
 	-- max deaths button
-	mainF.maxDeathsTxt = createFontDefault(mainF, "CENTER", WD_BUTTON_MAX_DEATHS)
+	mainF.maxDeathsTxt = createFontDefault(mainF, "LEFT", WD_BUTTON_MAX_DEATHS)
 	mainF.maxDeathsTxt:SetSize(200, 20)
 	mainF.maxDeathsTxt:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 0, -5)
 	mainF.maxDeaths = createDropDownMenu(mainF)
@@ -170,8 +170,11 @@ local function initMainModule(mainF)
 	mainF.maxDeaths:SetScript('OnShow', function() mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths) end)
 
 	-- default guild rank selector
+	mainF.rankSelectorTxt = createFontDefault(mainF, "LEFT", WD_BUTTON_SELECT_RANK)
+	mainF.rankSelectorTxt:SetSize(100, 20)
+	mainF.rankSelectorTxt:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 0, -5)
 	mainF.dropFrame1 = createDropDownMenu(mainF)
-	local items = {}
+	local items3 = {}
 	local gRanks = WD:GetGuildRanks()
 	for k,v in pairs(gRanks) do
 		local item = { name = v.name, func = function() 
@@ -180,11 +183,11 @@ local function initMainModule(mainF)
 			WD:OnGuildRosterUpdate()
 			updateGuildRosterFrame(WD.guiFrame.module['guild_roster'])
 		end }
-		table.insert(items, item)
+		table.insert(items3, item)
 	end
-	updateDropDownMenu(mainF.dropFrame1, "GuildRanks", items)
-	mainF.dropFrame1:SetSize(250, 20)
-	mainF.dropFrame1:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 0, -5)
+	updateDropDownMenu(mainF.dropFrame1, "GuildRanks", items3)
+	mainF.dropFrame1:SetSize(150, 20)
+	mainF.dropFrame1:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 100, -5)
 	mainF.dropFrame1:SetScript('OnShow', function() mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name) end)
 end
 
@@ -314,20 +317,29 @@ function WD:CreateGuiFrame()
 	gui.bg:SetAllPoints()
 	-- x button
 	gui.xButton = createXButton(gui, 0)
-
-	-- modules frames
-	local mainF = createModuleFrame(gui, 'main')
-	createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, 20, -30)
-	local encF = createModuleFrame(gui, 'encounters')
-	createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, 20, -51)
-	local pointsF = createModuleFrame(gui, 'guild_roster')
-	createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, 20, -72)
-	local lastEncF = createModuleFrame(gui, 'last_encounter')
-	createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, 20, -93)
-	local historyF = createModuleFrame(gui, 'history')
-	createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, 20, -114)
 	
-	WD:HideModules()
+	gui:RegisterEvent('GUILD_ROSTER_UPDATE')
+	gui:SetScript('OnEvent', function(self, event)
+		local gRanks = WD:GetGuildRanks()
+		if #gRanks == 0 then return end
+
+		-- modules frames
+		local mainF = createModuleFrame(gui, 'main')
+		createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, 20, -30)
+		local encF = createModuleFrame(gui, 'encounters')
+		createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, 20, -51)
+		local pointsF = createModuleFrame(gui, 'guild_roster')
+		createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, 20, -72)
+		local lastEncF = createModuleFrame(gui, 'last_encounter')
+		createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, 20, -93)
+		local historyF = createModuleFrame(gui, 'history')
+		createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, 20, -114)
+		WD:HideModules()
+		
+		gui:UnregisterEvent('GUILD_ROSTER_UPDATE')
+	end)
+	
+	GuildRoster()
 	gui:Hide()
 	
 	if WD.db.profile.isLocked == false then

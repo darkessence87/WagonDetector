@@ -41,7 +41,7 @@ function WD:OnGuildRosterUpdate()
 			end
 		end
 	end
-
+	
 	WD.cache.roster = {}
 	WD.cache.rosterkeys = {}
 	local altInfos = {}
@@ -80,6 +80,8 @@ function WD:OnGuildRosterUpdate()
 			table.insert(WD.cache.roster[mainName].alts, v.name)
 		end
 	end
+	
+	WD:SortGuildRoster(WD.cache.rostersort, WD.cache.rostersortinverse)
 end
 
 function WD:SortGuildRoster(param, inverse, callback)

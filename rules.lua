@@ -394,7 +394,7 @@ function WD:InitEncountersModule(parent)
 	parent.headers = {}
 	local h = createTableHeader(parent, '', x, y, 20, 20)
 	h = createTableHeader(parent, WD_BUTTON_ENCOUNTER, x + 21, y, 75, 20)
-	h = createTableHeaderNext(parent, h, WD_BUTTON_REASON, 400, 20)
+	h = createTableHeaderNext(parent, h, WD_BUTTON_REASON, 395, 20)
 	h = createTableHeaderNext(parent, h, WD_BUTTON_POINTS_SHORT, 50, 20)
 	h = createTableHeaderNext(parent, h, '', 50, 20)
 	createTableHeaderNext(parent, h, '', 50, 20)

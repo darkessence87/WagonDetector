@@ -225,7 +225,7 @@ local function initGuildRosterModule(self)
 			updateGuildRosterFrame(self)
 		end
 	end)
-	self:SetScript('OnShow', function(self) WD:RefreshGuildRosterFrame() end)
+	--self:SetScript('OnShow', function(self) WD:RefreshGuildRosterFrame() end)
 end
 
 local function initLastEncounterModule(self)
@@ -234,7 +234,7 @@ local function initLastEncounterModule(self)
 	self.headers = {}
 	local h = createTableHeader(self, WD_BUTTON_TIME, x, y, 70, 20)
 	h = createTableHeaderNext(self, h, WD_BUTTON_NAME, 100, 20)
-	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS_SHORT, 25, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS_SHORT, 50, 20)
 	createTableHeaderNext(self, h, WD_BUTTON_REASON, 300, 20)
 	
 	self:SetScript('OnShow', function(self) WD:RefreshLastEncounterFrame() end)
@@ -247,7 +247,7 @@ local function initHistoryModule(self)
 	local h = createTableHeader(self, WD_BUTTON_TIME, x, y, 70, 20)
 	h = createTableHeaderNext(self, h, WD_BUTTON_ENCOUNTER, 150, 20)
 	h = createTableHeaderNext(self, h, WD_BUTTON_NAME, 100, 20)
-	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS_SHORT, 25, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS_SHORT, 50, 20)
 	h = createTableHeaderNext(self, h, WD_BUTTON_REASON, 300, 20)
 	h = createTableHeaderNext(self, h, '', 40, 20)
 	createTableHeaderNext(self, h, '', 40, 20)
@@ -382,7 +382,6 @@ end
 function WD:RefreshGuildRosterFrame()
 	local f = WD.guiFrame.module['guild_roster']
 	if f then
-		WD:SortGuildRoster(WD.cache.rostersort, WD.cache.rostersortinverse)
 		GuildRoster()
 	end
 end

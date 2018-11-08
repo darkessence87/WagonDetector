@@ -32,8 +32,12 @@ function WD:OnInitialize()
 
 	if self.mainFrame then
 		self.mainFrame:RegisterEvent('VARIABLES_LOADED')
-		self.mainFrame:RegisterEvent('ENCOUNTER_START')
-		self.mainFrame:RegisterEvent('ENCOUNTER_END')
+
+		if WD.db.profile.isEnabled == true then
+			self.mainFrame:RegisterEvent('ENCOUNTER_START')
+			self.mainFrame:RegisterEvent('ENCOUNTER_END')
+		end
+
 		self.mainFrame:SetScript('OnEvent', function(self, ...) self:OnEvent(...); end)
 	end
 	

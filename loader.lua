@@ -34,6 +34,7 @@ function WD:OnInitialize()
 		self.mainFrame:RegisterEvent('VARIABLES_LOADED')
 
 		if WD.db.profile.isEnabled == true then
+			self.mainFrame:RegisterEvent('CHAT_MSG_ADDON')
 			self.mainFrame:RegisterEvent('ENCOUNTER_START')
 			self.mainFrame:RegisterEvent('ENCOUNTER_END')
 		end

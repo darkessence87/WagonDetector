@@ -224,6 +224,8 @@ function WDMF:OnEvent(event, ...)
 		self:StopEncounter()
 	elseif event == 'COMBAT_LOG_EVENT_UNFILTERED' then
 		self:OnCombatEvent(CombatLogGetCurrentEventInfo())
+	elseif event == 'CHAT_MSG_ADDON' then
+		self:OnAddonMessage(...)
 	end
 end
 
@@ -288,16 +290,33 @@ function WDMF:ResetEncounter()
 	self.encounter.stopped = 0
 end
 
+function WDMF:OnAddonMessage(msgId, msg)
+	if msgId == 'ping' then
+		print(msgId)
+		WD:SendAddonMessage('pong', msg)
+	elseif msgId == 'pong' then
+		print(msgId)
+	end
+end
+
 function WD:EnableConfig()
 	if WD.db.profile.isEnabled == false then
+		WDMF:RegisterEvent('CHAT_MSG_ADDON')
 		WDMF:RegisterEvent('ENCOUNTER_START')
 		WDMF:RegisterEvent('ENCOUNTER_END')
+		
 		WD.db.profile.isEnabled = true
 		sendMessage(WD_ENABLED)
 	else
+		WDMF:UnregisterEvent('CHAT_MSG_ADDON')
 		WDMF:UnregisterEvent('ENCOUNTER_START')
 		WDMF:UnregisterEvent('ENCOUNTER_END')
 		WD.db.profile.isEnabled = false
 		sendMessage(WD_DISABLED)
 	end
+end
+
+function WD:SendAddonMessage(msgId, msg)
+	if not msgId or not msg then return end
+	C_ChatInfo.SendAddonMessage(msgId, msg, 'GUILD')
 end

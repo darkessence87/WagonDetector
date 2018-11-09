@@ -20,7 +20,8 @@ WD_HELP = "Доступные команды:\
 /wd interrupt - прерывает сбор статистики на текущем пуле"
 
 WD_PRINT_FAILURE = "%s [ВАГОН] %s: %s (%d штраф очков)"
-WD_NOTIFY_RULE = "[%s] %d штраф очков за %s"
+WD_NOTIFY_HEADER_RULE = "Список действующих правил в бою '%s':"
+WD_NOTIFY_RULE = "%d штраф очков за %s"
 WD_REVERT_STR = "Отмена"
 
 WD_BUTTON_LOCK_GUI = "Блокировка перемещения"

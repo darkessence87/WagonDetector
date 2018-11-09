@@ -335,9 +335,10 @@ local function initNewRuleWindow(self)
 end
 
 local function notifyEncounterRules(encounter)
+	sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter))
 	for _,v in pairs(WD.db.profile.rules) do
 		if v.encounter == encounter and v.isActive == true then
-			local msg = string.format(WD_NOTIFY_RULE, v.encounter, v.points, getRuleDescription(v))
+			local msg = string.format(WD_NOTIFY_RULE, v.points, getRuleDescription(v))
 			sendMessage(msg)
 		end
 	end

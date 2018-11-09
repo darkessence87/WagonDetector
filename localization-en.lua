@@ -16,7 +16,8 @@ WD_HELP = "Available commands:\
 /wd interrupt - interrupts current active encounter"
 
 WD_PRINT_FAILURE = "%s [FAIL] %s: %s (%d penalty points)"
-WD_NOTIFY_RULE = "[%s] %d penalty points for %s"
+WD_NOTIFY_HEADER_RULE = "List of active rules in encounter '%s':"
+WD_NOTIFY_RULE = "%d penalty points for %s"
 WD_REVERT_STR = "REVERT"
 
 WD_BUTTON_LOCK_GUI = "Lock config"

@@ -73,17 +73,17 @@ function WD:SlashHandler(msg, box)
 	
 	if cmd == 'config' then
 		self:OpenConfig()
-	elseif cmd == 'start' then
+	elseif cmd == 'starttest' then
 		self.mainFrame:OnEvent('ENCOUNTER_START', 0, 'Test')
-	elseif cmd == 'stop' then
+	elseif cmd == 'stoptest' then
 		self.mainFrame:OnEvent('ENCOUNTER_END')
 	elseif cmd == 'wipe' then
 		self:ResetGuildStatistics()
 	elseif cmd == 'interrupt' then
-		if self.mainFrame then
-			self.mainFrame.encounter.interrupted = 1
-			sendMessage(WD_ENCOUNTER_INTERRUPTED)
-		end
+		self.mainFrame.encounter.interrupted = 1
+		print(WD_ENCOUNTER_INTERRUPTED)
+	elseif cmd == 'pull' then
+		WD:SendAddonMessage('block_encounter')
 	else
 		print(WD_HELP)
 	end

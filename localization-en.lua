@@ -5,15 +5,17 @@ WD_ENCOUNTER_STOP = "Stopped encounter %s. Elapsed time: %s"
 
 WD_ENABLED = "Fucker control enabled"
 WD_DISABLED = "Fucker control disabled"
+WD_LOCKED_BY = "Next encounter is locked by %s"
 
 WD_RESET_GUILD_ROSTER = "Guild statistics has been reseted"
 
 WD_HELP = "Available commands:\
 /wd config - opens configuration menu\
-/wd start - starts test encounter\
-/wd stop - ends test encounter\
+/wd starttest - starts test encounter\
+/wd stoptest - ends test encounter\
 /wd wipe - wipes guild roster statistics\
-/wd interrupt - interrupts current active encounter"
+/wd interrupt - interrupts current active encounter\
+/wd pull - blocks next upcoming encounter for other RLs or officers"
 
 WD_PRINT_FAILURE = "%s [FAIL] %s: %s (%d penalty points)"
 WD_NOTIFY_HEADER_RULE = "List of active rules in encounter '%s':"

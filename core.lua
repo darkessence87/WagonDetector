@@ -122,11 +122,13 @@ local function addFail(timestamp, name, msg, points)
 	fucker.points = points
 	WDMF.encounter.fuckers[#WDMF.encounter.fuckers+1] = fucker
 	
-	if WD.db.profile.sendFailImmediately == true then
-		local txt = string.format(WD_PRINT_FAILURE, fucker.timestamp, getShortCharacterName(fucker.name), fucker.reason, fucker.points)
-		sendMessage(txt)
+	if WDMF.encounter.isBlockedByAnother == 0 then
+		if WD.db.profile.sendFailImmediately == true then
+			local txt = string.format(WD_PRINT_FAILURE, fucker.timestamp, getShortCharacterName(fucker.name), fucker.reason, fucker.points)
+			sendMessage(txt)
 
-		WD:SavePenaltyPointsToGuildRoster(fucker)
+			WD:SavePenaltyPointsToGuildRoster(fucker)
+		end
 	end
 	
 	WD:RefreshLastEncounterFrame()
@@ -235,7 +237,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
 	
 	sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
 	self.encounter.id = encounterID
-	self.encounter.name = date("%d/%m").." "..encounterName..' ('..pullId..')'
+	self.encounter.name = encounterName
 	self.encounter.startTime = time()
 	self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
 	self.encounter.players = {}
@@ -254,29 +256,35 @@ function WDMF:StartEncounter(encounterID, encounterName)
 		realm = realm or currentRealmName
 		self.encounter.players[#self.encounter.players+1] = name.."-"..realm
 	end
-
-	-- save pull information
-	if WD.cache.roster then
-		for _,v in pairs(self.encounter.players) do
-			WD:SavePullsToGuildRoster(v)
-		end
-	end
-	WD:RefreshGuildRosterFrame()
-
-	WD:AddPullHistory(encounterName)
 end
 
 function WDMF:StopEncounter()
 	if self.encounter.stopped == 1 then return end
 	self.encounter.endTime = time()
 	
-	if WD.db.profile.sendFailImmediately == false then
-		printFuckups()
-		saveFuckups()
+	if self.encounter.isBlockedByAnother == 0 then
+		if WD.db.profile.sendFailImmediately == false then
+			printFuckups()
+			saveFuckups()
+		end
+	
+		-- save pull information
+		if WD.cache.roster then
+			for _,v in pairs(self.encounter.players) do
+				WD:SavePullsToGuildRoster(v)
+			end
+		end
+		WD:RefreshGuildRosterFrame()
+	
+		local pullId = WD.db.profile.encounters[self.encounter.name] + 1
+		local encounterName = date("%d/%m").." "..self.encounter.name..' ('..pullId..')'
+		WD:AddPullHistory(encounterName)
 	end
 
 	self.encounter.stopped = 1
 	sendMessage(string.format(WD_ENCOUNTER_STOP, self.encounter.name, getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)))
+	
+	self.encounter.isBlockedByAnother = 0
 end
 
 function WDMF:ResetEncounter()
@@ -290,12 +298,27 @@ function WDMF:ResetEncounter()
 	self.encounter.stopped = 0
 end
 
-function WDMF:OnAddonMessage(msgId, msg)
-	if msgId == 'ping' then
-		print(msgId)
-		WD:SendAddonMessage('pong', msg)
-	elseif msgId == 'pong' then
-		print(msgId)
+function WDMF:OnAddonMessage(msgId, msg, channel, sender)
+	-- /dump WD:SendAddonMessage('cmd1', 'data1')
+	if msgId ~= "WDCM" then return end
+	
+	local cmd, data = string.match(msg, '^(.*):(.*)$')
+	local receiver, realm = UnitName('player')
+	realm = realm or currentRealmName
+	receiver = receiver.."-"..realm
+	
+	if sender == receiver then
+		--print('Testing purpose, will be ignored in release')
+		return
+	end
+	
+	if cmd then
+		if cmd == 'block_encounter' then
+			self.encounter.isBlockedByAnother = 1
+			print(string.format(WD_LOCKED_BY, sender))
+		elseif cmd == 'share_encounter' then
+		elseif cmd == 'share_rule' then
+		end
 	end
 end
 
@@ -316,7 +339,15 @@ function WD:EnableConfig()
 	end
 end
 
-function WD:SendAddonMessage(msgId, msg)
-	if not msgId or not msg then return end
+function WD:SendAddonMessage(cmd, data)
+	if not cmd then return end
+	if not data then data = '' end
+	
+	if cmd == "block_encounter" then
+		self.mainFrame.encounter.isBlockedByAnother = 0
+	end
+	
+	local msgId = "WDCM"
+	local msg = cmd..':'..data
 	C_ChatInfo.SendAddonMessage(msgId, msg, 'GUILD')
 end

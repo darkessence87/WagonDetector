@@ -2,20 +2,61 @@
 WD.mainFrame = CreateFrame("Frame")
 local WDMF = WD.mainFrame
 WDMF.encounter = {}
+WDMF.encounter.isBlockedByAnother = 0
 
 encounterIDs = {
 	[0] = 'Test',
 	[2144] = 'UD_TALOC',
 	[2141] = 'UD_MOTHER',
 	[2136] = 'UD_ZEKVOZ',
-	[0] = 'UD_VECTIS',
-	[0] = 'UD_FETID',
-	[0] = 'UD_ZUL',
-	[0] = 'UD_MYTRAX',
+	[-1] = 'UD_VECTIS',
+	[-1] = 'UD_FETID',
+	[-1] = 'UD_ZUL',
+	[-1] = 'UD_MYTRAX',
 	[2122] = 'UD_GHUUN',
 }
 
 local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
+
+local potionSpellIds = {
+	[279151] = "/battle-potion-of-intellect",
+	[279152] = "/battle-potion-of-agility",
+	[279153] = "/battle-potion-of-strength",
+	[229206] = "/potion-of-prolonged-power",
+	[251316] = "/potion-of-bursting-blood",
+	[269853] = "/potion-of-rising-death",
+	[279154] = "/battle-potion-of-stamina",
+}
+
+local flaskSpellIds = {
+	[251837] = "/flask-of-endless-fathoms",
+	[251839] = "/flask-of-the-undertow",
+	[251836] = "/flask-of-the-currents",
+	[251838] = "/flask-of-the-vast-horizon",
+}
+
+local foodSpellIds = {
+	[257408] = "Increases critical strike by 53 for 1 hour.",
+	[257410] = "Increases critical strike by 70 for 1 hour.",
+	[257413] = "Increases haste by 53 for 1 hour.",
+	[257415] = "Increases haste by 70 for 1 hour.",
+	[257418] = "Increases mastery by 53 for 1 hour.",
+	[257420] = "Increases mastery by 70 for 1 hour.",
+	[257422] = "Increases versatility by 53 for 1 hour.",
+	[257424] = "Increases versatility by 70 for 1 hour.",
+	[259448] = "Agility increased by 75.  Lasts 1 hour.",
+	[259454] = "Agility increased by 100.  Lasts 1 hour.",
+	[259449] = "Intellect increased by 75.  Lasts 1 hour.",
+	[259455] = "Intellect increased by 100.  Lasts 1 hour.",
+	[259452] = "Strength increased by 75.  Lasts 1 hour.",
+	[259456] = "Strength increased by 100.  Lasts 1 hour.",
+	[259453] = "Stamina increased by 113.  Lasts 1 hour.",
+	[259457] = "Stamina increased by 150.  Lasts 1 hour.",
+}
+
+local runeSpellIds = {
+	[270058] = "/battle-scarred-augmentation",
+}
 
 function getTimedDiff(startTime, endTime)
 	if startTime == nil or endTime == nil then return end
@@ -42,6 +83,18 @@ function getTimedDiffShort(startTime, endTime)
 	return MIN .. ":" .. SEC
 end
 
+local function getRole(name)
+	local role = 'Unknown'
+	
+	for _,v in pairs(WDMF.encounter.players) do
+		if v.name == name then
+			return v.role
+		end
+	end
+	
+	return role
+end
+
 local function getActiveRulesForEncounter(encounterId)
 	local encounterName = encounterIDs[encounterId]
 	if not encounterName then 
@@ -57,10 +110,14 @@ local function getActiveRulesForEncounter(encounterId)
 		['EV_CAST'] = {},			-- done
 		['EV_INTERRUPTED_CAST'] = {},	-- done
 		['EV_DEATH_UNIT'] = {},		-- done
+		['EV_POTIONS'] = {},		-- done
+		['EV_FLASKS'] = {},			-- done
+		['EV_FOOD'] = {},			-- done
+		['EV_RUNES'] = {},			-- done
 	}
 	
 	for i=1,#WD.db.profile.rules do
-		if WD.db.profile.rules[i].isActive == true --[[and WD.db.profile.rules[i].encounter == encounterName]] then
+		if WD.db.profile.rules[i].isActive == true and WD.db.profile.rules[i].encounter == encounterName then
 			local rType = WD.db.profile.rules[i].type
 			local arg0 = WD.db.profile.rules[i].arg0
 			local arg1 = WD.db.profile.rules[i].arg1
@@ -73,6 +130,8 @@ local function getActiveRulesForEncounter(encounterId)
 				rules[rType][arg0] = p
 			elseif rType == 'EV_DEATH_UNIT' then
 				rules[rType].unit = arg0
+				rules[rType].points = p
+			elseif rType == 'EV_POTIONS' or rType == 'EV_FLASKS' or rType == 'EV_FOOD' or rType == 'EV_RUNES' then
 				rules[rType].points = p
 			else
 				if not rules[rType][arg0] then
@@ -88,8 +147,10 @@ end
 
 local function printFuckups()
 	for _,v in pairs(WDMF.encounter.fuckers) do
-		local msg = string.format(WD_PRINT_FAILURE, v.timestamp, getShortCharacterName(v.name), v.reason, v.points)
-		sendMessage(msg)
+		if v.points > 0 then
+			local msg = string.format(WD_PRINT_FAILURE, v.timestamp, getShortCharacterName(v.name), v.reason, v.points)
+			sendMessage(msg)
+		end
 	end
 end
 
@@ -102,8 +163,30 @@ local function saveFuckups()
 	WD:RefreshGuildRosterFrame()
 end
 
-local function addSuccess(timestamp, name, rule, points)
-	print(timestamp..' success:'..name.." rule: "..rule.." points:"..points)
+local function addSuccess(timestamp, name, msg, points)
+	if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
+		local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
+		local txt = t.." "..name.." [NICE] "..msg
+		print('Ignored success: '..txt)
+		return
+	end
+	
+	local niceBro = {}
+	niceBro.encounter = WDMF.encounter.name
+	niceBro.timestamp = getTimedDiff(WDMF.encounter.startTime, timestamp)
+	niceBro.name = name
+	niceBro.reason = msg
+	niceBro.points = points
+	niceBro.role = getRole(name)
+	WDMF.encounter.fuckers[#WDMF.encounter.fuckers+1] = niceBro
+	
+	if WDMF.encounter.isBlockedByAnother == 0 then
+		if WD.db.profile.sendFailImmediately == true then
+			WD:SavePenaltyPointsToGuildRoster(niceBro)
+		end
+	end
+	
+	WD:RefreshLastEncounterFrame()
 end
 
 local function addFail(timestamp, name, msg, points)
@@ -120,6 +203,7 @@ local function addFail(timestamp, name, msg, points)
 	fucker.name = name
 	fucker.reason = msg
 	fucker.points = points
+	fucker.role = getRole(name)
 	WDMF.encounter.fuckers[#WDMF.encounter.fuckers+1] = fucker
 	
 	if WDMF.encounter.isBlockedByAnother == 0 then
@@ -132,6 +216,48 @@ local function addFail(timestamp, name, msg, points)
 	end
 	
 	WD:RefreshLastEncounterFrame()
+end
+
+local function checkConsumables(timestamp, player, rules)
+	local noflask, nofood, norune = nil, nil, nil
+	if rules['EV_FLASKS'].points then
+		noflask = true
+	end
+	if rules['EV_FOOD'].points then
+		nofood = true
+	end
+	if rules['EV_RUNES'].points then
+		norune = true
+	end
+	
+	for index=1,40 do
+		local _, _, _, _, _, _, _, _, _, spellId = UnitBuff(player.unit, index)
+		
+		-- flasks
+		if spellId and flaskSpellIds[spellId] then
+			noflask = false
+		end
+
+		-- food
+		if spellId and foodSpellIds[spellId] and not nofood then
+			nofood = false
+		end
+
+		-- runes
+		if spellId and runeSpellIds[spellId] then
+			norune = false
+		end
+	end
+
+	if noflask and noflask == true then
+		addFail(timestamp, getShortCharacterName(player.name), WD_RULE_FLASKS, rules['EV_FLASKS'].points)
+	end
+	if nofood and nofood == true then
+		addFail(timestamp, getShortCharacterName(player.name), WD_RULE_FOOD, rules['EV_FOOD'].points)
+	end
+	if norune and norune == true then
+		addFail(timestamp, getShortCharacterName(player.name), WD_RULE_RUNES, rules['EV_RUNES'].points)
+	end
 end
 
 function WDMF:OnCombatEvent(...)
@@ -149,9 +275,19 @@ function WDMF:OnCombatEvent(...)
 		addFail(timestamp, dst_name, string.format(WD_RULE_APPLY_AURA, getSpellLinkById(spell_id)), p)
 	end
 
-	if event == 'SPELL_AURA_REMOVED' and rules['EV_AURA'][spell_id] and rules['EV_AURA'][spell_id]["remove"] then
-		local p = rules['EV_AURA'][spell_id]["remove"]
-		addFail(timestamp, dst_name, string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(spell_id)), p)
+	if event == 'SPELL_AURA_REMOVED' then
+		if rules['EV_AURA'][spell_id] and rules['EV_AURA'][spell_id]["remove"] then
+			local p = rules['EV_AURA'][spell_id]["remove"]
+			addFail(timestamp, dst_name, string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(spell_id)), p)
+		end
+		
+		-- potions
+		if rules['EV_POTIONS'].points then
+			local role = getRole(dst_name)
+			if (role == 'DAMAGE' or role == 'Unknown') and potionSpellIds[spell_id] then
+				addSuccess(timestamp, getShortCharacterName(dst_name), WD_RULE_POTIONS, rules['EV_POTIONS'].points)
+			end
+		end
 	end
 	
 	if event == 'SPELL_AURA_APPLIED_DOSE' then
@@ -203,7 +339,7 @@ function WDMF:OnCombatEvent(...)
 	
 	if event == 'UNIT_DIED' then
 		for i=1,#self.encounter.players do
-			if self.encounter.players[i] == getFullCharacterName(dst_name) then
+			if self.encounter.players[i].name == getFullCharacterName(dst_name) then
 				self.encounter.deaths = self.encounter.deaths + 1
 				break
 			end
@@ -236,8 +372,10 @@ function WDMF:StartEncounter(encounterID, encounterName)
 	if WD.db.profile.encounters[encounterName] then pullId = WD.db.profile.encounters[encounterName] + 1 end
 	
 	sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
+	WD:AddPullHistory(encounterName)
+
 	self.encounter.id = encounterID
-	self.encounter.name = encounterName
+	self.encounter.name = date("%d/%m").." "..encounterName..' ('..pullId..')'
 	self.encounter.startTime = time()
 	self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
 	self.encounter.players = {}
@@ -246,15 +384,28 @@ function WDMF:StartEncounter(encounterID, encounterName)
 		for i=1,40 do
 			local unit = 'raid'..i
 			if UnitIsVisible(unit) then
+				local _, rank, _, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(i)
 				local name, realm = UnitName(unit)
 				realm = realm or currentRealmName
-				self.encounter.players[#self.encounter.players+1] = name.."-"..realm
+				local p = {}
+				p.name = name.."-"..realm
+				p.role = role
+				p.unit = unit
+				self.encounter.players[#self.encounter.players+1] = p
+				
+				checkConsumables(self.encounter.startTime, p, self.encounter.rules)
 			end
 		end
 	else
 		local name, realm = UnitName('player')
 		realm = realm or currentRealmName
-		self.encounter.players[#self.encounter.players+1] = name.."-"..realm
+		local p = {}
+		p.name = name.."-"..realm
+		p.role = 'Unknown'
+		p.unit = 'player'
+		self.encounter.players[#self.encounter.players+1] = p
+		
+		checkConsumables(self.encounter.startTime, p, self.encounter.rules)
 	end
 end
 
@@ -275,10 +426,6 @@ function WDMF:StopEncounter()
 			end
 		end
 		WD:RefreshGuildRosterFrame()
-	
-		local pullId = WD.db.profile.encounters[self.encounter.name] + 1
-		local encounterName = date("%d/%m").." "..self.encounter.name..' ('..pullId..')'
-		WD:AddPullHistory(encounterName)
 	end
 
 	self.encounter.stopped = 1

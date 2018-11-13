@@ -21,6 +21,7 @@ WD_HELP = "Доступные команды:\
 /wd interrupt - прерывает сбор статистики на текущем пуле\
 /wd pull - блокирует следующий бой для других РЛов или офицеров"
 
+WD_PRINT_SUCCESS = "%s [КРАСАВА] %s: %s (%d штраф очков)"
 WD_PRINT_FAILURE = "%s [ВАГОН] %s: %s (%d штраф очков)"
 WD_NOTIFY_HEADER_RULE = "Список действующих правил в бою '%s':"
 WD_NOTIFY_RULE = "%d штраф очков за %s"
@@ -52,6 +53,7 @@ WD_BUTTON_NEW_RULE = "Новое правило"
 WD_BUTTON_NOTIFY_RULES = "Объявить правила"
 WD_BUTTON_EDIT = "Изменить"
 WD_BUTTON_SELECT_RANK = "Мин. звание:"
+WD_BUTTON_ROLE = "Роль"
 
 WD_RULE_DAMAGE_TAKEN = "получение >=%d урона от %s"
 WD_RULE_DAMAGE_TAKEN_AMOUNT = "получение урона от %s"
@@ -63,3 +65,8 @@ WD_RULE_AURA_STACKS = "получение %d стаков ауры %s"
 WD_RULE_CAST_START = "моб %s начинает каст %s"
 WD_RULE_CAST = "моб %s закончил каст %s"
 WD_RULE_CAST_INTERRUPT = "%s прерван %s"
+WD_RULE_POTIONS = "использование зелья"
+WD_RULE_FLASKS = "отсутствие фласки"
+WD_RULE_FOOD = "отсутствие еды"
+WD_RULE_RUNES = "отсутствие руны"
+

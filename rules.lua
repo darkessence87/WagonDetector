@@ -20,6 +20,10 @@ ruleTypes = {
 	'EV_CAST',
 	'EV_INTERRUPTED_CAST',
 	'EV_DEATH_UNIT',
+	'EV_POTIONS',
+	'EV_FLASKS',
+	'EV_FOOD',
+	'EV_RUNES'
 }
 
 local function getRuleDescription(rule)
@@ -47,6 +51,14 @@ local function getRuleDescription(rule)
 		return string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(rule.arg0), rule.arg1)
 	elseif rule.type == "EV_DEATH_UNIT" then
 		return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
+	elseif rule.type == "EV_POTIONS" then
+		return string.format(WD_RULE_POTIONS)
+	elseif rule.type == "EV_FLASKS" then
+		return string.format(WD_RULE_FLASKS)
+	elseif rule.type == "EV_FOOD" then
+		return string.format(WD_RULE_FOOD)
+	elseif rule.type == "EV_RUNES" then
+		return string.format(WD_RULE_RUNES)
 	end
 	
 	return "Unsupported rule"
@@ -78,11 +90,15 @@ local function editRuleLine(ruleLine)
 	end
 	
 	-- arg0
-	local txt = ruleLine.rule.arg0
-	newRuleFrame.editBox0:SetText(txt)
-	newRuleFrame.editBox0:SetScript('OnEscapePressed', function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
-	newRuleFrame.editBox0:SetScript('OnEditFocusGained', function() newRuleFrame.editBox0:SetText(""); end)
-	newRuleFrame.editBox0:Show()
+	if rule ~= 'EV_POTIONS' and rule ~= 'EV_FLASKS' and rule ~= 'EV_FOOD' and rule ~= 'EV_RUNES' then
+		local txt = ruleLine.rule.arg0
+		newRuleFrame.editBox0:SetText(txt)
+		newRuleFrame.editBox0:SetScript('OnEscapePressed', function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
+		newRuleFrame.editBox0:SetScript('OnEditFocusGained', function() newRuleFrame.editBox0:SetText(""); end)
+		newRuleFrame.editBox0:Show()
+	else
+		newRuleFrame.editBox0:Hide()
+	end
 	
 	-- arg1
 	if ruleLine.rule.type == 'EV_AURA' then
@@ -95,7 +111,13 @@ local function editRuleLine(ruleLine)
 		end
 		newRuleFrame.dropMenu1:Show()
 		newRuleFrame.editBox1:Hide()
-	elseif ruleLine.rule.type == "EV_DEATH" or ruleLine.rule.type == "EV_DEATH_UNIT" then
+	elseif ruleLine.rule.type == "EV_DEATH" 
+	    or ruleLine.rule.type == "EV_DEATH_UNIT" 
+		or ruleLine.rule.type == "EV_POTIONS"
+		or ruleLine.rule.type == "EV_FLASKS"
+		or ruleLine.rule.type == "EV_FOOD"
+		or ruleLine.rule.type == "EV_RUNES"
+	then
 		newRuleFrame.editBox1:Hide()
 		newRuleFrame.dropMenu1:Hide()
 	else
@@ -223,12 +245,13 @@ local function saveRule(self)
 		rule.arg1 = f.editBox1:GetText()
 	elseif ruleType == 'EV_DEATH_UNIT' then
 		rule.arg0 = f.editBox0:GetText()
+	elseif ruleType == 'EV_POTIONS' or ruleType == 'EV_FLASKS' or ruleType == 'EV_FOOD' or ruleType == 'EV_RUNES' then
+		-- nothing to do here
 	else
 		print("Unsupported rule type:"..rule.type)
 		return
 	end
 	
-	if rule.arg0 == "" or rule.arg0 == 0 then return end
 	if rule.points == "" or rule.points == 0 then return end
 
 	-- find duplicate
@@ -413,22 +436,33 @@ function WD:UpdateNewRuleMenu()
 	local rule = newRuleFrame.dropFrame1.selected.txt:GetText()
 	
 	-- arg0 name (based on rule type)
-	local txt = ""
-	if rule == "EV_DEATH_UNIT" then
-		txt = "unit name"
+	if rule ~= 'EV_POTIONS' and rule ~= 'EV_FLASKS' and rule ~= 'EV_FOOD' and rule ~= 'EV_RUNES' then
+		local txt = ""
+		if rule == "EV_DEATH_UNIT" then
+			txt = "unit name"
+		else
+			txt = "spellid"
+		end
+		
+		newRuleFrame.editBox0:SetText(txt)
+		newRuleFrame.editBox0:SetScript('OnEscapePressed', function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
+		newRuleFrame.editBox0:SetScript('OnEditFocusGained', function() newRuleFrame.editBox0:SetText(""); end)
+		newRuleFrame.editBox0:Show()
 	else
-		txt = "spellid"
+		newRuleFrame.editBox0:Hide()
 	end
-	newRuleFrame.editBox0:SetText(txt)
-	newRuleFrame.editBox0:SetScript('OnEscapePressed', function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
-	newRuleFrame.editBox0:SetScript('OnEditFocusGained', function() newRuleFrame.editBox0:SetText(""); end)
-	newRuleFrame.editBox0:Show()
 	
 	-- arg1 name (based on rule type)
 	if rule == "EV_AURA" then
 		newRuleFrame.editBox1:Hide()
 		newRuleFrame.dropMenu1:Show()
-	elseif rule == "EV_DEATH" or rule == "EV_DEATH_UNIT" then
+	elseif rule == "EV_DEATH" 
+	    or rule == "EV_DEATH_UNIT" 
+		or rule == "EV_POTIONS"
+		or rule == "EV_FLASKS"
+		or rule == "EV_FOOD"
+		or rule == "EV_RUNES"
+	then
 		newRuleFrame.editBox1:Hide()
 		newRuleFrame.dropMenu1:Hide()
 	else

@@ -234,6 +234,7 @@ local function initLastEncounterModule(self)
 	self.headers = {}
 	local h = createTableHeader(self, WD_BUTTON_TIME, x, y, 70, 20)
 	h = createTableHeaderNext(self, h, WD_BUTTON_NAME, 100, 20)
+	h = createTableHeaderNext(self, h, WD_BUTTON_ROLE, 100, 20)
 	h = createTableHeaderNext(self, h, WD_BUTTON_POINTS_SHORT, 50, 20)
 	createTableHeaderNext(self, h, WD_BUTTON_REASON, 300, 20)
 	
@@ -421,6 +422,8 @@ function WD:RefreshLastEncounterFrame()
 			index = index + 1
 			addNextColumn(self, member, index, "LEFT", getShortCharacterName(v.name))
 			index = index + 1
+			addNextColumn(self, member, index, "CENTER", v.role)
+			index = index + 1
 			addNextColumn(self, member, index, "CENTER", v.points)
 			index = index + 1
 			addNextColumn(self, member, index, "LEFT", v.reason)
@@ -430,8 +433,9 @@ function WD:RefreshLastEncounterFrame()
 			local member = self.members[k]
 			member.column[1].txt:SetText(v.timestamp)
 			member.column[2].txt:SetText(v.name)
-			member.column[3].txt:SetText(v.points)
-			member.column[4].txt:SetText(v.reason)
+			member.column[3].txt:SetText(v.role)
+			member.column[4].txt:SetText(v.points)
+			member.column[5].txt:SetText(v.reason)
 			member:Show()
 			updateScroller(self.scroller.slider, #core.encounter.fuckers)
 		end

@@ -17,6 +17,7 @@ WD_HELP = "Available commands:\
 /wd interrupt - interrupts current active encounter\
 /wd pull - blocks next upcoming encounter for other RLs or officers"
 
+WD_PRINT_SUCCESS = "%s [NICE] %s: %s (%d penalty points)"
 WD_PRINT_FAILURE = "%s [FAIL] %s: %s (%d penalty points)"
 WD_NOTIFY_HEADER_RULE = "List of active rules in encounter '%s':"
 WD_NOTIFY_RULE = "%d penalty points for %s"
@@ -48,6 +49,7 @@ WD_BUTTON_NEW_RULE = "New rule"
 WD_BUTTON_NOTIFY_RULES = "Notify rules"
 WD_BUTTON_EDIT = "Edit"
 WD_BUTTON_SELECT_RANK = "Lowest rank:"
+WD_BUTTON_ROLE = "Role"
 
 WD_RULE_DAMAGE_TAKEN = "taking >=%d damage by %s"
 WD_RULE_DAMAGE_TAKEN_AMOUNT = "taking damage by %s"
@@ -59,3 +61,7 @@ WD_RULE_AURA_STACKS = "gaining %d stacks of %s aura"
 WD_RULE_CAST_START = "unit %s starts cast %s"
 WD_RULE_CAST = "unit %s casted %s"
 WD_RULE_CAST_INTERRUPT = "%s interrupted by %s"
+WD_RULE_POTIONS = "used potion"
+WD_RULE_FLASKS = "no flask buff"
+WD_RULE_FOOD = "no food buff"
+WD_RULE_RUNES = "no rune buff"

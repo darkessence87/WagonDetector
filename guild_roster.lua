@@ -115,7 +115,7 @@ function WD:SortGuildRoster(param, inverse, callback)
 end
 
 function WD:SavePullsToGuildRoster(v)
-	local name = self:FindMain(v)
+	local name = self:FindMain(v.name)
 	if WD.cache.roster[name] then
 		local info = WD.cache.roster[name]
 		info.pulls = info.pulls + 1

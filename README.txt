@@ -4,6 +4,9 @@ This addon automatically starts tracking failures after encounter starts, and au
 after encounter ends or maximum deaths tracked or external command used. If there are several RL's or officers 
 with enabled addon main person should use macro at pull in order to prevent raiders be fined by multiple officers.
 
+Potions are tracked as success events (if points are set < 0), so that raiders who use potions may decrease their penalty points.
+Missing flasks, food or runes increase raider's penalty points.
+
 
 Usefull macro
 --------------------------

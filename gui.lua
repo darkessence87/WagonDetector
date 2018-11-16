@@ -380,6 +380,16 @@ function WD:OpenNotifyRuleMenu()
     if encF.notifyRule:IsVisible() then encF.notifyRule:Hide() else encF.notifyRule:Show() end
 end
 
+function WD:OpenExportEncounterMenu()
+    local encF = self.guiFrame.module['encounters']
+    if encF.exportEncounter:IsVisible() then encF.exportEncounter:Hide() else encF.exportEncounter:Show() end
+end
+
+function WD:OpenImportEncounterMenu()
+    local encF = self.guiFrame.module['encounters']
+    if encF.importEncounter:IsVisible() then encF.importEncounter:Hide() else encF.importEncounter:Show() end
+end
+
 function WD:RefreshGuildRosterFrame()
     local f = WD.guiFrame.module['guild_roster']
     if f then

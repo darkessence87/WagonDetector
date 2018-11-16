@@ -26,6 +26,62 @@ ruleTypes = {
     'EV_RUNES'
 }
 
+local function parseRule(str)
+    local rule = {}
+
+    -- parse rule
+    -- /script WD:ImportRule('e3R5cGU9IkVWX0RFQVRIIixhcmcxPSIiLGVuY291bnRlcj0iVURfTU9USEVSIixwb2ludHM9MjUsYXJnMD0yNjgyNzcsaXNBY3RpdmU9dHJ1ZX0=')
+    function parseValue(s)
+        if string.find(s, "\"") then
+            return s:sub(2,-2)
+        elseif s == "true" then
+            return true
+        elseif s == "false" then
+            return false
+        elseif tonumber(s) ~= 0 then
+            return tonumber(s)
+        else
+            return s
+        end
+    end
+
+    local rule = {}
+    for i in string.gmatch(str, "[%w]+=[\"|_|%w]+") do
+        local dashIndex = string.find(i, "%=")
+        if dashIndex then
+            local k = string.sub(i, 1, dashIndex - 1)
+            local v = parseValue(string.sub(i, dashIndex + 1))
+            if k == "type" then
+                rule.type = v
+            elseif k == "encounter" then
+                rule.encounter = v
+            elseif k == "arg0" then
+                rule.arg0 = v
+            elseif k == "arg1" then
+                rule.arg1 = v
+            elseif k == "points" then
+                rule.points = tonumber(v)
+            elseif k == "isActive" then
+                rule.isActive = v
+            end
+        end
+    end
+
+    return rule
+end
+
+local function parseEncounter(str)
+    local rules = {}
+
+    -- parse encounter
+    -- /script WD:ImportEncounter('e3t0eXBlPSJFVl9BVVJBIixhcmcxPSJhcHBseSIsZW5jb3VudGVyPSJUZXN0Iixwb2ludHM9MSxhcmcwPTc3NCxpc0FjdGl2ZT10cnVlfSx7dHlwZT0iRVZfQVVSQSIsYXJnMT0icmVtb3ZlIixlbmNvdW50ZXI9IlRlc3QiLHBvaW50cz0xLGFyZzA9Nzc0LGlzQWN0aXZlPXRydWV9fQ==')
+    string.gsub(str:sub(2,-2),"{(.-)}", function(a)
+        rules[#rules+1] = parseRule(a)
+    end)
+
+    return rules
+end
+
 local function getRuleDescription(rule)
     if rule.type == "EV_DAMAGETAKEN" then
         if rule.arg1 > 0 then
@@ -204,6 +260,7 @@ local function updateRuleLines(self)
             table.insert(self.rules, ruleLine)
         else
             local ruleLine = self.rules[k]
+            ruleLine.rule = v
             ruleLine.column[1]:SetChecked(v.isActive)
             ruleLine.column[1]:SetScript("OnClick", function() v.isActive = not v.isActive end)
             ruleLine.column[2].txt:SetText(v.encounter)
@@ -410,9 +467,42 @@ local function initNotifyRuleWindow(self)
     r:Hide()
 end
 
-local function initExportRuleWindow(self)
-    self.exportRule = CreateFrame("Frame", nil, self)
-    local r = self.exportRule
+local function initExportEncounterWindow(self)
+    self.exportEncounter = CreateFrame("Frame", nil, self)
+    local r = self.exportEncounter
+    r:EnableMouse(true)
+    r:SetPoint("BOTTOMLEFT", self.export, "TOPLEFT", 0, 1)
+    r:SetSize(152, 22)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    function exportEncounter(encounterName)
+        self.exportEncounter:Hide()
+        local rules = {}
+        for _,v in pairs(WD.db.profile.rules) do
+            if v.encounter == encounterName then
+                rules[#rules+1] = v
+            end
+        end
+        WD:ExportEncounter(self, rules)
+    end
+
+    local items0 = {}
+    for i=1,#encounterTypes do
+        local item = { name = encounterTypes[i], func = function() exportEncounter(encounterTypes[i]) end }
+        table.insert(items0, item)
+    end
+
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0:SetSize(150, 20)
+    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+
+    r:Hide()
+end
+
+local function initExportWindow(self)
+    self.exportWindow = CreateFrame("Frame", nil, self)
+    local r = self.exportWindow
     r:EnableMouse(true)
     r:SetPoint("CENTER", 0, 0)
     r:SetSize(400, 400)
@@ -430,11 +520,84 @@ local function initExportRuleWindow(self)
     r.editBox:SetMaxLetters(2048)
     r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end);
     r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end);
-    r.editBox.t = createColorTexture(r.editBox, "BACKGROUND", .2, .2, .2, 1)
-    r.editBox.t:SetAllPoints()
     r.editBox:Show()
 
     r:Hide()
+end
+
+local function initImportEncounterWindow(self)
+    self.importEncounter = CreateFrame("Frame", nil, self)
+    local r = self.importEncounter
+    r:EnableMouse(true)
+    r:SetPoint("CENTER", 0, 0)
+    r:SetSize(400, 400)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    function tryImportEncounter(str)
+        local rules = WD:ImportEncounter(str)
+        if rules and #rules > 0 then
+            StaticPopup_Show("WD_ACCEPT_IMPORT", rules[1].encounter)
+        end
+    end
+
+    function importEncounter(str)
+        local rules = WD:ImportEncounter(str)
+        if rules and #rules > 0 then
+            local encounter = rules[1].encounter
+            local newRules = {}
+            for k,v in pairs(WD.db.profile.rules) do
+                if v.encounter ~= encounter then
+                    newRules[#newRules+1] = v
+                end
+            end
+            for i=1,#rules do
+                newRules[#newRules+1] = rules[i]
+            end
+            WD.db.profile.rules = newRules
+            updateRuleLines(self)
+        end
+    end
+
+    createXButton(r, -1)
+
+    r.editBox = createEditBox(r)
+    r.editBox:SetSize(398, 378)
+    r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
+    r.editBox:SetMultiLine(true)
+    r.editBox:SetJustifyH("LEFT")
+    r.editBox:SetMaxBytes(nil)
+    r.editBox:SetMaxLetters(2048)
+    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
+    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end)
+    r.editBox:SetScript("OnShow", function() r.editBox:SetText(""); end)
+    r.editBox:Show()
+
+    r.button = createButton(r)
+    r.button:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
+    r.button:SetSize(125, 20)
+    r.button:SetScript("OnClick", function() tryImportEncounter(r.editBox:GetText()) end)
+    r.button.txt = createFont(r.button, "CENTER", WD_BUTTON_IMPORT)
+    r.button.txt:SetAllPoints()
+
+    r:Hide()
+
+    StaticPopupDialogs["WD_ACCEPT_IMPORT"] = {
+        text = WD_IMPORT_QUESTION,
+        button1 = WD_BUTTON_IMPORT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            importEncounter(r.editBox:GetText())
+            r:Hide()
+        end,
+        OnCancel = function()
+            r:Hide()
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
 end
 
 function WD:InitEncountersModule(parent)
@@ -456,6 +619,22 @@ function WD:InitEncountersModule(parent)
     parent.notify.txt = createFont(parent.notify, "CENTER", WD_BUTTON_NOTIFY_RULES)
     parent.notify.txt:SetAllPoints()
 
+    -- export encounter button
+    parent.export = createButton(parent)
+    parent.export:SetPoint("TOPLEFT", parent.notify, "TOPRIGHT", 1, 0)
+    parent.export:SetSize(125, 20)
+    parent.export:SetScript("OnClick", function() WD:OpenExportEncounterMenu() end)
+    parent.export.txt = createFont(parent.export, "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
+    parent.export.txt:SetAllPoints()
+
+    -- import encounter button
+    parent.import = createButton(parent)
+    parent.import:SetPoint("TOPLEFT", parent.export, "TOPRIGHT", 1, 0)
+    parent.import:SetSize(125, 20)
+    parent.import:SetScript("OnClick", function() WD:OpenImportEncounterMenu() end)
+    parent.import.txt = createFont(parent.import, "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
+    parent.import.txt:SetAllPoints()
+
     -- headers
     local x, y = 1, -30
     parent.headers = {}
@@ -469,7 +648,9 @@ function WD:InitEncountersModule(parent)
 
     initNewRuleWindow(parent)
     initNotifyRuleWindow(parent)
-    initExportRuleWindow(parent)
+    initExportEncounterWindow(parent)
+    initExportWindow(parent)
+    initImportEncounterWindow(parent)
 
     updateRuleLines(parent)
 end
@@ -535,10 +716,9 @@ function WD:UpdateNewRuleMenu()
 end
 
 function WD:ExportRule(self, rule)
+    if not rule then return end
     local txt = encode64(table.tostring(rule))
-    --txt = decode64(txt)
-    --print(txt)
-    local r = self.exportRule
+    local r = self.exportWindow
     r.editBox:SetText(txt)
     r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
     r.editBox:HighlightText()
@@ -550,43 +730,25 @@ end
 
 function WD:ImportRule(str)
     local d = decode64(str)
-    -- parse rule
-    -- /script WD:ImportRule('e3R5cGU9IkVWX0RFQVRIIixhcmcxPSIiLGVuY291bnRlcj0iVURfTU9USEVSIixwb2ludHM9MjUsYXJnMD0yNjgyNzcsaXNBY3RpdmU9dHJ1ZX0=')
-    -- {type="EV_DEATH",arg1="",encounter="UD_MOTHER",points=25,arg0=267803,isActive=true}
+    local rule = parseRule(d)
+    return rule
+end
 
-    function parseValue(s)
-        if string.find(s, "\"") then
-            return s:sub(2,-2)
-        elseif s == "true" then
-            return true
-        elseif s == "false" then
-            return false
-        else
-            return s
-        end
-    end
+function WD:ExportEncounter(self, rules)
+    if not rules or #rules == 0 then return end
+    local txt = encode64(table.tostring(rules))
+    local r = self.exportWindow
+    r.editBox:SetText(txt)
+    r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
+    r.editBox:HighlightText()
+    r.editBox:SetAutoFocus(true)
+    r.editBox:SetCursorPosition(0)
 
-    local rule = {}
-    for i in string.gmatch(d, "[%w]+=[\"|_|%w]+") do
-        local dashIndex = string.find(i, "%=")
-        if dashIndex then
-            local k = string.sub(i, 1, dashIndex - 1)
-            local v = parseValue(string.sub(i, dashIndex + 1))
-            if k == "type" then
-                rule.type = v
-            elseif k == "encounter" then
-                rule.encounter = v
-            elseif k == "arg0" then
-                rule.arg0 = v
-            elseif k == "arg1" then
-                rule.arg1 = v
-            elseif k == "points" then
-                rule.points = v
-            elseif k == "isActive" then
-                rule.isActive = v
-            end
-        end
-    end
+    r:Show()
+end
 
-    print(getRuleDescription(rule))
+function WD:ImportEncounter(str)
+    local d = decode64(str)
+    local rules = parseEncounter(d)
+    return rules
 end

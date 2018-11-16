@@ -152,6 +152,16 @@ local function updateRuleLines(self)
 		self.scroller = scroller
 	end
 	
+	-- sort by encounter > points
+	local func = function(a, b)
+		if a.encounter < b.encounter then return true
+		elseif a.encounter > b.encounter then return false
+		else
+			return a.points > b.points
+		end
+	end
+	table.sort(WD.db.profile.rules, func)
+	
 	local x, y = 30, -51
 	for k,v in pairs(WD.db.profile.rules) do
 		if not self.rules[k] then
@@ -185,6 +195,11 @@ local function updateRuleLines(self)
 			ruleLine.column[index]:EnableMouse(true)
 			ruleLine.column[index]:SetScript('OnClick', function() table.remove(WD.db.profile.rules, k); updateRuleLines(self); end)
 			ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
+			index = index + 1
+			addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_EXPORT)
+			ruleLine.column[index]:EnableMouse(true)
+			ruleLine.column[index]:SetScript('OnClick', function() WD:ExportRule(self, ruleLine.rule); end)
+			ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
 
 			table.insert(self.rules, ruleLine)
 		else
@@ -195,6 +210,7 @@ local function updateRuleLines(self)
 			ruleLine.column[3].txt:SetText(getRuleDescription(v))
 			ruleLine.column[4].txt:SetText(v.points)
 			ruleLine.column[5]:SetScript('OnClick', function() editRuleLine(ruleLine); end)
+			ruleLine.column[7]:SetScript('OnClick', function() WD:ExportRule(self, ruleLine.rule); end)
 			ruleLine:Show()
 			updateScroller(self.scroller.slider, #WD.db.profile.rules)
 		end
@@ -266,7 +282,7 @@ local function saveRule(self)
 	
 	if found == false then
 		rule.isActive = true
-		table.insert(WD.db.profile.rules, rule)
+		WD.db.profile.rules[#WD.db.profile.rules+1] = rule
 	end
 	
 	updateRuleLines(self)
@@ -394,6 +410,33 @@ local function initNotifyRuleWindow(self)
 	r:Hide()
 end
 
+local function initExportRuleWindow(self)
+	self.exportRule = CreateFrame("Frame", nil, self)
+	local r = self.exportRule
+	r:EnableMouse(true)
+	r:SetPoint("CENTER", 0, 0)
+	r:SetSize(400, 400)
+	r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+	r.bg:SetAllPoints()
+	
+	createXButton(r, -1)
+	
+	r.editBox = createEditBox(r)
+	r.editBox:SetSize(398, 378)
+	r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -21)
+	r.editBox:SetMultiLine(true)
+	r.editBox:SetJustifyH("LEFT")
+	r.editBox:SetMaxBytes(nil)
+	r.editBox:SetMaxLetters(2048)
+	r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end);
+	r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end);
+	r.editBox.t = createColorTexture(r.editBox, "BACKGROUND", .2, .2, .2, 1)
+	r.editBox.t:SetAllPoints()	
+	r.editBox:Show()
+	
+	r:Hide()
+end
+
 function WD:InitEncountersModule(parent)
 	parent.rules = {}
 
@@ -421,10 +464,12 @@ function WD:InitEncountersModule(parent)
 	h = createTableHeaderNext(parent, h, WD_BUTTON_REASON, 395, 20)
 	h = createTableHeaderNext(parent, h, WD_BUTTON_POINTS_SHORT, 50, 20)
 	h = createTableHeaderNext(parent, h, '', 50, 20)
+	h = createTableHeaderNext(parent, h, '', 50, 20)
 	createTableHeaderNext(parent, h, '', 50, 20)
 
 	initNewRuleWindow(parent)
 	initNotifyRuleWindow(parent)
+	initExportRuleWindow(parent)
 
 	updateRuleLines(parent)
 end
@@ -487,4 +532,61 @@ function WD:UpdateNewRuleMenu()
 	newRuleFrame.editBox2:SetScript('OnEscapePressed', function() newRuleFrame.editBox2:SetText("points"); newRuleFrame.editBox2:ClearFocus() end)
 	newRuleFrame.editBox2:SetScript('OnEditFocusGained', function() newRuleFrame.editBox2:SetText(""); end)
 	newRuleFrame.editBox2:Show()
+end
+
+function WD:ExportRule(self, rule)
+	local txt = encode64(table.tostring(rule))
+	--txt = decode64(txt)
+	--print(txt)
+	local r = self.exportRule
+	r.editBox:SetText(txt)
+	r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
+	r.editBox:HighlightText()
+	r.editBox:SetAutoFocus(true)
+	r.editBox:SetCursorPosition(0)
+
+	r:Show()
+end
+
+function WD:ImportRule(str)
+	local d = decode64(str)
+	-- parse rule
+	-- /script WD:ImportRule('e3R5cGU9IkVWX0RFQVRIIixhcmcxPSIiLGVuY291bnRlcj0iVURfTU9USEVSIixwb2ludHM9MjUsYXJnMD0yNjgyNzcsaXNBY3RpdmU9dHJ1ZX0=')
+	-- {type="EV_DEATH",arg1="",encounter="UD_MOTHER",points=25,arg0=267803,isActive=true}
+	
+	function parseValue(s)
+		if string.find(s, "\"") then
+			return s:sub(2,-2)
+		elseif s == "true" then
+			return true
+		elseif s == "false" then
+			return false
+		else
+			return s
+		end
+	end
+	
+	local rule = {}
+	for i in string.gmatch(d, "[%w]+=[\"|_|%w]+") do
+		local dashIndex = string.find(i, "%=")
+		if dashIndex then
+			local k = string.sub(i, 1, dashIndex - 1)
+			local v = parseValue(string.sub(i, dashIndex + 1))
+			if k == "type" then
+				rule.type = v
+			elseif k == "encounter" then
+				rule.encounter = v
+			elseif k == "arg0" then
+				rule.arg0 = v
+			elseif k == "arg1" then
+				rule.arg1 = v
+			elseif k == "points" then
+				rule.points = v
+			elseif k == "isActive" then
+				rule.isActive = v
+			end
+		end
+	end
+	
+	print(getRuleDescription(rule))
 end

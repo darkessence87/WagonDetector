@@ -1,5 +1,5 @@
-﻿if GetLocale() ~= "ruRU" then 
-    return 
+﻿if GetLocale() ~= "ruRU" then
+    return
 end
 
 

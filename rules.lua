@@ -38,7 +38,7 @@ local function parseRule(str)
             return true
         elseif s == "false" then
             return false
-        elseif tonumber(s) ~= 0 then
+        elseif tonumber(s) ~= nil then
             return tonumber(s)
         else
             return s
@@ -46,7 +46,7 @@ local function parseRule(str)
     end
 
     local rule = {}
-    for i in string.gmatch(str, "[%w]+=[\"|_|%w]+") do
+    for i in string.gmatch(str, "[%w]+=[%w|\"|_|%-]+") do
         local dashIndex = string.find(i, "%=")
         if dashIndex then
             local k = string.sub(i, 1, dashIndex - 1)

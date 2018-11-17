@@ -1,6 +1,7 @@
 
 encounterTypes = {
     'Test',
+    'ALL',
     'UD_TALOC',
     'UD_MOTHER',
     'UD_ZEKVOZ',
@@ -25,100 +26,6 @@ ruleTypes = {
     'EV_FOOD',
     'EV_RUNES'
 }
-
-local function parseRule(str)
-    local rule = {}
-
-    -- parse rule
-    -- /script WD:ImportRule('e3R5cGU9IkVWX0RFQVRIIixhcmcxPSIiLGVuY291bnRlcj0iVURfTU9USEVSIixwb2ludHM9MjUsYXJnMD0yNjgyNzcsaXNBY3RpdmU9dHJ1ZX0=')
-    function parseValue(s)
-        if string.find(s, "\"") then
-            return s:sub(2,-2)
-        elseif s == "true" then
-            return true
-        elseif s == "false" then
-            return false
-        elseif tonumber(s) ~= nil then
-            return tonumber(s)
-        else
-            return s
-        end
-    end
-
-    local rule = {}
-    for i in string.gmatch(str, "[%w]+=[%w|\"|_|%-]+") do
-        local dashIndex = string.find(i, "%=")
-        if dashIndex then
-            local k = string.sub(i, 1, dashIndex - 1)
-            local v = parseValue(string.sub(i, dashIndex + 1))
-            if k == "type" then
-                rule.type = v
-            elseif k == "encounter" then
-                rule.encounter = v
-            elseif k == "arg0" then
-                rule.arg0 = v
-            elseif k == "arg1" then
-                rule.arg1 = v
-            elseif k == "points" then
-                rule.points = tonumber(v)
-            elseif k == "isActive" then
-                rule.isActive = v
-            end
-        end
-    end
-
-    return rule
-end
-
-local function parseEncounter(str)
-    local rules = {}
-
-    -- parse encounter
-    -- /script WD:ImportEncounter('e3t0eXBlPSJFVl9BVVJBIixhcmcxPSJhcHBseSIsZW5jb3VudGVyPSJUZXN0Iixwb2ludHM9MSxhcmcwPTc3NCxpc0FjdGl2ZT10cnVlfSx7dHlwZT0iRVZfQVVSQSIsYXJnMT0icmVtb3ZlIixlbmNvdW50ZXI9IlRlc3QiLHBvaW50cz0xLGFyZzA9Nzc0LGlzQWN0aXZlPXRydWV9fQ==')
-    string.gsub(str:sub(2,-2),"{(.-)}", function(a)
-        rules[#rules+1] = parseRule(a)
-    end)
-
-    return rules
-end
-
-local function getRuleDescription(rule)
-    if rule.type == "EV_DAMAGETAKEN" then
-        if rule.arg1 > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN, rule.arg1, getSpellLinkById(rule.arg0))
-        else
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, getSpellLinkById(rule.arg0))
-        end
-    elseif rule.type == "EV_DEATH" then
-        return string.format(WD_RULE_DEATH, getSpellLinkById(rule.arg0))
-    elseif rule.type == "EV_AURA" then
-        if rule.arg1 == "apply" then
-            return string.format(WD_RULE_APPLY_AURA, getSpellLinkById(rule.arg0))
-        else
-            return string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(rule.arg0))
-        end
-    elseif rule.type == "EV_AURA_STACKS" then
-        return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkById(rule.arg0))
-    elseif rule.type == "EV_START_CAST" then
-        return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkById(rule.arg0))
-    elseif rule.type == "EV_CAST" then
-        return string.format(WD_RULE_CAST, rule.arg1, getSpellLinkById(rule.arg0))
-    elseif rule.type == "EV_INTERRUPTED_CAST" then
-        return string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(rule.arg0), rule.arg1)
-    elseif rule.type == "EV_DEATH_UNIT" then
-        return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
-    elseif rule.type == "EV_POTIONS" then
-        return string.format(WD_RULE_POTIONS)
-    elseif rule.type == "EV_FLASKS" then
-        return string.format(WD_RULE_FLASKS)
-    elseif rule.type == "EV_FOOD" then
-        return string.format(WD_RULE_FOOD)
-    elseif rule.type == "EV_RUNES" then
-        return string.format(WD_RULE_RUNES)
-    end
-
-    return "Unsupported rule"
-end
 
 local function editRuleLine(ruleLine)
     local newRuleFrame = WD.guiFrame.module['encounters'].newRule
@@ -194,6 +101,44 @@ local function editRuleLine(ruleLine)
     newRuleFrame.editBox2:Show()
 end
 
+local function getRuleDescription(rule)
+    if rule.type == "EV_DAMAGETAKEN" then
+        if rule.arg1 > 0 then
+            return string.format(WD_RULE_DAMAGE_TAKEN, rule.arg1, getSpellLinkById(rule.arg0))
+        else
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, getSpellLinkById(rule.arg0))
+        end
+    elseif rule.type == "EV_DEATH" then
+        return string.format(WD_RULE_DEATH, getSpellLinkById(rule.arg0))
+    elseif rule.type == "EV_AURA" then
+        if rule.arg1 == "apply" then
+            return string.format(WD_RULE_APPLY_AURA, getSpellLinkById(rule.arg0))
+        else
+            return string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(rule.arg0))
+        end
+    elseif rule.type == "EV_AURA_STACKS" then
+        return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkById(rule.arg0))
+    elseif rule.type == "EV_START_CAST" then
+        return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkById(rule.arg0))
+    elseif rule.type == "EV_CAST" then
+        return string.format(WD_RULE_CAST, rule.arg1, getSpellLinkById(rule.arg0))
+    elseif rule.type == "EV_INTERRUPTED_CAST" then
+        return string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(rule.arg0), rule.arg1)
+    elseif rule.type == "EV_DEATH_UNIT" then
+        return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
+    elseif rule.type == "EV_POTIONS" then
+        return string.format(WD_RULE_POTIONS)
+    elseif rule.type == "EV_FLASKS" then
+        return string.format(WD_RULE_FLASKS)
+    elseif rule.type == "EV_FOOD" then
+        return string.format(WD_RULE_FOOD)
+    elseif rule.type == "EV_RUNES" then
+        return string.format(WD_RULE_RUNES)
+    end
+
+    return "Unsupported rule"
+end
+
 local function updateRuleLines(self)
     if not self.rules then return end
 
@@ -256,6 +201,11 @@ local function updateRuleLines(self)
             ruleLine.column[index]:EnableMouse(true)
             ruleLine.column[index]:SetScript('OnClick', function() WD:ExportRule(self, ruleLine.rule); end)
             ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
+            index = index + 1
+            addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_SHARE)
+            ruleLine.column[index]:EnableMouse(true)
+            ruleLine.column[index]:SetScript('OnClick', function() WD:ShareRule(self, ruleLine.rule); end)
+            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
 
             table.insert(self.rules, ruleLine)
         else
@@ -268,6 +218,7 @@ local function updateRuleLines(self)
             ruleLine.column[4].txt:SetText(v.points)
             ruleLine.column[5]:SetScript('OnClick', function() editRuleLine(ruleLine); end)
             ruleLine.column[7]:SetScript('OnClick', function() WD:ExportRule(self, ruleLine.rule); end)
+            ruleLine.column[8]:SetScript('OnClick', function() WD:ShareRule(self, ruleLine.rule); end)
             ruleLine:Show()
             updateScroller(self.scroller.slider, #WD.db.profile.rules)
         end
@@ -280,6 +231,82 @@ local function updateRuleLines(self)
             self.rules[i]:Hide()
         end
     end
+end
+
+local function isDuplicate(rule)
+    local found = false
+    for k,v in pairs(WD.db.profile.rules) do
+        if v.encounter == rule.encounter and v.type == rule.type and v.arg0 == rule.arg0 and v.arg1 == rule.arg1 then
+            found = true
+            v.points = rule.points
+            break
+        end
+    end
+    return found
+end
+
+local function insertRule(self, rule)
+    if rule.points ~= "" and rule.points ~= 0 then
+        if isDuplicate(rule) == false then
+            rule.isActive = true
+            WD.db.profile.rules[#WD.db.profile.rules+1] = rule
+            updateRuleLines(self)
+        else
+            print('This rule already exists')
+        end
+    else
+        print('Could not add rule with empty points')
+    end
+end
+
+local function parseRule(str)
+    function parseValue(s)
+        if string.find(s, "\"") then
+            return s:sub(2,-2)
+        elseif s == "true" then
+            return true
+        elseif s == "false" then
+            return false
+        elseif tonumber(s) ~= nil then
+            return tonumber(s)
+        else
+            return s
+        end
+    end
+
+    local rule = {}
+    for i in string.gmatch(str, "[%w]+=[%w|\"|_|%-]+") do
+        local dashIndex = string.find(i, "%=")
+        if dashIndex then
+            local k = string.sub(i, 1, dashIndex - 1)
+            local v = parseValue(string.sub(i, dashIndex + 1))
+            if k == "type" then
+                rule.type = v
+            elseif k == "encounter" then
+                rule.encounter = v
+            elseif k == "arg0" then
+                rule.arg0 = v
+            elseif k == "arg1" then
+                rule.arg1 = v
+            elseif k == "points" then
+                rule.points = tonumber(v)
+            elseif k == "isActive" then
+                rule.isActive = v
+            end
+        end
+    end
+
+    return rule
+end
+
+local function parseEncounter(str)
+    local rules = {}
+
+    string.gsub(str:sub(2,-2),"{(.-)}", function(a)
+        rules[#rules+1] = parseRule(a)
+    end)
+
+    return rules
 end
 
 local function saveRule(self)
@@ -325,24 +352,7 @@ local function saveRule(self)
         return
     end
 
-    if rule.points == "" or rule.points == 0 then return end
-
-    -- find duplicate
-    local found = false
-    for k,v in pairs(WD.db.profile.rules) do
-        if v.encounter == rule.encounter and v.type == rule.type and v.arg0 == rule.arg0 and v.arg1 == rule.arg1 then
-            found = true
-            v.points = rule.points
-            break
-        end
-    end
-
-    if found == false then
-        rule.isActive = true
-        WD.db.profile.rules[#WD.db.profile.rules+1] = rule
-    end
-
-    updateRuleLines(self)
+    insertRule(self, rule)
 end
 
 local function initNewRuleWindow(self)
@@ -538,6 +548,15 @@ local function initImportEncounterWindow(self)
         local rules = WD:ImportEncounter(str)
         if rules and #rules > 0 then
             StaticPopup_Show("WD_ACCEPT_IMPORT", rules[1].encounter)
+        else
+            -- try import as single rule
+            local rule = WD:ImportRule(str)
+            if rule.type then
+                insertRule(self, rule)
+            else
+                print('Could not parse rule')
+            end
+            r:Hide()
         end
     end
 
@@ -598,6 +617,29 @@ local function initImportEncounterWindow(self)
         hideOnEscape = false,
         preferredIndex = 3,
     }
+
+    StaticPopupDialogs["WD_ACCEPT_SHARED_RULE"] = {
+        text = WD_IMPORT_SHARED_QUESTION,
+        button1 = WD_BUTTON_ACCEPT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            if self.sharedRule then
+                local rule = WD:ImportRule(self.sharedRule)
+                if rule.type then
+                    insertRule(self, rule)
+                else
+                    print('Could not parse rule')
+                end
+            end
+        end,
+        OnCancel = function()
+            if self.sharedRule then self.sharedRule = "" end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
 end
 
 function WD:InitEncountersModule(parent)
@@ -644,7 +686,8 @@ function WD:InitEncountersModule(parent)
     h = createTableHeaderNext(parent, h, WD_BUTTON_POINTS_SHORT, 50, 20)
     h = createTableHeaderNext(parent, h, '', 50, 20)
     h = createTableHeaderNext(parent, h, '', 50, 20)
-    createTableHeaderNext(parent, h, '', 50, 20)
+    h = createTableHeaderNext(parent, h, '', 50, 20)
+    createTableHeaderNext(parent, h, '', 70, 20)
 
     initNewRuleWindow(parent)
     initNotifyRuleWindow(parent)
@@ -751,4 +794,16 @@ function WD:ImportEncounter(str)
     local d = decode64(str)
     local rules = parseEncounter(d)
     return rules
+end
+
+function WD:ShareRule(self, rule)
+    if not rule then return end
+    local txt = encode64(table.tostring(rule))
+    WD:SendAddonMessage('share_rule', txt)
+end
+
+function WD:ReceiveSharedRule(sender, str)
+    local r = WD.guiFrame.module['encounters']
+    r.sharedRule = str
+    StaticPopup_Show("WD_ACCEPT_SHARED_RULE", sender)
 end

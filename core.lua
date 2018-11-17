@@ -469,7 +469,8 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
             self.encounter.isBlockedByAnother = 1
             print(string.format(WD_LOCKED_BY, sender))
         elseif cmd == 'share_encounter' then
-            print('not supported yet')
+            local encounterName, str = string.match(data, '^(.*)$(.*)$')
+            WD:ReceiveSharedEncounter(sender, encounterName, str)
         elseif cmd == 'share_rule' then
             WD:ReceiveSharedRule(sender, data)
         end

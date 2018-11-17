@@ -390,6 +390,11 @@ function WD:OpenImportEncounterMenu()
     if encF.importEncounter:IsVisible() then encF.importEncounter:Hide() else encF.importEncounter:Show() end
 end
 
+function WD:OpenShareEncounterMenu()
+    local encF = self.guiFrame.module['encounters']
+    if encF.shareEncounter:IsVisible() then encF.shareEncounter:Hide() else encF.shareEncounter:Show() end
+end
+
 function WD:RefreshGuildRosterFrame()
     local f = WD.guiFrame.module['guild_roster']
     if f then

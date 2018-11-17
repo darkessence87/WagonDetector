@@ -259,6 +259,22 @@ local function insertRule(self, rule)
     end
 end
 
+local function insertEncounter(self, rules)
+    if not rules or #rules == 0 then return end
+    local encounter = rules[1].encounter
+    local newRules = {}
+    for k,v in pairs(WD.db.profile.rules) do
+        if v.encounter ~= encounter then
+            newRules[#newRules+1] = v
+        end
+    end
+    for i=1,#rules do
+        newRules[#newRules+1] = rules[i]
+    end
+    WD.db.profile.rules = newRules
+    updateRuleLines(self)
+end
+
 local function parseRule(str)
     function parseValue(s)
         if string.find(s, "\"") then
@@ -359,7 +375,7 @@ local function initNewRuleWindow(self)
     self.newRule = CreateFrame("Frame", nil, self)
     local r = self.newRule
     r:EnableMouse(true)
-    r:SetPoint("TOPLEFT", self.headers[#self.headers], "TOPRIGHT", 1, 1)
+    r:SetPoint("BOTTOMLEFT", self.addRule, "TOPLEFT", -1, 1)
     r:SetSize(152, 122)
     r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
@@ -562,20 +578,7 @@ local function initImportEncounterWindow(self)
 
     function importEncounter(str)
         local rules = WD:ImportEncounter(str)
-        if rules and #rules > 0 then
-            local encounter = rules[1].encounter
-            local newRules = {}
-            for k,v in pairs(WD.db.profile.rules) do
-                if v.encounter ~= encounter then
-                    newRules[#newRules+1] = v
-                end
-            end
-            for i=1,#rules do
-                newRules[#newRules+1] = rules[i]
-            end
-            WD.db.profile.rules = newRules
-            updateRuleLines(self)
-        end
+        insertEncounter(self, rules)
     end
 
     createXButton(r, -1)
@@ -630,6 +633,7 @@ local function initImportEncounterWindow(self)
                 else
                     print('Could not parse rule')
                 end
+                self.sharedRule = ""
             end
         end,
         OnCancel = function()
@@ -640,6 +644,64 @@ local function initImportEncounterWindow(self)
         hideOnEscape = false,
         preferredIndex = 3,
     }
+end
+
+local function initShareEncounterWindow(self)
+    self.shareEncounter = CreateFrame("Frame", nil, self)
+    local r = self.shareEncounter
+    r:EnableMouse(true)
+    r:SetPoint("BOTTOMLEFT", self.share, "TOPLEFT", 0, 1)
+    r:SetSize(152, 22)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    function shareEncounter(encounterName)
+        self.shareEncounter:Hide()
+        local rules = {}
+        for _,v in pairs(WD.db.profile.rules) do
+            if v.encounter == encounterName then
+                rules[#rules+1] = v
+            end
+        end
+        WD:ShareEncounter(self, encounterName, rules)
+    end
+
+    local items0 = {}
+    for i=1,#encounterTypes do
+        local item = { name = encounterTypes[i], func = function() shareEncounter(encounterTypes[i]) end }
+        table.insert(items0, item)
+    end
+
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0:SetSize(150, 20)
+    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+
+    StaticPopupDialogs["WD_ACCEPT_SHARED_ENCOUNTER"] = {
+        text = WD_IMPORT_SHARED_ENCOUNTER_QUESTION,
+        button1 = WD_BUTTON_ACCEPT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            if self.sharedRule then
+                local rules = WD:ImportEncounter(self.sharedRule)
+                if rules and #rules > 0 then
+                    insertEncounter(self, rules)
+                else
+                    print('Could not parse rule')
+                end
+
+                self.sharedRule = ""
+            end
+        end,
+        OnCancel = function()
+            if self.sharedRule then self.sharedRule = "" end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
+
+    r:Hide()
 end
 
 function WD:InitEncountersModule(parent)
@@ -677,6 +739,14 @@ function WD:InitEncountersModule(parent)
     parent.import.txt = createFont(parent.import, "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
     parent.import.txt:SetAllPoints()
 
+    -- share encounter button
+    parent.share = createButton(parent)
+    parent.share:SetPoint("TOPLEFT", parent.import, "TOPRIGHT", 1, 0)
+    parent.share:SetSize(125, 20)
+    parent.share:SetScript("OnClick", function() WD:OpenShareEncounterMenu() end)
+    parent.share.txt = createFont(parent.share, "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
+    parent.share.txt:SetAllPoints()
+
     -- headers
     local x, y = 1, -30
     parent.headers = {}
@@ -694,6 +764,7 @@ function WD:InitEncountersModule(parent)
     initExportEncounterWindow(parent)
     initExportWindow(parent)
     initImportEncounterWindow(parent)
+    initShareEncounterWindow(parent)
 
     updateRuleLines(parent)
 end
@@ -802,8 +873,20 @@ function WD:ShareRule(self, rule)
     WD:SendAddonMessage('share_rule', txt)
 end
 
+function WD:ShareEncounter(self, encounterName, rules)
+    if not rules or #rules == 0 then return end
+    local txt = encode64(table.tostring(rules))
+    WD:SendAddonMessage('share_encounter', encounterName..'$'..txt)
+end
+
 function WD:ReceiveSharedRule(sender, str)
     local r = WD.guiFrame.module['encounters']
     r.sharedRule = str
     StaticPopup_Show("WD_ACCEPT_SHARED_RULE", sender)
+end
+
+function WD:ReceiveSharedEncounter(sender, encounter, str)
+    local r = WD.guiFrame.module['encounters']
+    r.sharedRule = str
+    StaticPopup_Show("WD_ACCEPT_SHARED_ENCOUNTER", sender, encounter)
 end

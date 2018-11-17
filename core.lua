@@ -6,6 +6,7 @@ WDMF.encounter.isBlockedByAnother = 0
 
 encounterIDs = {
     [0] = 'Test',
+    [-1] = 'ALL',
     [2144] = 'UD_TALOC',
     [2141] = 'UD_MOTHER',
     [2136] = 'UD_ZEKVOZ',
@@ -117,7 +118,7 @@ local function getActiveRulesForEncounter(encounterId)
     }
 
     for i=1,#WD.db.profile.rules do
-        if WD.db.profile.rules[i].isActive == true and WD.db.profile.rules[i].encounter == encounterName then
+        if WD.db.profile.rules[i].isActive == true and (WD.db.profile.rules[i].encounter == encounterName or WD.db.profile.rules[i].encounter == 'ALL') then
             local rType = WD.db.profile.rules[i].type
             local arg0 = WD.db.profile.rules[i].arg0
             local arg1 = WD.db.profile.rules[i].arg1
@@ -454,6 +455,10 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
     realm = realm or currentRealmName
     receiver = receiver.."-"..realm
 
+    if WD:IsOfficer(receiver) == false then
+        return
+    end
+
     if sender == receiver then
         --print('Testing purpose, will be ignored in release')
         return
@@ -464,7 +469,9 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
             self.encounter.isBlockedByAnother = 1
             print(string.format(WD_LOCKED_BY, sender))
         elseif cmd == 'share_encounter' then
+            print('not supported yet')
         elseif cmd == 'share_rule' then
+            WD:ReceiveSharedRule(sender, data)
         end
     end
 end

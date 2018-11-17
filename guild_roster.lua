@@ -114,6 +114,15 @@ function WD:SortGuildRoster(param, inverse, callback)
     end
 end
 
+function WD:IsOfficer(name)
+    local name = self:FindMain(name)
+    if WD.cache.roster[name] then
+        return true
+    end
+
+    return false
+end
+
 function WD:SavePullsToGuildRoster(v)
     local name = self:FindMain(v.name)
     if WD.cache.roster[name] then

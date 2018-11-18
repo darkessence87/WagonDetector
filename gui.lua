@@ -254,6 +254,37 @@ local function initHistoryModule(self)
     createTableHeaderNext(self, h, '', 40, 20)
 
     self:SetScript('OnShow', WD.RefreshHistoryFrame)
+
+    self.exportWindow = CreateFrame("Frame", nil, self)
+    local r = self.exportWindow
+    r:EnableMouse(true)
+    r:SetPoint("CENTER", 0, 0)
+    r:SetSize(400, 400)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    createXButton(r, -1)
+
+    r.editBox = createEditBox(r)
+    r.editBox:SetSize(398, 378)
+    r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -21)
+    r.editBox:SetMultiLine(true)
+    r.editBox:SetJustifyH("LEFT")
+    r.editBox:SetMaxBytes(nil)
+    r.editBox:SetMaxLetters(4096)
+    r.editBox:SetHyperlinksEnabled(true)
+    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end);
+    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end);
+    r.editBox:Show()
+
+    r:Hide()
+
+    self.export = createButton(self)
+    self.export:SetPoint("TOPLEFT", self, "TOPLEFT", 1, -5)
+    self.export:SetSize(125, 20)
+    self.export:SetScript("OnClick", function() WD:ExportHistory() end)
+    self.export.txt = createFont(self.export, "CENTER", WD_BUTTON_EXPORT)
+    self.export.txt:SetAllPoints()
 end
 
 local function createModuleButton(self, name, ySize, yOffset)

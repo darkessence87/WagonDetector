@@ -365,6 +365,8 @@ function WDMF:OnEvent(event, ...)
         self:OnCombatEvent(CombatLogGetCurrentEventInfo())
     elseif event == 'CHAT_MSG_ADDON' then
         self:OnAddonMessage(...)
+    elseif event == 'ADDON_LOADED' then
+        C_ChatInfo.RegisterAddonMessagePrefix("WDCM")
     end
 end
 

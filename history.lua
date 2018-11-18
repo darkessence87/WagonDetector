@@ -38,3 +38,23 @@ function WD:AddPullHistory(encounter)
         WD.db.profile.encounters[encounter] = 1
     end
 end
+
+function WD:ExportHistory()
+    local r = WD.guiFrame.module['history'].exportWindow
+    local history = deepcopy(WD.db.profile.history)
+    for k,v in pairs(history) do
+        local _, _, spellString = string.find(v.reason, "|c%x+|H(.+)|h%[.*%]")
+        if spellString then
+            v.reason = string.gsub(v.reason, '|', '||')
+        end
+    end
+    local txt = encode64(table.tostring(history))
+
+    r.editBox:SetText(txt)
+    r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
+    r.editBox:HighlightText()
+    r.editBox:SetAutoFocus(true)
+    r.editBox:SetCursorPosition(0)
+
+    r:Show()
+end

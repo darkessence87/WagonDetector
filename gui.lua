@@ -211,7 +211,6 @@ local function initGuildRosterModule(self)
     h = createTableHeaderNext(self, h, WD_BUTTON_PULLS, 75, 20, function() headerButtonFunction("BY_PULLS") end)
     createTableHeaderNext(self, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
 
-    WD.cache = {}
     WD.cache.roster = {}
     WD.cache.rosterkeys = {}
 
@@ -225,7 +224,6 @@ local function initGuildRosterModule(self)
             updateGuildRosterFrame(self)
         end
     end)
-    --self:SetScript('OnShow', function(self) WD:RefreshGuildRosterFrame() end)
 end
 
 local function initLastEncounterModule(self)

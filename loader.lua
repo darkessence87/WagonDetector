@@ -37,6 +37,8 @@ function WD:OnInitialize()
             self.mainFrame:RegisterEvent('CHAT_MSG_ADDON')
             self.mainFrame:RegisterEvent('ENCOUNTER_START')
             self.mainFrame:RegisterEvent('ENCOUNTER_END')
+            self.mainFrame:RegisterEvent('INSPECT_READY')
+            self.mainFrame:RegisterEvent('RAID_ROSTER_UPDATE')
         end
 
         self.mainFrame:SetScript('OnEvent', function(self, ...) self:OnEvent(...); end)

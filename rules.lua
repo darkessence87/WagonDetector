@@ -1,34 +1,34 @@
 
 encounterTypes = {
-    'Test',
-    'ALL',
-    'UD_TALOC',
-    'UD_MOTHER',
-    'UD_ZEKVOZ',
-    'UD_VECTIS',
-    'UD_FETID',
-    'UD_ZUL',
-    'UD_MYTRAX',
-    'UD_GHUUN',
+    "Test",
+    "ALL",
+    "UD_TALOC",
+    "UD_MOTHER",
+    "UD_ZEKVOZ",
+    "UD_VECTIS",
+    "UD_FETID",
+    "UD_ZUL",
+    "UD_MYTRAX",
+    "UD_GHUUN",
 }
 
 ruleTypes = {
-    'EV_DAMAGETAKEN',
-    'EV_DEATH',
-    'EV_AURA',
-    'EV_AURA_STACKS',
-    'EV_START_CAST',
-    'EV_CAST',
-    'EV_INTERRUPTED_CAST',
-    'EV_DEATH_UNIT',
-    'EV_POTIONS',
-    'EV_FLASKS',
-    'EV_FOOD',
-    'EV_RUNES'
+    "EV_DAMAGETAKEN",
+    "EV_DEATH",
+    "EV_AURA",
+    "EV_AURA_STACKS",
+    "EV_START_CAST",
+    "EV_CAST",
+    "EV_INTERRUPTED_CAST",
+    "EV_DEATH_UNIT",
+    "EV_POTIONS",
+    "EV_FLASKS",
+    "EV_FOOD",
+    "EV_RUNES"
 }
 
 local function editRuleLine(ruleLine)
-    local newRuleFrame = WD.guiFrame.module['encounters'].newRule
+    local newRuleFrame = WD.guiFrame.module["encounters"].newRule
     if not ruleLine then return end
 
     if newRuleFrame:IsVisible() then newRuleFrame:Hide() return end
@@ -53,18 +53,18 @@ local function editRuleLine(ruleLine)
     end
 
     -- arg0
-    if rule ~= 'EV_POTIONS' and rule ~= 'EV_FLASKS' and rule ~= 'EV_FOOD' and rule ~= 'EV_RUNES' then
+    if rule ~= "EV_POTIONS" and rule ~= "EV_FLASKS" and rule ~= "EV_FOOD" and rule ~= "EV_RUNES" then
         local txt = ruleLine.rule.arg0
         newRuleFrame.editBox0:SetText(txt)
-        newRuleFrame.editBox0:SetScript('OnEscapePressed', function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
-        newRuleFrame.editBox0:SetScript('OnEditFocusGained', function() newRuleFrame.editBox0:SetText(""); end)
+        newRuleFrame.editBox0:SetScript("OnEscapePressed", function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
+        newRuleFrame.editBox0:SetScript("OnEditFocusGained", function() newRuleFrame.editBox0:SetText(""); end)
         newRuleFrame.editBox0:Show()
     else
         newRuleFrame.editBox0:Hide()
     end
 
     -- arg1
-    if ruleLine.rule.type == 'EV_AURA' then
+    if ruleLine.rule.type == "EV_AURA" then
         for i=1,#newRuleFrame.dropMenu1.items do
             if newRuleFrame.dropMenu1.items[i].txt:GetText() == ruleLine.rule.arg1 then
                 newRuleFrame.dropMenu1.selected = newRuleFrame.dropMenu1.items[i]
@@ -86,8 +86,8 @@ local function editRuleLine(ruleLine)
     else
         local ruleTxt = ruleLine.rule.arg1
         newRuleFrame.editBox1:SetText(ruleTxt)
-        newRuleFrame.editBox1:SetScript('OnEscapePressed', function() newRuleFrame.editBox1:SetText(ruleTxt); newRuleFrame.editBox1:ClearFocus() end)
-        newRuleFrame.editBox1:SetScript('OnEditFocusGained', function() newRuleFrame.editBox1:SetText(""); end)
+        newRuleFrame.editBox1:SetScript("OnEscapePressed", function() newRuleFrame.editBox1:SetText(ruleTxt); newRuleFrame.editBox1:ClearFocus() end)
+        newRuleFrame.editBox1:SetScript("OnEditFocusGained", function() newRuleFrame.editBox1:SetText(""); end)
         newRuleFrame.editBox1:Show()
         newRuleFrame.editBox1:ClearFocus()
         newRuleFrame.dropMenu1:Hide()
@@ -96,8 +96,8 @@ local function editRuleLine(ruleLine)
     -- points
     local points = ruleLine.rule.points
     newRuleFrame.editBox2:SetText(points)
-    newRuleFrame.editBox2:SetScript('OnEscapePressed', function() newRuleFrame.editBox2:SetText(points); newRuleFrame.editBox2:ClearFocus() end)
-    newRuleFrame.editBox2:SetScript('OnEditFocusGained', function() newRuleFrame.editBox2:SetText(""); end)
+    newRuleFrame.editBox2:SetScript("OnEscapePressed", function() newRuleFrame.editBox2:SetText(points); newRuleFrame.editBox2:ClearFocus() end)
+    newRuleFrame.editBox2:SetScript("OnEditFocusGained", function() newRuleFrame.editBox2:SetText(""); end)
     newRuleFrame.editBox2:Show()
 end
 
@@ -189,22 +189,22 @@ local function updateRuleLines(self)
             index = index + 1
             addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_EDIT)
             ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript('OnClick', function() editRuleLine(ruleLine); end)
+            ruleLine.column[index]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
             ruleLine.column[index].t:SetColorTexture(.2, 1, .2, .5)
             index = index + 1
             addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_DELETE)
             ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript('OnClick', function() table.remove(WD.db.profile.rules, k); updateRuleLines(self); end)
+            ruleLine.column[index]:SetScript("OnClick", function() table.remove(WD.db.profile.rules, k); updateRuleLines(self); end)
             ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
             index = index + 1
             addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_EXPORT)
             ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript('OnClick', function() WD:ExportRule(self, ruleLine.rule); end)
+            ruleLine.column[index]:SetScript("OnClick", function() WD:ExportRule(self, ruleLine.rule); end)
             ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
             index = index + 1
             addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_SHARE)
             ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript('OnClick', function() WD:ShareRule(self, ruleLine.rule); end)
+            ruleLine.column[index]:SetScript("OnClick", function() WD:ShareRule(self, ruleLine.rule); end)
             ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
 
             table.insert(self.rules, ruleLine)
@@ -216,9 +216,9 @@ local function updateRuleLines(self)
             ruleLine.column[2].txt:SetText(v.encounter)
             ruleLine.column[3].txt:SetText(getRuleDescription(v))
             ruleLine.column[4].txt:SetText(v.points)
-            ruleLine.column[5]:SetScript('OnClick', function() editRuleLine(ruleLine); end)
-            ruleLine.column[7]:SetScript('OnClick', function() WD:ExportRule(self, ruleLine.rule); end)
-            ruleLine.column[8]:SetScript('OnClick', function() WD:ShareRule(self, ruleLine.rule); end)
+            ruleLine.column[5]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
+            ruleLine.column[7]:SetScript("OnClick", function() WD:ExportRule(self, ruleLine.rule); end)
+            ruleLine.column[8]:SetScript("OnClick", function() WD:ShareRule(self, ruleLine.rule); end)
             ruleLine:Show()
             updateScroller(self.scroller.slider, #WD.db.profile.rules)
         end
@@ -252,10 +252,10 @@ local function insertRule(self, rule)
             WD.db.profile.rules[#WD.db.profile.rules+1] = rule
             updateRuleLines(self)
         else
-            print('This rule already exists')
+            print("This rule already exists")
         end
     else
-        print('Could not add rule with empty points')
+        print("Could not add rule with empty points")
     end
 end
 
@@ -338,30 +338,30 @@ local function saveRule(self)
     rule.arg1 = ""
     rule.points = f.editBox2:GetNumber()
 
-    if ruleType == 'EV_DAMAGETAKEN' then
+    if ruleType == "EV_DAMAGETAKEN" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = tonumber(f.editBox1:GetText()) or 0
-    elseif ruleType == 'EV_DEATH' then
+    elseif ruleType == "EV_DEATH" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-    elseif ruleType == 'EV_AURA' then
+    elseif ruleType == "EV_AURA" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.dropMenu1:GetText()
         if rule.arg1 ~= "apply" and rule.arg1 ~= "remove" then return end
-    elseif ruleType == 'EV_AURA_STACKS' then
+    elseif ruleType == "EV_AURA_STACKS" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = tonumber(f.editBox1:GetText()) or 1
-    elseif ruleType == 'EV_START_CAST' then
+    elseif ruleType == "EV_START_CAST" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.editBox1:GetText()
-    elseif ruleType == 'EV_CAST' then
+    elseif ruleType == "EV_CAST" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.editBox1:GetText()
-    elseif ruleType == 'EV_INTERRUPTED_CAST' then
+    elseif ruleType == "EV_INTERRUPTED_CAST" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.editBox1:GetText()
-    elseif ruleType == 'EV_DEATH_UNIT' then
+    elseif ruleType == "EV_DEATH_UNIT" then
         rule.arg0 = f.editBox0:GetText()
-    elseif ruleType == 'EV_POTIONS' or ruleType == 'EV_FLASKS' or ruleType == 'EV_FOOD' or ruleType == 'EV_RUNES' then
+    elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" then
         -- nothing to do here
     else
         print("Unsupported rule type:"..rule.type)
@@ -415,7 +415,7 @@ local function initNewRuleWindow(self)
     r.editBox1:Hide()
 
     local items2 = { {name = "apply"},{name = "remove"} }
-    r.dropMenu1 = createDropDownMenu(r, 'Select aura action', items2)
+    r.dropMenu1 = createDropDownMenu(r, "Select aura action", items2)
     r.dropMenu1.txt:SetJustifyH("CENTER")
     r.dropMenu1:SetSize(xSize, 20)
     r.dropMenu1:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -22)
@@ -428,7 +428,7 @@ local function initNewRuleWindow(self)
     r.editBox2:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -43)
     r.editBox2:Hide()
 
-    r:SetScript('OnHide', function()
+    r:SetScript("OnHide", function()
         r.editBox0:Hide()
         r.editBox1:Hide()
         r.editBox2:Hide()
@@ -438,7 +438,7 @@ local function initNewRuleWindow(self)
     r.saveButton = createButton(r)
     r.saveButton:SetPoint("TOPLEFT", r.dropFrame0, "BOTTOMLEFT", 0, -85)
     r.saveButton:SetSize(74, 15)
-    r.saveButton:SetScript('OnClick', function() saveRule(self); r:Hide() end)
+    r.saveButton:SetScript("OnClick", function() saveRule(self); r:Hide() end)
     r.saveButton.t:SetColorTexture(.2, .4, .2, 1)
     r.saveButton.txt = createFont(r.saveButton, "CENTER", "Save")
     r.saveButton.txt:SetSize(74, 15)
@@ -447,7 +447,7 @@ local function initNewRuleWindow(self)
     r.cancelButton = createButton(r)
     r.cancelButton:SetPoint("TOPLEFT", r.saveButton, "TOPRIGHT", 2, 0)
     r.cancelButton:SetSize(74, 15)
-    r.cancelButton:SetScript('OnClick', function() r:Hide() end)
+    r.cancelButton:SetScript("OnClick", function() r:Hide() end)
     r.cancelButton.t:SetColorTexture(.4, .2, .2, 1)
     r.cancelButton.txt = createFont(r.cancelButton, "CENTER", "Cancel")
     r.cancelButton.txt:SetSize(74, 15)
@@ -570,7 +570,7 @@ local function initImportEncounterWindow(self)
             if rule.type then
                 insertRule(self, rule)
             else
-                print('Could not parse rule')
+                print("Could not parse rule")
             end
             r:Hide()
         end
@@ -631,7 +631,7 @@ local function initImportEncounterWindow(self)
                 if rule.type then
                     insertRule(self, rule)
                 else
-                    print('Could not parse rule')
+                    print("Could not parse rule")
                 end
                 self.sharedRule = ""
             end
@@ -686,7 +686,7 @@ local function initShareEncounterWindow(self)
                 if rules and #rules > 0 then
                     insertEncounter(self, rules)
                 else
-                    print('Could not parse rule')
+                    print("Could not parse rule")
                 end
 
                 self.sharedRule = ""
@@ -750,14 +750,14 @@ function WD:InitEncountersModule(parent)
     -- headers
     local x, y = 1, -30
     parent.headers = {}
-    local h = createTableHeader(parent, '', x, y, 20, 20)
+    local h = createTableHeader(parent, "", x, y, 20, 20)
     h = createTableHeader(parent, WD_BUTTON_ENCOUNTER, x + 21, y, 75, 20)
     h = createTableHeaderNext(parent, h, WD_BUTTON_REASON, 395, 20)
     h = createTableHeaderNext(parent, h, WD_BUTTON_POINTS_SHORT, 50, 20)
-    h = createTableHeaderNext(parent, h, '', 50, 20)
-    h = createTableHeaderNext(parent, h, '', 50, 20)
-    h = createTableHeaderNext(parent, h, '', 50, 20)
-    createTableHeaderNext(parent, h, '', 70, 20)
+    h = createTableHeaderNext(parent, h, "", 50, 20)
+    h = createTableHeaderNext(parent, h, "", 50, 20)
+    h = createTableHeaderNext(parent, h, "", 50, 20)
+    createTableHeaderNext(parent, h, "", 70, 20)
 
     initNewRuleWindow(parent)
     initNotifyRuleWindow(parent)
@@ -770,13 +770,13 @@ function WD:InitEncountersModule(parent)
 end
 
 function WD:UpdateNewRuleMenu()
-    local newRuleFrame = WD.guiFrame.module['encounters'].newRule
+    local newRuleFrame = WD.guiFrame.module["encounters"].newRule
     if not newRuleFrame.dropFrame1.selected then return end
 
     local rule = newRuleFrame.dropFrame1.selected.txt:GetText()
 
     -- arg0 name (based on rule type)
-    if rule ~= 'EV_POTIONS' and rule ~= 'EV_FLASKS' and rule ~= 'EV_FOOD' and rule ~= 'EV_RUNES' then
+    if rule ~= "EV_POTIONS" and rule ~= "EV_FLASKS" and rule ~= "EV_FOOD" and rule ~= "EV_RUNES" then
         local txt = ""
         if rule == "EV_DEATH_UNIT" then
             txt = "unit name"
@@ -785,8 +785,8 @@ function WD:UpdateNewRuleMenu()
         end
 
         newRuleFrame.editBox0:SetText(txt)
-        newRuleFrame.editBox0:SetScript('OnEscapePressed', function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
-        newRuleFrame.editBox0:SetScript('OnEditFocusGained', function() newRuleFrame.editBox0:SetText(""); end)
+        newRuleFrame.editBox0:SetScript("OnEscapePressed", function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
+        newRuleFrame.editBox0:SetScript("OnEditFocusGained", function() newRuleFrame.editBox0:SetText(""); end)
         newRuleFrame.editBox0:Show()
     else
         newRuleFrame.editBox0:Hide()
@@ -815,8 +815,8 @@ function WD:UpdateNewRuleMenu()
             ruleTxt = "unit name"
         end
         newRuleFrame.editBox1:SetText(ruleTxt)
-        newRuleFrame.editBox1:SetScript('OnEscapePressed', function() newRuleFrame.editBox1:SetText(ruleTxt); newRuleFrame.editBox1:ClearFocus() end)
-        newRuleFrame.editBox1:SetScript('OnEditFocusGained', function() newRuleFrame.editBox1:SetText(""); end)
+        newRuleFrame.editBox1:SetScript("OnEscapePressed", function() newRuleFrame.editBox1:SetText(ruleTxt); newRuleFrame.editBox1:ClearFocus() end)
+        newRuleFrame.editBox1:SetScript("OnEditFocusGained", function() newRuleFrame.editBox1:SetText(""); end)
         newRuleFrame.editBox1:Show()
         newRuleFrame.editBox1:ClearFocus()
         newRuleFrame.dropMenu1:Hide()
@@ -824,8 +824,8 @@ function WD:UpdateNewRuleMenu()
 
     -- arg2 points
     newRuleFrame.editBox2:SetText("points")
-    newRuleFrame.editBox2:SetScript('OnEscapePressed', function() newRuleFrame.editBox2:SetText("points"); newRuleFrame.editBox2:ClearFocus() end)
-    newRuleFrame.editBox2:SetScript('OnEditFocusGained', function() newRuleFrame.editBox2:SetText(""); end)
+    newRuleFrame.editBox2:SetScript("OnEscapePressed", function() newRuleFrame.editBox2:SetText("points"); newRuleFrame.editBox2:ClearFocus() end)
+    newRuleFrame.editBox2:SetScript("OnEditFocusGained", function() newRuleFrame.editBox2:SetText(""); end)
     newRuleFrame.editBox2:Show()
 end
 
@@ -870,23 +870,23 @@ end
 function WD:ShareRule(self, rule)
     if not rule then return end
     local txt = encode64(table.tostring(rule))
-    WD:SendAddonMessage('share_rule', txt)
+    WD:SendAddonMessage("share_rule", txt)
 end
 
 function WD:ShareEncounter(self, encounterName, rules)
     if not rules or #rules == 0 then return end
     local txt = encode64(table.tostring(rules))
-    WD:SendAddonMessage('share_encounter', encounterName..'$'..txt)
+    WD:SendAddonMessage("share_encounter", encounterName.."$"..txt)
 end
 
 function WD:ReceiveSharedRule(sender, str)
-    local r = WD.guiFrame.module['encounters']
+    local r = WD.guiFrame.module["encounters"]
     r.sharedRule = str
     StaticPopup_Show("WD_ACCEPT_SHARED_RULE", sender)
 end
 
 function WD:ReceiveSharedEncounter(sender, encounter, str)
-    local r = WD.guiFrame.module['encounters']
+    local r = WD.guiFrame.module["encounters"]
     r.sharedRule = str
     StaticPopup_Show("WD_ACCEPT_SHARED_ENCOUNTER", sender, encounter)
 end

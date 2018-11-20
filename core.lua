@@ -8,16 +8,16 @@ WD.cache = {}
 WD.cache.raidroster = {}
 
 encounterIDs = {
-    [0] = 'Test',
-    [-1] = 'ALL',
-    [2144] = 'UD_TALOC',
-    [2141] = 'UD_MOTHER',
-    [2136] = 'UD_ZEKVOZ',
-    [-1] = 'UD_VECTIS',
-    [-1] = 'UD_FETID',
-    [-1] = 'UD_ZUL',
-    [-1] = 'UD_MYTRAX',
-    [2122] = 'UD_GHUUN',
+    [0] = "Test",
+    [-1] = "ALL",
+    [2144] = "UD_TALOC",
+    [2141] = "UD_MOTHER",
+    [2136] = "UD_ZEKVOZ",
+    [-1] = "UD_VECTIS",
+    [-1] = "UD_FETID",
+    [-1] = "UD_ZUL",
+    [-1] = "UD_MYTRAX",
+    [2122] = "UD_GHUUN",
 }
 
 local ClassSpecializations = {
@@ -143,40 +143,40 @@ end
 local function getActiveRulesForEncounter(encounterId)
     local encounterName = encounterIDs[encounterId]
     if not encounterName then
-        print('Unknown name for encounterId:'..encounterId)
+        print("Unknown name for encounterId:"..encounterId)
     end
 
     local rules = {
-        ['EV_DAMAGETAKEN'] = {},    -- done
-        ['EV_DEATH'] = {},            -- done
-        ['EV_AURA'] = {{{}}},        -- done
-        ['EV_AURA_STACKS'] = {},    -- done
-        ['EV_START_CAST'] = {},        -- done
-        ['EV_CAST'] = {},            -- done
-        ['EV_INTERRUPTED_CAST'] = {},    -- done
-        ['EV_DEATH_UNIT'] = {},        -- done
-        ['EV_POTIONS'] = {},        -- done
-        ['EV_FLASKS'] = {},            -- done
-        ['EV_FOOD'] = {},            -- done
-        ['EV_RUNES'] = {},            -- done
+        ["EV_DAMAGETAKEN"] = {},    -- done
+        ["EV_DEATH"] = {},            -- done
+        ["EV_AURA"] = {{{}}},        -- done
+        ["EV_AURA_STACKS"] = {},    -- done
+        ["EV_START_CAST"] = {},        -- done
+        ["EV_CAST"] = {},            -- done
+        ["EV_INTERRUPTED_CAST"] = {},    -- done
+        ["EV_DEATH_UNIT"] = {},        -- done
+        ["EV_POTIONS"] = {},        -- done
+        ["EV_FLASKS"] = {},            -- done
+        ["EV_FOOD"] = {},            -- done
+        ["EV_RUNES"] = {},            -- done
     }
 
     for i=1,#WD.db.profile.rules do
-        if WD.db.profile.rules[i].isActive == true and (WD.db.profile.rules[i].encounter == encounterName or WD.db.profile.rules[i].encounter == 'ALL') then
+        if WD.db.profile.rules[i].isActive == true and (WD.db.profile.rules[i].encounter == encounterName or WD.db.profile.rules[i].encounter == "ALL") then
             local rType = WD.db.profile.rules[i].type
             local arg0 = WD.db.profile.rules[i].arg0
             local arg1 = WD.db.profile.rules[i].arg1
             local p = WD.db.profile.rules[i].points
-            if rType == 'EV_DAMAGETAKEN' then
+            if rType == "EV_DAMAGETAKEN" then
                 rules[rType][arg0] = {}
                 rules[rType][arg0].amount = arg1
                 rules[rType][arg0].points = p
-            elseif rType == 'EV_DEATH' then
+            elseif rType == "EV_DEATH" then
                 rules[rType][arg0] = p
-            elseif rType == 'EV_DEATH_UNIT' then
+            elseif rType == "EV_DEATH_UNIT" then
                 rules[rType].unit = arg0
                 rules[rType].points = p
-            elseif rType == 'EV_POTIONS' or rType == 'EV_FLASKS' or rType == 'EV_FOOD' or rType == 'EV_RUNES' then
+            elseif rType == "EV_POTIONS" or rType == "EV_FLASKS" or rType == "EV_FOOD" or rType == "EV_RUNES" then
                 rules[rType].points = p
             else
                 if not rules[rType][arg0] then
@@ -212,7 +212,7 @@ local function addSuccess(timestamp, name, msg, points)
     if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
         local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
         local txt = t.." "..name.." [NICE] "..msg
-        print('Ignored success: '..txt)
+        print("Ignored success: "..txt)
         return
     end
 
@@ -238,7 +238,7 @@ local function addFail(timestamp, name, msg, points)
     if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
         local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
         local txt = t.." "..name.." [FAIL] "..msg
-        print('Ignored fuckup: '..txt)
+        print("Ignored fuckup: "..txt)
         return
     end
 
@@ -265,13 +265,13 @@ end
 
 local function checkConsumables(timestamp, name, unit, rules)
     local noflask, nofood, norune = nil, nil, nil
-    if rules['EV_FLASKS'].points then
+    if rules["EV_FLASKS"].points then
         noflask = true
     end
-    if rules['EV_FOOD'].points then
+    if rules["EV_FOOD"].points then
         nofood = true
     end
-    if rules['EV_RUNES'].points then
+    if rules["EV_RUNES"].points then
         norune = true
     end
 
@@ -295,13 +295,13 @@ local function checkConsumables(timestamp, name, unit, rules)
     end
 
     if noflask and noflask == true then
-        addFail(timestamp, getShortCharacterName(name), WD_RULE_FLASKS, rules['EV_FLASKS'].points)
+        addFail(timestamp, getShortCharacterName(name), WD_RULE_FLASKS, rules["EV_FLASKS"].points)
     end
     if nofood and nofood == true then
-        addFail(timestamp, getShortCharacterName(name), WD_RULE_FOOD, rules['EV_FOOD'].points)
+        addFail(timestamp, getShortCharacterName(name), WD_RULE_FOOD, rules["EV_FOOD"].points)
     end
     if norune and norune == true then
-        addFail(timestamp, getShortCharacterName(name), WD_RULE_RUNES, rules['EV_RUNES'].points)
+        addFail(timestamp, getShortCharacterName(name), WD_RULE_RUNES, rules["EV_RUNES"].points)
     end
 end
 
@@ -315,53 +315,53 @@ function WDMF:OnCombatEvent(...)
 
     local rules = WDMF.encounter.rules
 
-    if event == 'SPELL_AURA_APPLIED' and rules['EV_AURA'][spell_id] and rules['EV_AURA'][spell_id]["apply"] then
-        local p = rules['EV_AURA'][spell_id]["apply"]
+    if event == "SPELL_AURA_APPLIED" and rules["EV_AURA"][spell_id] and rules["EV_AURA"][spell_id]["apply"] then
+        local p = rules["EV_AURA"][spell_id]["apply"]
         addFail(timestamp, dst_name, string.format(WD_RULE_APPLY_AURA, getSpellLinkById(spell_id)), p)
     end
 
-    if event == 'SPELL_AURA_REMOVED' then
-        if rules['EV_AURA'][spell_id] and rules['EV_AURA'][spell_id]["remove"] then
-            local p = rules['EV_AURA'][spell_id]["remove"]
+    if event == "SPELL_AURA_REMOVED" then
+        if rules["EV_AURA"][spell_id] and rules["EV_AURA"][spell_id]["remove"] then
+            local p = rules["EV_AURA"][spell_id]["remove"]
             addFail(timestamp, dst_name, string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(spell_id)), p)
         end
 
         -- potions
-        if rules['EV_POTIONS'].points then
+        if rules["EV_POTIONS"].points then
             local role = getRole(dst_name)
-            if (role == 'DAMAGE' or role == 'Unknown') and potionSpellIds[spell_id] then
-                addSuccess(timestamp, getShortCharacterName(dst_name), WD_RULE_POTIONS, rules['EV_POTIONS'].points)
+            if (role == "DAMAGE" or role == "Unknown") and potionSpellIds[spell_id] then
+                addSuccess(timestamp, getShortCharacterName(dst_name), WD_RULE_POTIONS, rules["EV_POTIONS"].points)
             end
         end
     end
 
-    if event == 'SPELL_AURA_APPLIED_DOSE' then
+    if event == "SPELL_AURA_APPLIED_DOSE" then
         local stacks = tonumber(arg[16])
-        if rules['EV_AURA_STACKS'][spell_id] and rules['EV_AURA_STACKS'][spell_id][stacks] then
-            local p = rules['EV_AURA'][spell_id]["remove"][stacks]
+        if rules["EV_AURA_STACKS"][spell_id] and rules["EV_AURA_STACKS"][spell_id][stacks] then
+            local p = rules["EV_AURA"][spell_id]["remove"][stacks]
             addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkById(spell_id)), p)
         end
     end
 
-    if event == 'SPELL_CAST_START' and rules['EV_START_CAST'][spell_id] and rules['EV_START_CAST'][spell_id][src_name] then
-        local p = rules['EV_START_CAST'][spell_id][src_name]
+    if event == "SPELL_CAST_START" and rules["EV_START_CAST"][spell_id] and rules["EV_START_CAST"][spell_id][src_name] then
+        local p = rules["EV_START_CAST"][spell_id][src_name]
         addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_START, src_name, getSpellLinkById(spell_id)), p)
     end
 
-    if event == 'SPELL_CAST_SUCCESS' and rules['EV_CAST'][spell_id] and rules['EV_CAST'][spell_id][src_name] then
-        local p = rules['EV_CAST'][spell_id][src_name]
+    if event == "SPELL_CAST_SUCCESS" and rules["EV_CAST"][spell_id] and rules["EV_CAST"][spell_id][src_name] then
+        local p = rules["EV_CAST"][spell_id][src_name]
         addSuccess(timestamp, src_name, string.format(WD_RULE_CAST, src_name, getSpellLinkById(spell_id)), p)
     end
 
-    if event == 'SPELL_INTERRUPT' then
+    if event == "SPELL_INTERRUPT" then
         local target_spell_id = tonumber(arg[14])
-        if rules['EV_INTERRUPTED_CAST'][target_spell_id] and rules['EV_INTERRUPTED_CAST'][target_spell_id][dst_name] then
-            local p = rules['EV_CAST'][spell_id][dst_name]
+        if rules["EV_INTERRUPTED_CAST"][target_spell_id] and rules["EV_INTERRUPTED_CAST"][target_spell_id][dst_name] then
+            local p = rules["EV_CAST"][spell_id][dst_name]
             addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(spell_id)), src_name, p)
         end
     end
 
-    if event == 'SPELL_DAMAGE' then
+    if event == "SPELL_DAMAGE" then
         local death_rule = rules["EV_DEATH"][spell_id]
         local damagetaken_rule = rules["EV_DAMAGETAKEN"][spell_id]
         local amount, overkill = tonumber(arg[15]), tonumber(arg[16])
@@ -382,7 +382,7 @@ function WDMF:OnCombatEvent(...)
         end
     end
 
-    if event == 'UNIT_DIED' then
+    if event == "UNIT_DIED" then
         for i=1,#self.encounter.players do
             if self.encounter.players[i].name == getFullCharacterName(dst_name) then
                 self.encounter.deaths = self.encounter.deaths + 1
@@ -390,31 +390,31 @@ function WDMF:OnCombatEvent(...)
             end
         end
 
-        if rules['EV_DEATH_UNIT'].unit == dst_name then
-            addSuccess(timestamp, dst_name, string.format(WD_RULE_DEATH_UNIT, dst_name), rules['EV_DEATH_UNIT'].points)
+        if rules["EV_DEATH_UNIT"].unit == dst_name then
+            addSuccess(timestamp, dst_name, string.format(WD_RULE_DEATH_UNIT, dst_name), rules["EV_DEATH_UNIT"].points)
         end
     end
 end
 
 function WDMF:OnEvent(event, ...)
-    if event == 'ENCOUNTER_START' then
+    if event == "ENCOUNTER_START" then
         local encounterID, name = ...
         self:ResetEncounter()
         self:StartEncounter(encounterID, name)
-        self:RegisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
-    elseif event == 'ENCOUNTER_END' then
-        self:UnregisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
+        self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    elseif event == "ENCOUNTER_END" then
+        self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         self:StopEncounter()
-    elseif event == 'COMBAT_LOG_EVENT_UNFILTERED' then
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
         self:OnCombatEvent(CombatLogGetCurrentEventInfo())
-    elseif event == 'CHAT_MSG_ADDON' then
+    elseif event == "CHAT_MSG_ADDON" then
         self:OnAddonMessage(...)
-    elseif event == 'ADDON_LOADED' then
+    elseif event == "ADDON_LOADED" then
         C_ChatInfo.RegisterAddonMessagePrefix("WDCM")
-    elseif event == 'RAID_ROSTER_UPDATE' then
+    elseif event == "RAID_ROSTER_UPDATE" then
         WD.cache.raidroster = {}
         for i=1, GetNumGroupMembers() do
-            local unit = 'raid'..i
+            local unit = "raid"..i
             local name, realm = UnitName(unit)
             realm = realm or currentRealmName
             local _,class = UnitClass(unit)
@@ -427,7 +427,7 @@ function WDMF:OnEvent(event, ...)
 
             NotifyInspect(unit)
         end
-    elseif event == 'INSPECT_READY' then
+    elseif event == "INSPECT_READY" then
         if not WD.cache.raidroster then return end
         local guid = ...
         local _,_,_,race,_,name,realm = GetPlayerInfoByGUID(guid)
@@ -452,12 +452,12 @@ function WDMF:StartEncounter(encounterID, encounterName)
     WD:AddPullHistory(encounterName)
 
     self.encounter.id = encounterID
-    self.encounter.name = date("%d/%m").." "..encounterName..' ('..pullId..')'
+    self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
     self.encounter.startTime = time()
     self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
     self.encounter.players = {}
 
-    if UnitInRaid('player') ~= nil then
+    if UnitInRaid("player") ~= nil then
         for _,v in pairs(WD.cache.raidroster) do
             if UnitIsVisible(v.unit) then
                 self.encounter.players[#self.encounter.players+1] = v
@@ -465,12 +465,12 @@ function WDMF:StartEncounter(encounterID, encounterName)
             end
         end
     else
-        local name = UnitName('player')
-        local _,class = UnitClass('player')
+        local name = UnitName("player")
+        local _,class = UnitClass("player")
 
         local p = {}
         p.name = name
-        p.unit = 'player'
+        p.unit = "player"
         p.class = class
         WD.cache.raidroster[p.name] = p
         local specId = GetSpecialization()
@@ -521,32 +521,32 @@ function WDMF:ResetEncounter()
 end
 
 function WDMF:OnAddonMessage(msgId, msg, channel, sender)
-    -- /dump WD:SendAddonMessage('cmd1', 'data1')
+    -- /dump WD:SendAddonMessage("cmd1", "data1")
     if msgId ~= "WDCM" then return end
 
-    local cmd, data = string.match(msg, '^(.*):(.*)$')
-    local receiver, realm = UnitName('player')
+    local cmd, data = string.match(msg, "^(.*):(.*)$")
+    local receiver, realm = UnitName("player")
     realm = realm or currentRealmName
     receiver = receiver.."-"..realm
 
     if WD:IsOfficer(receiver) == false then
-        print('You are not officer to receive message')
+        print("You are not officer to receive message")
         return
     end
 
     if sender == receiver then
-        --print('Testing purpose, will be ignored in release')
+        --print("Testing purpose, will be ignored in release")
         return
     end
 
     if cmd then
-        if cmd == 'block_encounter' then
+        if cmd == "block_encounter" then
             self.encounter.isBlockedByAnother = 1
             print(string.format(WD_LOCKED_BY, sender))
-        elseif cmd == 'share_encounter' then
-            local encounterName, str = string.match(data, '^(.*)$(.*)$')
+        elseif cmd == "share_encounter" then
+            local encounterName, str = string.match(data, "^(.*)$(.*)$")
             WD:ReceiveSharedEncounter(sender, encounterName, str)
-        elseif cmd == 'share_rule' then
+        elseif cmd == "share_rule" then
             WD:ReceiveSharedRule(sender, data)
         end
     end
@@ -554,20 +554,20 @@ end
 
 function WD:EnableConfig()
     if WD.db.profile.isEnabled == false then
-        WDMF:RegisterEvent('CHAT_MSG_ADDON')
-        WDMF:RegisterEvent('ENCOUNTER_START')
-        WDMF:RegisterEvent('ENCOUNTER_END')
-        WDMF:RegisterEvent('INSPECT_READY')
-        WDMF:RegisterEvent('RAID_ROSTER_UPDATE')
+        WDMF:RegisterEvent("CHAT_MSG_ADDON")
+        WDMF:RegisterEvent("ENCOUNTER_START")
+        WDMF:RegisterEvent("ENCOUNTER_END")
+        WDMF:RegisterEvent("INSPECT_READY")
+        WDMF:RegisterEvent("RAID_ROSTER_UPDATE")
 
         WD.db.profile.isEnabled = true
         sendMessage(WD_ENABLED)
     else
-        WDMF:UnregisterEvent('CHAT_MSG_ADDON')
-        WDMF:UnregisterEvent('ENCOUNTER_START')
-        WDMF:UnregisterEvent('ENCOUNTER_END')
-        WDMF:UnregisterEvent('INSPECT_READY')
-        WDMF:UnregisterEvent('RAID_ROSTER_UPDATE')
+        WDMF:UnregisterEvent("CHAT_MSG_ADDON")
+        WDMF:UnregisterEvent("ENCOUNTER_START")
+        WDMF:UnregisterEvent("ENCOUNTER_END")
+        WDMF:UnregisterEvent("INSPECT_READY")
+        WDMF:UnregisterEvent("RAID_ROSTER_UPDATE")
 
         WD.db.profile.isEnabled = false
         sendMessage(WD_DISABLED)
@@ -576,13 +576,13 @@ end
 
 function WD:SendAddonMessage(cmd, data)
     if not cmd then return end
-    if not data then data = '' end
+    if not data then data = "" end
 
     if cmd == "block_encounter" then
         WDMF.encounter.isBlockedByAnother = 0
     end
 
     local msgId = "WDCM"
-    local msg = cmd..':'..data
-    C_ChatInfo.SendAddonMessage(msgId, msg, 'GUILD')
+    local msg = cmd..":"..data
+    C_ChatInfo.SendAddonMessage(msgId, msg, "GUILD")
 end

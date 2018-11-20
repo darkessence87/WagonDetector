@@ -10,10 +10,10 @@ function WD:RevertHistory(v)
     WD:DeleteHistory(v)
 
     if v.isReverted == true then
-        v.reason = string.match(v.reason, '%['..WD_REVERT_STR..'%]%s(.*)')
+        v.reason = string.match(v.reason, "%["..WD_REVERT_STR.."%]%s(.*)")
         v.isReverted = false
     else
-        v.reason = '['..WD_REVERT_STR..'] '..v.reason
+        v.reason = "["..WD_REVERT_STR.."] "..v.reason
         v.isReverted = true
     end
 
@@ -40,12 +40,12 @@ function WD:AddPullHistory(encounter)
 end
 
 function WD:ExportHistory()
-    local r = WD.guiFrame.module['history'].exportWindow
+    local r = WD.guiFrame.module["history"].exportWindow
     local history = deepcopy(WD.db.profile.history)
     for k,v in pairs(history) do
         local _, _, spellString = string.find(v.reason, "|c%x+|H(.+)|h%[.*%]")
         if spellString then
-            v.reason = string.gsub(v.reason, '|', '||')
+            v.reason = string.gsub(v.reason, "|", "||")
         end
     end
     local txt = encode64(table.tostring(history))

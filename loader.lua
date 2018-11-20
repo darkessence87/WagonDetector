@@ -29,17 +29,17 @@ function WD:OnInitialize()
     SlashCmdList["WD"] = function(...) self:SlashHandler(...) end
 
     self:CreateGuiFrame()
+    C_ChatInfo.RegisterAddonMessagePrefix("WDCM")
 
     if self.mainFrame then
-        self.mainFrame:RegisterEvent("VARIABLES_LOADED")
         self.mainFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
         if WD.db.profile.isEnabled == true then
             self.mainFrame:RegisterEvent("CHAT_MSG_ADDON")
             self.mainFrame:RegisterEvent("ENCOUNTER_START")
             self.mainFrame:RegisterEvent("ENCOUNTER_END")
+            self.mainFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
             self.mainFrame:RegisterEvent("INSPECT_READY")
-            self.mainFrame:RegisterEvent("RAID_ROSTER_UPDATE")
         end
 
         self.mainFrame:SetScript("OnEvent", function(self, ...) self:OnEvent(...); end)

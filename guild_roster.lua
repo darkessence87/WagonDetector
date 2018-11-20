@@ -1,6 +1,10 @@
 
 local WDGR = nil
 
+if not WD.cache then WD.cache = {} end
+WD.cache.roster = {}
+WD.cache.rosterkeys = {}
+
 function calculateCoef(points, pulls)
     local mult = 10^2
     return math.floor((points * 1.0 / pulls) * mult + 0.5) / mult
@@ -137,9 +141,6 @@ function WD:InitGuildRosterModule(parent)
     h = createTableHeaderNext(WDGR, h, WD_BUTTON_PULLS, 75, 20, function() headerButtonFunction("BY_PULLS") end)
     createTableHeaderNext(WDGR, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
 
-    WD.cache.roster = {}
-    WD.cache.rosterkeys = {}
-
     WD:OnGuildRosterUpdate()
     WD:SortGuildRoster("BY_NAME", false, function() updateGuildRosterFrame() end)
 
@@ -185,6 +186,9 @@ function WD:OnGuildRosterUpdate()
     local altInfos = {}
     for i=1,GetNumGuildMembers() do
         local name, rank, rankIndex, _, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
+        if officernote and officernote == "" then
+            officernote = "0,0"
+        end
         if officernote and officernote ~= "" and rankIndex <= WD.db.profile.minGuildRank.id then
             local info = {}
             info.index = i

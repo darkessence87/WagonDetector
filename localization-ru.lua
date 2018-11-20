@@ -4,8 +4,8 @@ end
 
 
 WD_ENCOUNTER_INTERRUPTED = "Сбор статистики для текущего боя прерван"
-WD_ENCOUNTER_START = "Начало боя '%s' пул:%d (ENCOUNTER_ID:%s)"
-WD_ENCOUNTER_STOP = "Конец боя '%s'. Время боя: %s"
+WD_ENCOUNTER_START = "Начало боя \"%s\" пул:%d (ENCOUNTER_ID:%s)"
+WD_ENCOUNTER_STOP = "Конец боя \"%s\". Время боя: %s"
 
 WD_ENABLED = "Аддон включен"
 WD_DISABLED = "Аддон выключен"
@@ -23,7 +23,7 @@ WD_HELP = "Доступные команды:\
 
 WD_PRINT_SUCCESS = "%s [КРАСАВА] %s: %s (%d штраф очков)"
 WD_PRINT_FAILURE = "%s [ВАГОН] %s: %s (%d штраф очков)"
-WD_NOTIFY_HEADER_RULE = "Список действующих правил в бою '%s':"
+WD_NOTIFY_HEADER_RULE = "Список действующих правил в бою \"%s\":"
 WD_NOTIFY_RULE = "%d штраф очков за %s"
 WD_REVERT_STR = "Отмена"
 
@@ -33,15 +33,15 @@ WD_BUTTON_ENABLE_CONFIG = "Аддон включен"
 WD_BUTTON_IMMEDIATE_NOTIFY = "Использовать мгновенные оповещения в бою"
 WD_BUTTON_ENABLE_PENALTIES = "Использовать штрафы в гильдии"
 WD_BUTTON_MAX_DEATHS = "Макс. смертей при сборе статистики:"
-WD_BUTTON_NAME = 'Имя игрока'
-WD_BUTTON_RANK = 'Звание'
-WD_BUTTON_POINTS = 'Штрафные очки'
-WD_BUTTON_POINTS_SHORT = 'Очки'
-WD_BUTTON_PULLS = 'Пулы'
-WD_BUTTON_COEF = 'За пул'
-WD_BUTTON_TIME = 'Время'
-WD_BUTTON_REASON = 'Причина'
-WD_BUTTON_ENCOUNTER = 'Бой'
+WD_BUTTON_NAME = "Имя игрока"
+WD_BUTTON_RANK = "Звание"
+WD_BUTTON_POINTS = "Штрафные очки"
+WD_BUTTON_POINTS_SHORT = "Очки"
+WD_BUTTON_PULLS = "Пулы"
+WD_BUTTON_COEF = "За пул"
+WD_BUTTON_TIME = "Время"
+WD_BUTTON_REASON = "Причина"
+WD_BUTTON_ENCOUNTER = "Бой"
 WD_BUTTON_MAIN_MODULE = "Основные опции"
 WD_BUTTON_ENCOUNTERS_MODULE = "Список правил"
 WD_BUTTON_GUILD_ROSTER_MODULE = "Статистика гильдии"
@@ -59,12 +59,12 @@ WD_BUTTON_EXPORT_ENCOUNTERS = "Экспорт правил боя"
 WD_BUTTON_IMPORT_ENCOUNTERS = "Импорт правил боя"
 WD_BUTTON_IMPORT = "Импорт"
 WD_BUTTON_CANCEL = "Отмена"
-WD_IMPORT_QUESTION = "Это действие перетрёт существующие правила для всего боя '%s'. Хотите продолжить?"
+WD_IMPORT_QUESTION = "Это действие перетрёт существующие правила для всего боя \"%s\". Хотите продолжить?"
 WD_BUTTON_SHARE = "Поделиться"
 WD_BUTTON_ACCEPT = "Принять"
 WD_IMPORT_SHARED_QUESTION = "%s хочет поделиться с вами правилом"
 WD_BUTTON_SHARE_ENCOUNTERS = "Поделиться правилами"
-WD_IMPORT_SHARED_ENCOUNTER_QUESTION = "%s хочет поделиться с вами правилами боя '%s'. Это действие перетрёт все существующие правила для этого боя"
+WD_IMPORT_SHARED_ENCOUNTER_QUESTION = "%s хочет поделиться с вами правилами боя \"%s\". Это действие перетрёт все существующие правила для этого боя"
 
 WD_RULE_DAMAGE_TAKEN = "получение >=%d урона от %s"
 WD_RULE_DAMAGE_TAKEN_AMOUNT = "получение урона от %s"

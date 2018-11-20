@@ -4,7 +4,7 @@ local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
 function deepcopy(orig)
     local orig_type = type(orig)
     local copy
-    if orig_type == 'table' then
+    if orig_type == "table" then
         copy = {}
         for orig_key, orig_value in next, orig, nil do
             copy[deepcopy(orig_key)] = deepcopy(orig_value)
@@ -57,7 +57,7 @@ function table.tostring(tbl)
 end
 
 
-local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local b="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 function encode64(data)
     return ((data:gsub('.', function(x)
         local r,b='',x:byte()
@@ -97,7 +97,7 @@ end
 
 function getSpellLinkById(id)
     local name = GetSpellInfo(id)
-    if not name then return 'Unknown' end
+    if not name then return "Unknown" end
     return "|cff71d5ff|Hspell:"..id.."|h["..name.."]|h|r"
 end
 
@@ -253,9 +253,9 @@ function createScroller(parent, width, height, lines)
     scroller.slider.t:SetAllPoints()
 
     scroller.slider.buttonUp = createSliderButton(scroller.slider, "UP")
-    scroller.slider.buttonUp:SetScript('OnClick', function() scroller.slider:SetValue(scroller.slider:GetValue()-1) end)
+    scroller.slider.buttonUp:SetScript("OnClick", function() scroller.slider:SetValue(scroller.slider:GetValue()-1) end)
     scroller.slider.buttonDown = createSliderButton(scroller.slider, "DOWN")
-    scroller.slider.buttonDown:SetScript('OnClick', function() scroller.slider:SetValue(scroller.slider:GetValue()+1) end)
+    scroller.slider.buttonDown:SetScript("OnClick", function() scroller.slider:SetValue(scroller.slider:GetValue()+1) end)
 
     scroller:SetScript("OnMouseWheel", function(self, delta)
         delta = delta * self.slider:GetValueStep()
@@ -299,7 +299,7 @@ function createXButton(parent, xOffset)
     local xButton = createButton(parent)
     xButton:SetPoint("TOPRIGHT", parent, "TOPRIGHT", xOffset, 0)
     xButton:SetSize(15, 15)
-    xButton:SetScript('OnClick', function() parent:Hide() end)
+    xButton:SetScript("OnClick", function() parent:Hide() end)
     xButton.t:SetTexture([[Interface\AddOns\WagonDetector\media\textures\cross_button]])
     xButton.t:SetTexCoord(0, 1, 0, 1)
     xButton.h:SetColorTexture(0, .5, 0, 1)
@@ -369,7 +369,7 @@ function updateDropDownMenu(self, name, items)
     if items and #self.items == 0 then
         for k,v in pairs(items) do
             local item = createListItemButton(self, v.name, k - 1)
-            item:SetScript('OnClick', function() onClickDropDown(self, item, v.func) end)
+            item:SetScript("OnClick", function() onClickDropDown(self, item, v.func) end)
             table.insert(self.items, item)
         end
     end
@@ -384,8 +384,8 @@ end
 
 function createDropDownMenu(parent, name, items)
     local dropFrame = createListButton(parent, name)
-    dropFrame:SetScript('OnClick', function() if dropFrame.isVisible then dropDownHide(dropFrame) else dropDownShow(dropFrame) end end)
-    dropFrame:SetScript('OnHide', function() resetDropDownMenu(dropFrame, name) end)
+    dropFrame:SetScript("OnClick", function() if dropFrame.isVisible then dropDownHide(dropFrame) else dropDownShow(dropFrame) end end)
+    dropFrame:SetScript("OnHide", function() resetDropDownMenu(dropFrame, name) end)
     dropFrame.items = {}
 
     updateDropDownMenu(dropFrame, name, items)
@@ -403,7 +403,7 @@ function createTableHeader(self, name, x, y, xSize, ySize, onClick)
     button.txt:SetSize(xSize, ySize)
     button.txt:SetPoint("LEFT", button, "LEFT", 0, 0)
     button.t:SetColorTexture(.5, .5, .5, 1)
-    if onClick then button:EnableMouse(true); button:SetScript('OnClick', onClick) end
+    if onClick then button:EnableMouse(true); button:SetScript("OnClick", onClick) end
     table.insert(self.headers, button)
     return button
 end
@@ -417,7 +417,7 @@ function createTableHeaderNext(self, prev, name, xSize, ySize, onClick)
     button.txt:SetSize(xSize, ySize)
     button.txt:SetPoint("LEFT", button, "LEFT", 0, 0)
     button.t:SetColorTexture(.5, .5, .5, 1)
-    if onClick then button:EnableMouse(true); button:SetScript('OnClick', onClick) end
+    if onClick then button:EnableMouse(true); button:SetScript("OnClick", onClick) end
     table.insert(self.headers, button)
     return button
 end

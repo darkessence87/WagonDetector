@@ -1,4 +1,6 @@
 
+local WDRM = nil
+
 encounterTypes = {
     "Test",
     "ALL",
@@ -28,7 +30,7 @@ ruleTypes = {
 }
 
 local function editRuleLine(ruleLine)
-    local newRuleFrame = WD.guiFrame.module["encounters"].newRule
+    local newRuleFrame = WDRM.newRule
     if not ruleLine then return end
 
     if newRuleFrame:IsVisible() then newRuleFrame:Hide() return end
@@ -139,142 +141,6 @@ local function getRuleDescription(rule)
     return "Unsupported rule"
 end
 
-local function updateRuleLines(self)
-    if not self.rules then return end
-
-    local maxWidth = 30
-    local maxHeight = 545
-    for i=1,#self.headers do
-        maxWidth = maxWidth + self.headers[i]:GetWidth() + 1
-    end
-
-    local scroller = self.scroller or createScroller(self, maxWidth, maxHeight, #WD.db.profile.rules)
-    if not self.scroller then
-        self.scroller = scroller
-    end
-
-    -- sort by encounter > points
-    local func = function(a, b)
-        if a.encounter < b.encounter then return true
-        elseif a.encounter > b.encounter then return false
-        else
-            return a.points > b.points
-        end
-    end
-    table.sort(WD.db.profile.rules, func)
-
-    local x, y = 30, -51
-    for k,v in pairs(WD.db.profile.rules) do
-        if not self.rules[k] then
-            local ruleLine = CreateFrame("Frame", nil, self.scroller.scrollerChild)
-            ruleLine.rule = v
-            ruleLine:SetSize(maxWidth, 20)
-            ruleLine:SetPoint("TOPLEFT", self.scroller.scrollerChild, "TOPLEFT", x, y)
-            ruleLine.column = {}
-
-            local index = 1
-            ruleLine.column[index] = createCheckButton(ruleLine)
-            ruleLine.column[index]:SetSize(18, 18)
-            ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine, "TOPLEFT", 1, -1)
-            ruleLine.column[index]:SetChecked(v.isActive)
-            ruleLine.column[index]:SetScript("OnClick", function() v.isActive = not v.isActive end)
-
-            index = index + 1
-            addNextColumn(self, ruleLine, index, "CENTER", v.encounter)
-            ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine.column[index-1], "TOPRIGHT", 2, 1)
-            index = index + 1
-            addNextColumn(self, ruleLine, index, "LEFT", getRuleDescription(v))
-            index = index + 1
-            addNextColumn(self, ruleLine, index, "CENTER", v.points)
-            index = index + 1
-            addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_EDIT)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
-            ruleLine.column[index].t:SetColorTexture(.2, 1, .2, .5)
-            index = index + 1
-            addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_DELETE)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() table.remove(WD.db.profile.rules, k); updateRuleLines(self); end)
-            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
-            index = index + 1
-            addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_EXPORT)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() WD:ExportRule(self, ruleLine.rule); end)
-            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
-            index = index + 1
-            addNextColumn(self, ruleLine, index, "CENTER", WD_BUTTON_SHARE)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() WD:ShareRule(self, ruleLine.rule); end)
-            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
-
-            table.insert(self.rules, ruleLine)
-        else
-            local ruleLine = self.rules[k]
-            ruleLine.rule = v
-            ruleLine.column[1]:SetChecked(v.isActive)
-            ruleLine.column[1]:SetScript("OnClick", function() v.isActive = not v.isActive end)
-            ruleLine.column[2].txt:SetText(v.encounter)
-            ruleLine.column[3].txt:SetText(getRuleDescription(v))
-            ruleLine.column[4].txt:SetText(v.points)
-            ruleLine.column[5]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
-            ruleLine.column[7]:SetScript("OnClick", function() WD:ExportRule(self, ruleLine.rule); end)
-            ruleLine.column[8]:SetScript("OnClick", function() WD:ShareRule(self, ruleLine.rule); end)
-            ruleLine:Show()
-            updateScroller(self.scroller.slider, #WD.db.profile.rules)
-        end
-
-        y = y - 21
-    end
-
-    if #WD.db.profile.rules < #self.rules then
-        for i=#WD.db.profile.rules+1, #self.rules do
-            self.rules[i]:Hide()
-        end
-    end
-end
-
-local function isDuplicate(rule)
-    local found = false
-    for k,v in pairs(WD.db.profile.rules) do
-        if v.encounter == rule.encounter and v.type == rule.type and v.arg0 == rule.arg0 and v.arg1 == rule.arg1 then
-            found = true
-            v.points = rule.points
-            break
-        end
-    end
-    return found
-end
-
-local function insertRule(self, rule)
-    if rule.points ~= "" and rule.points ~= 0 then
-        if isDuplicate(rule) == false then
-            rule.isActive = true
-            WD.db.profile.rules[#WD.db.profile.rules+1] = rule
-            updateRuleLines(self)
-        else
-            print("This rule already exists")
-        end
-    else
-        print("Could not add rule with empty points")
-    end
-end
-
-local function insertEncounter(self, rules)
-    if not rules or #rules == 0 then return end
-    local encounter = rules[1].encounter
-    local newRules = {}
-    for k,v in pairs(WD.db.profile.rules) do
-        if v.encounter ~= encounter then
-            newRules[#newRules+1] = v
-        end
-    end
-    for i=1,#rules do
-        newRules[#newRules+1] = rules[i]
-    end
-    WD.db.profile.rules = newRules
-    updateRuleLines(self)
-end
-
 local function parseRule(str)
     function parseValue(s)
         if string.find(s, "\"") then
@@ -325,8 +191,194 @@ local function parseEncounter(str)
     return rules
 end
 
-local function saveRule(self)
-    local f = self.newRule
+local function exportRule(rule)
+    if not rule then return end
+    local txt = encode64(table.tostring(rule))
+    local r = WDRM.exportWindow
+    r.editBox:SetText(txt)
+    r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
+    r.editBox:HighlightText()
+    r.editBox:SetAutoFocus(true)
+    r.editBox:SetCursorPosition(0)
+
+    r:Show()
+end
+
+local function exportEncounter(rules)
+    if not rules or #rules == 0 then return end
+    local txt = encode64(table.tostring(rules))
+    local r = WDRM.exportWindow
+    r.editBox:SetText(txt)
+    r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
+    r.editBox:HighlightText()
+    r.editBox:SetAutoFocus(true)
+    r.editBox:SetCursorPosition(0)
+
+    r:Show()
+end
+
+local function importRule(str)
+    local d = decode64(str)
+    local rule = parseRule(d)
+    return rule
+end
+
+local function importEncounter(str)
+    local d = decode64(str)
+    local rules = parseEncounter(d)
+    return rules
+end
+
+local function shareRule(rule)
+    if not rule then return end
+    local txt = encode64(table.tostring(rule))
+    WD:SendAddonMessage("share_rule", txt)
+end
+
+local function shareEncounter(encounterName, rules)
+    if not rules or #rules == 0 then return end
+    local txt = encode64(table.tostring(rules))
+    WD:SendAddonMessage("share_encounter", encounterName.."$"..txt)
+end
+
+local function updateRuleLines()
+    if not WDRM.rules then return end
+
+    local maxWidth = 30
+    local maxHeight = 545
+    for i=1,#WDRM.headers do
+        maxWidth = maxWidth + WDRM.headers[i]:GetWidth() + 1
+    end
+
+    local scroller = WDRM.scroller or createScroller(WDRM, maxWidth, maxHeight, #WD.db.profile.rules)
+    if not WDRM.scroller then
+        WDRM.scroller = scroller
+    end
+
+    -- sort by encounter > points
+    local func = function(a, b)
+        if a.encounter < b.encounter then return true
+        elseif a.encounter > b.encounter then return false
+        else
+            return a.points > b.points
+        end
+    end
+    table.sort(WD.db.profile.rules, func)
+
+    local x, y = 30, -51
+    for k,v in pairs(WD.db.profile.rules) do
+        if not WDRM.rules[k] then
+            local ruleLine = CreateFrame("Frame", nil, WDRM.scroller.scrollerChild)
+            ruleLine.rule = v
+            ruleLine:SetSize(maxWidth, 20)
+            ruleLine:SetPoint("TOPLEFT", WDRM.scroller.scrollerChild, "TOPLEFT", x, y)
+            ruleLine.column = {}
+
+            local index = 1
+            ruleLine.column[index] = createCheckButton(ruleLine)
+            ruleLine.column[index]:SetSize(18, 18)
+            ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine, "TOPLEFT", 1, -1)
+            ruleLine.column[index]:SetChecked(v.isActive)
+            ruleLine.column[index]:SetScript("OnClick", function() v.isActive = not v.isActive end)
+
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "CENTER", v.encounter)
+            ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine.column[index-1], "TOPRIGHT", 2, 1)
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "CENTER", v.points)
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EDIT)
+            ruleLine.column[index]:EnableMouse(true)
+            ruleLine.column[index]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
+            ruleLine.column[index].t:SetColorTexture(.2, 1, .2, .5)
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_DELETE)
+            ruleLine.column[index]:EnableMouse(true)
+            ruleLine.column[index]:SetScript("OnClick", function() table.remove(WD.db.profile.rules, k); updateRuleLines(); end)
+            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EXPORT)
+            ruleLine.column[index]:EnableMouse(true)
+            ruleLine.column[index]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
+            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_SHARE)
+            ruleLine.column[index]:EnableMouse(true)
+            ruleLine.column[index]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
+            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
+
+            table.insert(WDRM.rules, ruleLine)
+        else
+            local ruleLine = WDRM.rules[k]
+            ruleLine.rule = v
+            ruleLine.column[1]:SetChecked(v.isActive)
+            ruleLine.column[1]:SetScript("OnClick", function() v.isActive = not v.isActive end)
+            ruleLine.column[2].txt:SetText(v.encounter)
+            ruleLine.column[3].txt:SetText(getRuleDescription(v))
+            ruleLine.column[4].txt:SetText(v.points)
+            ruleLine.column[5]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
+            ruleLine.column[7]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
+            ruleLine.column[8]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
+            ruleLine:Show()
+            updateScroller(WDRM.scroller.slider, #WD.db.profile.rules)
+        end
+
+        y = y - 21
+    end
+
+    if #WD.db.profile.rules < #WDRM.rules then
+        for i=#WD.db.profile.rules+1, #WDRM.rules do
+            WDRM.rules[i]:Hide()
+        end
+    end
+end
+
+local function isDuplicate(rule)
+    local found = false
+    for k,v in pairs(WD.db.profile.rules) do
+        if v.encounter == rule.encounter and v.type == rule.type and v.arg0 == rule.arg0 and v.arg1 == rule.arg1 then
+            found = true
+            v.points = rule.points
+            break
+        end
+    end
+    return found
+end
+
+local function insertRule(rule)
+    if rule.points ~= "" and rule.points ~= 0 then
+        if isDuplicate(rule) == false then
+            rule.isActive = true
+            WD.db.profile.rules[#WD.db.profile.rules+1] = rule
+            updateRuleLines()
+        else
+            print("This rule already exists")
+        end
+    else
+        print("Could not add rule with empty points")
+    end
+end
+
+local function insertEncounter(rules)
+    if not rules or #rules == 0 then return end
+    local encounter = rules[1].encounter
+    local newRules = {}
+    for k,v in pairs(WD.db.profile.rules) do
+        if v.encounter ~= encounter then
+            newRules[#newRules+1] = v
+        end
+    end
+    for i=1,#rules do
+        newRules[#newRules+1] = rules[i]
+    end
+    WD.db.profile.rules = newRules
+    updateRuleLines()
+end
+
+local function saveRule()
+    local f = WDRM.newRule
     if not f.dropFrame0.selected or not f.dropFrame1.selected then return end
     local encounterType = f.dropFrame0.selected.txt:GetText()
     local ruleType = f.dropFrame1.selected.txt:GetText()
@@ -368,409 +420,11 @@ local function saveRule(self)
         return
     end
 
-    insertRule(self, rule)
+    insertRule(rule)
 end
 
-local function initNewRuleWindow(self)
-    self.newRule = CreateFrame("Frame", nil, self)
-    local r = self.newRule
-    r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", self.addRule, "TOPLEFT", -1, 1)
-    r:SetSize(152, 122)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    r.bg:SetAllPoints()
-
-    local xSize = 150
-
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i] }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
-    r.dropFrame0:SetSize(xSize, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
-
-    local items1 = {}
-    for i=1,#ruleTypes do
-        local item = { name = ruleTypes[i], func = WD.UpdateNewRuleMenu }
-        table.insert(items1, item)
-    end
-
-    r.dropFrame1 = createDropDownMenu(r, "Select rule type", items1)
-    r.dropFrame1:SetSize(xSize, 20)
-    r.dropFrame1:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
-
-    -- editbox arg0
-    r.editBox0 = createEditBox(r)
-    r.editBox0:SetSize(xSize, 20)
-    r.editBox0:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -1)
-    r.editBox0:Hide()
-
-    -- editbox or dropdownmenu arg1
-    r.editBox1 = createEditBox(r)
-    r.editBox1:SetSize(xSize, 20)
-    r.editBox1:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -22)
-    r.editBox1:Hide()
-
-    local items2 = { {name = "apply"},{name = "remove"} }
-    r.dropMenu1 = createDropDownMenu(r, "Select aura action", items2)
-    r.dropMenu1.txt:SetJustifyH("CENTER")
-    r.dropMenu1:SetSize(xSize, 20)
-    r.dropMenu1:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -22)
-    r.dropMenu1:Hide()
-
-    -- editbox arg2
-    r.editBox2 = createEditBox(r)
-    r.editBox2:SetNumeric()
-    r.editBox2:SetSize(xSize, 20)
-    r.editBox2:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -43)
-    r.editBox2:Hide()
-
-    r:SetScript("OnHide", function()
-        r.editBox0:Hide()
-        r.editBox1:Hide()
-        r.editBox2:Hide()
-        r.dropMenu1:Hide()
-    end)
-
-    r.saveButton = createButton(r)
-    r.saveButton:SetPoint("TOPLEFT", r.dropFrame0, "BOTTOMLEFT", 0, -85)
-    r.saveButton:SetSize(74, 15)
-    r.saveButton:SetScript("OnClick", function() saveRule(self); r:Hide() end)
-    r.saveButton.t:SetColorTexture(.2, .4, .2, 1)
-    r.saveButton.txt = createFont(r.saveButton, "CENTER", "Save")
-    r.saveButton.txt:SetSize(74, 15)
-    r.saveButton.txt:SetPoint("LEFT", r.saveButton, "LEFT", 0, 0)
-
-    r.cancelButton = createButton(r)
-    r.cancelButton:SetPoint("TOPLEFT", r.saveButton, "TOPRIGHT", 2, 0)
-    r.cancelButton:SetSize(74, 15)
-    r.cancelButton:SetScript("OnClick", function() r:Hide() end)
-    r.cancelButton.t:SetColorTexture(.4, .2, .2, 1)
-    r.cancelButton.txt = createFont(r.cancelButton, "CENTER", "Cancel")
-    r.cancelButton.txt:SetSize(74, 15)
-    r.cancelButton.txt:SetPoint("LEFT", r.cancelButton, "LEFT", 1, 0)
-
-    r:Hide()
-end
-
-local function notifyEncounterRules(encounter)
-    sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter))
-    for _,v in pairs(WD.db.profile.rules) do
-        if v.encounter == encounter and v.isActive == true then
-            local msg = string.format(WD_NOTIFY_RULE, v.points, getRuleDescription(v))
-            sendMessage(msg)
-        end
-    end
-end
-
-local function initNotifyRuleWindow(self)
-    self.notifyRule = CreateFrame("Frame", nil, self)
-    local r = self.notifyRule
-    r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", self.notify, "TOPLEFT", 0, 1)
-    r:SetSize(152, 22)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    r.bg:SetAllPoints()
-
-    function notifyRule(encounter)
-        self.notifyRule:Hide()
-        notifyEncounterRules(encounter)
-    end
-
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i], func = function() notifyRule(encounterTypes[i]) end }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
-    r.dropFrame0:SetSize(150, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
-
-    r:Hide()
-end
-
-local function initExportEncounterWindow(self)
-    self.exportEncounter = CreateFrame("Frame", nil, self)
-    local r = self.exportEncounter
-    r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", self.export, "TOPLEFT", 0, 1)
-    r:SetSize(152, 22)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    r.bg:SetAllPoints()
-
-    function exportEncounter(encounterName)
-        self.exportEncounter:Hide()
-        local rules = {}
-        for _,v in pairs(WD.db.profile.rules) do
-            if v.encounter == encounterName then
-                rules[#rules+1] = v
-            end
-        end
-        WD:ExportEncounter(self, rules)
-    end
-
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i], func = function() exportEncounter(encounterTypes[i]) end }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
-    r.dropFrame0:SetSize(150, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
-
-    r:Hide()
-end
-
-local function initExportWindow(self)
-    self.exportWindow = CreateFrame("Frame", nil, self)
-    local r = self.exportWindow
-    r:EnableMouse(true)
-    r:SetPoint("CENTER", 0, 0)
-    r:SetSize(400, 400)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    r.bg:SetAllPoints()
-
-    createXButton(r, -1)
-
-    r.editBox = createEditBox(r)
-    r.editBox:SetSize(398, 378)
-    r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -21)
-    r.editBox:SetMultiLine(true)
-    r.editBox:SetJustifyH("LEFT")
-    r.editBox:SetMaxBytes(nil)
-    r.editBox:SetMaxLetters(2048)
-    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end);
-    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end);
-    r.editBox:Show()
-
-    r:Hide()
-end
-
-local function initImportEncounterWindow(self)
-    self.importEncounter = CreateFrame("Frame", nil, self)
-    local r = self.importEncounter
-    r:EnableMouse(true)
-    r:SetPoint("CENTER", 0, 0)
-    r:SetSize(400, 400)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    r.bg:SetAllPoints()
-
-    function tryImportEncounter(str)
-        local rules = WD:ImportEncounter(str)
-        if rules and #rules > 0 then
-            StaticPopup_Show("WD_ACCEPT_IMPORT", rules[1].encounter)
-        else
-            -- try import as single rule
-            local rule = WD:ImportRule(str)
-            if rule.type then
-                insertRule(self, rule)
-            else
-                print("Could not parse rule")
-            end
-            r:Hide()
-        end
-    end
-
-    function importEncounter(str)
-        local rules = WD:ImportEncounter(str)
-        insertEncounter(self, rules)
-    end
-
-    createXButton(r, -1)
-
-    r.editBox = createEditBox(r)
-    r.editBox:SetSize(398, 378)
-    r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
-    r.editBox:SetMultiLine(true)
-    r.editBox:SetJustifyH("LEFT")
-    r.editBox:SetMaxBytes(nil)
-    r.editBox:SetMaxLetters(2048)
-    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
-    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end)
-    r.editBox:SetScript("OnShow", function() r.editBox:SetText(""); end)
-    r.editBox:Show()
-
-    r.button = createButton(r)
-    r.button:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
-    r.button:SetSize(125, 20)
-    r.button:SetScript("OnClick", function() tryImportEncounter(r.editBox:GetText()) end)
-    r.button.txt = createFont(r.button, "CENTER", WD_BUTTON_IMPORT)
-    r.button.txt:SetAllPoints()
-
-    r:Hide()
-
-    StaticPopupDialogs["WD_ACCEPT_IMPORT"] = {
-        text = WD_IMPORT_QUESTION,
-        button1 = WD_BUTTON_IMPORT,
-        button2 = WD_BUTTON_CANCEL,
-        OnAccept = function()
-            importEncounter(r.editBox:GetText())
-            r:Hide()
-        end,
-        OnCancel = function()
-            r:Hide()
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = false,
-        preferredIndex = 3,
-    }
-
-    StaticPopupDialogs["WD_ACCEPT_SHARED_RULE"] = {
-        text = WD_IMPORT_SHARED_QUESTION,
-        button1 = WD_BUTTON_ACCEPT,
-        button2 = WD_BUTTON_CANCEL,
-        OnAccept = function()
-            if self.sharedRule then
-                local rule = WD:ImportRule(self.sharedRule)
-                if rule.type then
-                    insertRule(self, rule)
-                else
-                    print("Could not parse rule")
-                end
-                self.sharedRule = ""
-            end
-        end,
-        OnCancel = function()
-            if self.sharedRule then self.sharedRule = "" end
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = false,
-        preferredIndex = 3,
-    }
-end
-
-local function initShareEncounterWindow(self)
-    self.shareEncounter = CreateFrame("Frame", nil, self)
-    local r = self.shareEncounter
-    r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", self.share, "TOPLEFT", 0, 1)
-    r:SetSize(152, 22)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    r.bg:SetAllPoints()
-
-    function shareEncounter(encounterName)
-        self.shareEncounter:Hide()
-        local rules = {}
-        for _,v in pairs(WD.db.profile.rules) do
-            if v.encounter == encounterName then
-                rules[#rules+1] = v
-            end
-        end
-        WD:ShareEncounter(self, encounterName, rules)
-    end
-
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i], func = function() shareEncounter(encounterTypes[i]) end }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
-    r.dropFrame0:SetSize(150, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
-
-    StaticPopupDialogs["WD_ACCEPT_SHARED_ENCOUNTER"] = {
-        text = WD_IMPORT_SHARED_ENCOUNTER_QUESTION,
-        button1 = WD_BUTTON_ACCEPT,
-        button2 = WD_BUTTON_CANCEL,
-        OnAccept = function()
-            if self.sharedRule then
-                local rules = WD:ImportEncounter(self.sharedRule)
-                if rules and #rules > 0 then
-                    insertEncounter(self, rules)
-                else
-                    print("Could not parse rule")
-                end
-
-                self.sharedRule = ""
-            end
-        end,
-        OnCancel = function()
-            if self.sharedRule then self.sharedRule = "" end
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = false,
-        preferredIndex = 3,
-    }
-
-    r:Hide()
-end
-
-function WD:InitEncountersModule(parent)
-    parent.rules = {}
-
-    -- new rule button
-    parent.addRule = createButton(parent)
-    parent.addRule:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -5)
-    parent.addRule:SetSize(125, 20)
-    parent.addRule:SetScript("OnClick", function() WD:OpenNewRuleMenu() end)
-    parent.addRule.txt = createFont(parent.addRule, "CENTER", WD_BUTTON_NEW_RULE)
-    parent.addRule.txt:SetAllPoints()
-
-    -- notify rules button
-    parent.notify = createButton(parent)
-    parent.notify:SetPoint("TOPLEFT", parent.addRule, "TOPRIGHT", 1, 0)
-    parent.notify:SetSize(125, 20)
-    parent.notify:SetScript("OnClick", function() WD:OpenNotifyRuleMenu() end)
-    parent.notify.txt = createFont(parent.notify, "CENTER", WD_BUTTON_NOTIFY_RULES)
-    parent.notify.txt:SetAllPoints()
-
-    -- export encounter button
-    parent.export = createButton(parent)
-    parent.export:SetPoint("TOPLEFT", parent.notify, "TOPRIGHT", 1, 0)
-    parent.export:SetSize(125, 20)
-    parent.export:SetScript("OnClick", function() WD:OpenExportEncounterMenu() end)
-    parent.export.txt = createFont(parent.export, "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
-    parent.export.txt:SetAllPoints()
-
-    -- import encounter button
-    parent.import = createButton(parent)
-    parent.import:SetPoint("TOPLEFT", parent.export, "TOPRIGHT", 1, 0)
-    parent.import:SetSize(125, 20)
-    parent.import:SetScript("OnClick", function() WD:OpenImportEncounterMenu() end)
-    parent.import.txt = createFont(parent.import, "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
-    parent.import.txt:SetAllPoints()
-
-    -- share encounter button
-    parent.share = createButton(parent)
-    parent.share:SetPoint("TOPLEFT", parent.import, "TOPRIGHT", 1, 0)
-    parent.share:SetSize(125, 20)
-    parent.share:SetScript("OnClick", function() WD:OpenShareEncounterMenu() end)
-    parent.share.txt = createFont(parent.share, "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
-    parent.share.txt:SetAllPoints()
-
-    -- headers
-    local x, y = 1, -30
-    parent.headers = {}
-    local h = createTableHeader(parent, "", x, y, 20, 20)
-    h = createTableHeader(parent, WD_BUTTON_ENCOUNTER, x + 21, y, 75, 20)
-    h = createTableHeaderNext(parent, h, WD_BUTTON_REASON, 395, 20)
-    h = createTableHeaderNext(parent, h, WD_BUTTON_POINTS_SHORT, 50, 20)
-    h = createTableHeaderNext(parent, h, "", 50, 20)
-    h = createTableHeaderNext(parent, h, "", 50, 20)
-    h = createTableHeaderNext(parent, h, "", 50, 20)
-    createTableHeaderNext(parent, h, "", 70, 20)
-
-    initNewRuleWindow(parent)
-    initNotifyRuleWindow(parent)
-    initExportEncounterWindow(parent)
-    initExportWindow(parent)
-    initImportEncounterWindow(parent)
-    initShareEncounterWindow(parent)
-
-    updateRuleLines(parent)
-end
-
-function WD:UpdateNewRuleMenu()
-    local newRuleFrame = WD.guiFrame.module["encounters"].newRule
+local function updateNewRuleMenu()
+    local newRuleFrame = WDRM.newRule
     if not newRuleFrame.dropFrame1.selected then return end
 
     local rule = newRuleFrame.dropFrame1.selected.txt:GetText()
@@ -829,64 +483,407 @@ function WD:UpdateNewRuleMenu()
     newRuleFrame.editBox2:Show()
 end
 
-function WD:ExportRule(self, rule)
-    if not rule then return end
-    local txt = encode64(table.tostring(rule))
-    local r = self.exportWindow
-    r.editBox:SetText(txt)
-    r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
-    r.editBox:HighlightText()
-    r.editBox:SetAutoFocus(true)
-    r.editBox:SetCursorPosition(0)
+local function initNewRuleWindow()
+    WDRM.newRule = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.newRule
+    r:EnableMouse(true)
+    r:SetPoint("BOTTOMLEFT", WDRM.addRule, "TOPLEFT", -1, 1)
+    r:SetSize(152, 122)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
 
-    r:Show()
+    local xSize = 150
+
+    local items0 = {}
+    for i=1,#encounterTypes do
+        local item = { name = encounterTypes[i] }
+        table.insert(items0, item)
+    end
+
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0:SetSize(xSize, 20)
+    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
+
+    local items1 = {}
+    for i=1,#ruleTypes do
+        local item = { name = ruleTypes[i], func = updateNewRuleMenu }
+        table.insert(items1, item)
+    end
+
+    r.dropFrame1 = createDropDownMenu(r, "Select rule type", items1)
+    r.dropFrame1:SetSize(xSize, 20)
+    r.dropFrame1:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
+
+    -- editbox arg0
+    r.editBox0 = createEditBox(r)
+    r.editBox0:SetSize(xSize, 20)
+    r.editBox0:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -1)
+    r.editBox0:Hide()
+
+    -- editbox or dropdownmenu arg1
+    r.editBox1 = createEditBox(r)
+    r.editBox1:SetSize(xSize, 20)
+    r.editBox1:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -22)
+    r.editBox1:Hide()
+
+    local items2 = { {name = "apply"},{name = "remove"} }
+    r.dropMenu1 = createDropDownMenu(r, "Select aura action", items2)
+    r.dropMenu1.txt:SetJustifyH("CENTER")
+    r.dropMenu1:SetSize(xSize, 20)
+    r.dropMenu1:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -22)
+    r.dropMenu1:Hide()
+
+    -- editbox arg2
+    r.editBox2 = createEditBox(r)
+    r.editBox2:SetNumeric()
+    r.editBox2:SetSize(xSize, 20)
+    r.editBox2:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -43)
+    r.editBox2:Hide()
+
+    r:SetScript("OnHide", function()
+        r.editBox0:Hide()
+        r.editBox1:Hide()
+        r.editBox2:Hide()
+        r.dropMenu1:Hide()
+    end)
+
+    r.saveButton = createButton(r)
+    r.saveButton:SetPoint("TOPLEFT", r.dropFrame0, "BOTTOMLEFT", 0, -85)
+    r.saveButton:SetSize(74, 15)
+    r.saveButton:SetScript("OnClick", function() saveRule(); r:Hide() end)
+    r.saveButton.t:SetColorTexture(.2, .4, .2, 1)
+    r.saveButton.txt = createFont(r.saveButton, "CENTER", "Save")
+    r.saveButton.txt:SetSize(74, 15)
+    r.saveButton.txt:SetPoint("LEFT", r.saveButton, "LEFT", 0, 0)
+
+    r.cancelButton = createButton(r)
+    r.cancelButton:SetPoint("TOPLEFT", r.saveButton, "TOPRIGHT", 2, 0)
+    r.cancelButton:SetSize(74, 15)
+    r.cancelButton:SetScript("OnClick", function() r:Hide() end)
+    r.cancelButton.t:SetColorTexture(.4, .2, .2, 1)
+    r.cancelButton.txt = createFont(r.cancelButton, "CENTER", "Cancel")
+    r.cancelButton.txt:SetSize(74, 15)
+    r.cancelButton.txt:SetPoint("LEFT", r.cancelButton, "LEFT", 1, 0)
+
+    r:Hide()
 end
 
-function WD:ImportRule(str)
-    local d = decode64(str)
-    local rule = parseRule(d)
-    return rule
+local function notifyEncounterRules(encounter)
+    sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter))
+    for _,v in pairs(WD.db.profile.rules) do
+        if v.encounter == encounter and v.isActive == true then
+            local msg = string.format(WD_NOTIFY_RULE, v.points, getRuleDescription(v))
+            sendMessage(msg)
+        end
+    end
 end
 
-function WD:ExportEncounter(self, rules)
-    if not rules or #rules == 0 then return end
-    local txt = encode64(table.tostring(rules))
-    local r = self.exportWindow
-    r.editBox:SetText(txt)
-    r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
-    r.editBox:HighlightText()
-    r.editBox:SetAutoFocus(true)
-    r.editBox:SetCursorPosition(0)
+local function initNotifyRuleWindow()
+    WDRM.notifyRule = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.notifyRule
+    r:EnableMouse(true)
+    r:SetPoint("BOTTOMLEFT", WDRM.notify, "TOPLEFT", 0, 1)
+    r:SetSize(152, 22)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
 
-    r:Show()
+    function notifyRule(encounter)
+        WDRM.notifyRule:Hide()
+        notifyEncounterRules(encounter)
+    end
+
+    local items0 = {}
+    for i=1,#encounterTypes do
+        local item = { name = encounterTypes[i], func = function() notifyRule(encounterTypes[i]) end }
+        table.insert(items0, item)
+    end
+
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0:SetSize(150, 20)
+    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+
+    r:Hide()
 end
 
-function WD:ImportEncounter(str)
-    local d = decode64(str)
-    local rules = parseEncounter(d)
-    return rules
+local function initExportEncounterWindow()
+    WDRM.exportEncounter = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.exportEncounter
+    r:EnableMouse(true)
+    r:SetPoint("BOTTOMLEFT", WDRM.export, "TOPLEFT", 0, 1)
+    r:SetSize(152, 22)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    function exportEncounter(encounterName)
+        WDRM.exportEncounter:Hide()
+        local rules = {}
+        for _,v in pairs(WD.db.profile.rules) do
+            if v.encounter == encounterName then
+                rules[#rules+1] = v
+            end
+        end
+        exportEncounter(rules)
+    end
+
+    local items0 = {}
+    for i=1,#encounterTypes do
+        local item = { name = encounterTypes[i], func = function() exportEncounter(encounterTypes[i]) end }
+        table.insert(items0, item)
+    end
+
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0:SetSize(150, 20)
+    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+
+    r:Hide()
 end
 
-function WD:ShareRule(self, rule)
-    if not rule then return end
-    local txt = encode64(table.tostring(rule))
-    WD:SendAddonMessage("share_rule", txt)
+local function initExportWindow()
+    WDRM.exportWindow = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.exportWindow
+    r:EnableMouse(true)
+    r:SetPoint("CENTER", 0, 0)
+    r:SetSize(400, 400)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    createXButton(r, -1)
+
+    r.editBox = createEditBox(r)
+    r.editBox:SetSize(398, 378)
+    r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -21)
+    r.editBox:SetMultiLine(true)
+    r.editBox:SetJustifyH("LEFT")
+    r.editBox:SetMaxBytes(nil)
+    r.editBox:SetMaxLetters(2048)
+    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end);
+    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end);
+    r.editBox:Show()
+
+    r:Hide()
 end
 
-function WD:ShareEncounter(self, encounterName, rules)
-    if not rules or #rules == 0 then return end
-    local txt = encode64(table.tostring(rules))
-    WD:SendAddonMessage("share_encounter", encounterName.."$"..txt)
+local function initImportEncounterWindow()
+    WDRM.importEncounter = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.importEncounter
+    r:EnableMouse(true)
+    r:SetPoint("CENTER", 0, 0)
+    r:SetSize(400, 400)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    function tryImportEncounter(str)
+        local rules = importEncounter(str)
+        if rules and #rules > 0 then
+            StaticPopup_Show("WD_ACCEPT_IMPORT", rules[1].encounter)
+        else
+            -- try import as single rule
+            local rule = importRule(str)
+            if rule.type then
+                insertRule(rule)
+            else
+                print("Could not parse rule")
+            end
+            r:Hide()
+        end
+    end
+
+    createXButton(r, -1)
+
+    r.editBox = createEditBox(r)
+    r.editBox:SetSize(398, 378)
+    r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
+    r.editBox:SetMultiLine(true)
+    r.editBox:SetJustifyH("LEFT")
+    r.editBox:SetMaxBytes(nil)
+    r.editBox:SetMaxLetters(2048)
+    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
+    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end)
+    r.editBox:SetScript("OnShow", function() r.editBox:SetText(""); end)
+    r.editBox:Show()
+
+    r.button = createButton(r)
+    r.button:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
+    r.button:SetSize(125, 20)
+    r.button:SetScript("OnClick", function() tryImportEncounter(r.editBox:GetText()) end)
+    r.button.txt = createFont(r.button, "CENTER", WD_BUTTON_IMPORT)
+    r.button.txt:SetAllPoints()
+
+    r:Hide()
+
+    StaticPopupDialogs["WD_ACCEPT_IMPORT"] = {
+        text = WD_IMPORT_QUESTION,
+        button1 = WD_BUTTON_IMPORT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            insertEncounter(importEncounter(r.editBox:GetText()))
+            r:Hide()
+        end,
+        OnCancel = function()
+            r:Hide()
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
+
+    StaticPopupDialogs["WD_ACCEPT_SHARED_RULE"] = {
+        text = WD_IMPORT_SHARED_QUESTION,
+        button1 = WD_BUTTON_ACCEPT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            if WDRM.sharedRule then
+                local rule = importRule(WDRM.sharedRule)
+                if rule.type then
+                    insertRule(rule)
+                else
+                    print("Could not parse rule")
+                end
+                WDRM.sharedRule = ""
+            end
+        end,
+        OnCancel = function()
+            if WDRM.sharedRule then WDRM.sharedRule = "" end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
+end
+
+local function initShareEncounterWindow()
+    WDRM.shareEncounter = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.shareEncounter
+    r:EnableMouse(true)
+    r:SetPoint("BOTTOMLEFT", WDRM.share, "TOPLEFT", 0, 1)
+    r:SetSize(152, 22)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    function share(encounterName)
+        WDRM.shareEncounter:Hide()
+        local rules = {}
+        for _,v in pairs(WD.db.profile.rules) do
+            if v.encounter == encounterName then
+                rules[#rules+1] = v
+            end
+        end
+        shareEncounter(encounterName, rules)
+    end
+
+    local items0 = {}
+    for i=1,#encounterTypes do
+        local item = { name = encounterTypes[i], func = function() share(encounterTypes[i]) end }
+        table.insert(items0, item)
+    end
+
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0:SetSize(150, 20)
+    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+
+    StaticPopupDialogs["WD_ACCEPT_SHARED_ENCOUNTER"] = {
+        text = WD_IMPORT_SHARED_ENCOUNTER_QUESTION,
+        button1 = WD_BUTTON_ACCEPT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            if WDRM.sharedRule then
+                local rules = WD:ImportEncounter(WDRM.sharedRule)
+                if rules and #rules > 0 then
+                    insertEncounter(rules)
+                else
+                    print("Could not parse rule")
+                end
+
+                WDRM.sharedRule = ""
+            end
+        end,
+        OnCancel = function()
+            if WDRM.sharedRule then WDRM.sharedRule = "" end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
+
+    r:Hide()
+end
+
+function WD:InitEncountersModule(parent)
+    WDRM = parent
+
+    WDRM.rules = {}
+
+    -- new rule button
+    WDRM.addRule = createButton(WDRM)
+    WDRM.addRule:SetPoint("TOPLEFT", WDRM, "TOPLEFT", 1, -5)
+    WDRM.addRule:SetSize(125, 20)
+    WDRM.addRule:SetScript("OnClick", function() if WDRM.newRule:IsVisible() then WDRM.newRule:Hide() else WDRM.newRule:Show() end end)
+    WDRM.addRule.txt = createFont(WDRM.addRule, "CENTER", WD_BUTTON_NEW_RULE)
+    WDRM.addRule.txt:SetAllPoints()
+
+    -- notify rules button
+    WDRM.notify = createButton(WDRM)
+    WDRM.notify:SetPoint("TOPLEFT", WDRM.addRule, "TOPRIGHT", 1, 0)
+    WDRM.notify:SetSize(125, 20)
+    WDRM.notify:SetScript("OnClick", function() if WDRM.notifyRule:IsVisible() then WDRM.notifyRule:Hide() else WDRM.notifyRule:Show() end end)
+    WDRM.notify.txt = createFont(WDRM.notify, "CENTER", WD_BUTTON_NOTIFY_RULES)
+    WDRM.notify.txt:SetAllPoints()
+
+    -- export encounter button
+    WDRM.export = createButton(WDRM)
+    WDRM.export:SetPoint("TOPLEFT", WDRM.notify, "TOPRIGHT", 1, 0)
+    WDRM.export:SetSize(125, 20)
+    WDRM.export:SetScript("OnClick", function() if WDRM.exportEncounter:IsVisible() then WDRM.exportEncounter:Hide() else WDRM.exportEncounter:Show() end end)
+    WDRM.export.txt = createFont(WDRM.export, "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
+    WDRM.export.txt:SetAllPoints()
+
+    -- import encounter button
+    WDRM.import = createButton(WDRM)
+    WDRM.import:SetPoint("TOPLEFT", WDRM.export, "TOPRIGHT", 1, 0)
+    WDRM.import:SetSize(125, 20)
+    WDRM.import:SetScript("OnClick", function() if WDRM.importEncounter:IsVisible() then WDRM.importEncounter:Hide() else WDRM.importEncounter:Show() end end)
+    WDRM.import.txt = createFont(WDRM.import, "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
+    WDRM.import.txt:SetAllPoints()
+
+    -- share encounter button
+    WDRM.share = createButton(WDRM)
+    WDRM.share:SetPoint("TOPLEFT", WDRM.import, "TOPRIGHT", 1, 0)
+    WDRM.share:SetSize(125, 20)
+    WDRM.share:SetScript("OnClick", function() if WDRM.shareEncounter:IsVisible() then WDRM.shareEncounter:Hide() else WDRM.shareEncounter:Show() end end)
+    WDRM.share.txt = createFont(WDRM.share, "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
+    WDRM.share.txt:SetAllPoints()
+
+    -- headers
+    local x, y = 1, -30
+    WDRM.headers = {}
+    local h = createTableHeader(WDRM, "", x, y, 20, 20)
+    h = createTableHeader(WDRM, WD_BUTTON_ENCOUNTER, x + 21, y, 75, 20)
+    h = createTableHeaderNext(WDRM, h, WD_BUTTON_REASON, 395, 20)
+    h = createTableHeaderNext(WDRM, h, WD_BUTTON_POINTS_SHORT, 50, 20)
+    h = createTableHeaderNext(WDRM, h, "", 50, 20)
+    h = createTableHeaderNext(WDRM, h, "", 50, 20)
+    h = createTableHeaderNext(WDRM, h, "", 50, 20)
+    createTableHeaderNext(WDRM, h, "", 70, 20)
+
+    initNewRuleWindow()
+    initNotifyRuleWindow()
+    initExportEncounterWindow()
+    initExportWindow()
+    initImportEncounterWindow()
+    initShareEncounterWindow()
+
+    updateRuleLines()
 end
 
 function WD:ReceiveSharedRule(sender, str)
-    local r = WD.guiFrame.module["encounters"]
-    r.sharedRule = str
+    WDRM.sharedRule = str
     StaticPopup_Show("WD_ACCEPT_SHARED_RULE", sender)
 end
 
 function WD:ReceiveSharedEncounter(sender, encounter, str)
-    local r = WD.guiFrame.module["encounters"]
-    r.sharedRule = str
+    WDRM.sharedRule = str
     StaticPopup_Show("WD_ACCEPT_SHARED_ENCOUNTER", sender, encounter)
 end

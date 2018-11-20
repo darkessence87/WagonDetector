@@ -1,4 +1,6 @@
 
+local WDGR = nil
+
 function calculateCoef(points, pulls)
     local mult = 10^2
     return math.floor((points * 1.0 / pulls) * mult + 0.5) / mult
@@ -17,6 +19,142 @@ local function parseOfficerNote(note)
     end
 
     return tonumber(points) or 0, tonumber(pulls) or 0, isAlt
+end
+
+local function updateGuildRosterFrame()
+    if #WD.cache.rosterkeys == 0 then
+        if #WDGR.members then
+            for i=1, #WDGR.members do
+                WDGR.members[i]:Hide()
+            end
+        end
+        return
+    end
+
+    local maxWidth = 30
+    local maxHeight = 545
+    for i=1,#WDGR.headers do
+        maxWidth = maxWidth + WDGR.headers[i]:GetWidth() + 1
+    end
+
+    local scroller = WDGR.scroller or createScroller(WDGR, maxWidth, maxHeight, #WD.cache.rosterkeys)
+    if not WDGR.scroller then
+        WDGR.scroller = scroller
+    end
+
+    local x, y = 30, -51
+    for k=1,#WD.cache.rosterkeys do
+        local v = WD.cache.roster[WD.cache.rosterkeys[k]]
+        if not WDGR.members[k] then
+            local member = CreateFrame("Frame", nil, WDGR.scroller.scrollerChild)
+            member.info = v
+            member:SetSize(maxWidth, 20)
+            member:SetPoint("TOPLEFT", WDGR.scroller.scrollerChild, "TOPLEFT", x, y)
+            member.column = {}
+
+            local index = 1
+            addNextColumn(WDGR, member, index, "LEFT", getShortCharacterName(v.name))
+            member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
+            member.column[index]:EnableMouse(true)
+            local r,g,b = GetClassColor(v.class)
+            member.column[index].txt:SetTextColor(r, g, b, 1)
+            member.column[index]:SetScript("OnEnter", function(WDGR)
+                GameTooltip:SetOwner(WDGR, "ANCHOR_RIGHT")
+                local tooltip = "Alts:\n"
+                for i=1,#v.alts do
+                    tooltip = tooltip..getShortCharacterName(v.alts[i]).."\n"
+                end
+                if #v.alts > 0 then
+                    GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+                    GameTooltip:Show()
+                end
+            end)
+            member.column[index]:SetScript("OnLeave", function(WDGR) GameTooltip_Hide() end)
+
+            index = index + 1
+            addNextColumn(WDGR, member, index, "CENTER", v.rank)
+            index = index + 1
+            addNextColumn(WDGR, member, index, "CENTER", v.points)
+            index = index + 1
+            addNextColumn(WDGR, member, index, "CENTER", v.pulls)
+            index = index + 1
+            addNextColumn(WDGR, member, index, "CENTER", v.coef)
+
+            table.insert(WDGR.members, member)
+        else
+            local member = WDGR.members[k]
+            member.column[1].txt:SetText(getShortCharacterName(v.name))
+            local r,g,b = GetClassColor(v.class)
+            member.column[1].txt:SetTextColor(r, g, b, 1)
+            member.column[1]:SetScript("OnEnter", function(WDGR)
+                GameTooltip:SetOwner(WDGR, "ANCHOR_RIGHT")
+                local tooltip = "Alts:\n"
+                for i=1,#v.alts do
+                    tooltip = tooltip..getShortCharacterName(v.alts[i]).."\n"
+                end
+                if #v.alts > 0 then
+                    GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+                    GameTooltip:Show()
+                end
+            end)
+            member.column[2].txt:SetText(v.rank)
+            member.column[3].txt:SetText(v.points)
+            member.column[4].txt:SetText(v.pulls)
+            member.column[5].txt:SetText(v.coef)
+            member:Show()
+            updateScroller(WDGR.scroller.slider, #WD.cache.rosterkeys)
+        end
+
+        y = y - 21
+    end
+
+    if #WD.cache.rosterkeys < #WDGR.members then
+        for i=#WD.cache.rosterkeys+1, #WDGR.members do
+            WDGR.members[i]:Hide()
+        end
+    end
+end
+
+function WD:InitGuildRosterModule(parent)
+    WDGR = parent
+
+    local x, y = 1, -30
+    WDGR.headers = {}
+    WDGR.members = {}
+
+    function headerButtonFunction(param)
+        if WDGR.sorted == param then
+            WD:SortGuildRoster(param, not WD.cache.rostersortinverse, function() updateGuildRosterFrame() end)
+        else
+            WD:SortGuildRoster(param, false, function() updateGuildRosterFrame() end) 
+        end
+        WDGR.sorted = param
+    end
+
+    local h = createTableHeader(WDGR, WD_BUTTON_NAME, x, y, 150, 20, function() headerButtonFunction("BY_NAME") end)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_RANK, 75, 20, function() headerButtonFunction("BY_RANK") end)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_POINTS, 75, 20, function() headerButtonFunction("BY_POINTS") end)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_PULLS, 75, 20, function() headerButtonFunction("BY_PULLS") end)
+    createTableHeaderNext(WDGR, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
+
+    WD.cache.roster = {}
+    WD.cache.rosterkeys = {}
+
+    WD:OnGuildRosterUpdate()
+    WD:SortGuildRoster("BY_NAME", false, function() updateGuildRosterFrame() end)
+
+    WDGR:RegisterEvent("GUILD_ROSTER_UPDATE")
+    WDGR:SetScript("OnEvent", function(self, event, ...)
+        if event == "GUILD_ROSTER_UPDATE" then
+            WD:OnGuildRosterUpdate()
+        end
+    end)
+end
+
+function WD:RefreshGuildRosterFrame()
+    if WDGR then
+        GuildRoster()
+    end
 end
 
 function WD:FindMain(name)
@@ -81,7 +219,7 @@ function WD:OnGuildRosterUpdate()
         end
     end
 
-    WD:SortGuildRoster(WD.cache.rostersort, WD.cache.rostersortinverse)
+    WD:SortGuildRoster(WD.cache.rostersort, WD.cache.rostersortinverse, function() updateGuildRosterFrame() end)
 end
 
 function WD:SortGuildRoster(param, inverse, callback)

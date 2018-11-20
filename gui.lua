@@ -117,24 +117,24 @@ local function initMainModule(mainF)
     mainF.dropFrame1:SetScript("OnShow", function() mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name) end)
 end
 
-local function createModuleButton(self, name, ySize, yOffset)
-    local parent = self:GetParent()
-    self.button = createButton(parent)
-    self.button:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, yOffset)
-    self.button:SetSize(198, ySize)
-    self.button:SetScript("OnClick", function() if not self:IsVisible() then hideModules(); self:Show(); self.button.t:SetColorTexture(.2, .6, .2, 1); end end)
-    self.button.txt = createFont(self.button, "LEFT", name)
-    self.button.txt:SetSize(190, ySize)
-    self.button.txt:SetPoint("LEFT", self.button, "LEFT", 5, 0)
-    self.button.t:SetColorTexture(.2, .2, .2, 1)
+local function createModuleButton(module, name, ySize, yOffset)
+    local parent = module:GetParent()
+    module.button = createButton(parent)
+    module.button:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, yOffset)
+    module.button:SetSize(158, ySize)
+    module.button:SetScript("OnClick", function() if not module:IsVisible() then hideModules(); module:Show(); module.button.t:SetColorTexture(.2, .6, .2, 1); end end)
+    module.button.txt = createFont(module.button, "LEFT", name)
+    module.button.txt:SetSize(150, ySize)
+    module.button.txt:SetPoint("LEFT", module.button, "LEFT", 5, 0)
+    module.button.t:SetColorTexture(.2, .2, .2, 1)
 end
 
-local function createModuleFrame(self, name)
-    self.module[name] = CreateFrame("Frame", nil, self)
-    local m = self.module[name]
+local function createModuleFrame(name)
+    WDGF.module[name] = CreateFrame("Frame", nil, WDGF)
+    local m = WDGF.module[name]
     m:SetSize(800, 600)
     m:ClearAllPoints()
-    m:SetPoint("TOPLEFT", self, "TOPLEFT", 201, 0)
+    m:SetPoint("TOPLEFT", WDGF, "TOPLEFT", 161, 0)
     m:SetFrameStrata("DIALOG")
 
     if name == "main" then
@@ -178,15 +178,15 @@ function WD:CreateGuiFrame()
         if #gRanks == 0 then return end
 
         -- modules frames
-        local mainF = createModuleFrame(WDGF, "main")
+        local mainF = createModuleFrame("main")
         createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, 20, -30)
-        local encF = createModuleFrame(WDGF, "encounters")
+        local encF = createModuleFrame("encounters")
         createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, 20, -51)
-        local pointsF = createModuleFrame(WDGF, "guild_roster")
+        local pointsF = createModuleFrame("guild_roster")
         createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, 20, -72)
-        local lastEncF = createModuleFrame(WDGF, "last_encounter")
+        local lastEncF = createModuleFrame("last_encounter")
         createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, 20, -93)
-        local historyF = createModuleFrame(WDGF, "history")
+        local historyF = createModuleFrame("history")
         createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, 20, -114)
         hideModules()
 

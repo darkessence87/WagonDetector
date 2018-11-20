@@ -12,7 +12,7 @@ local function parseOfficerNote(note)
 
     for i=1,GetNumGuildMembers() do
         local name, _, rankIndex = GetGuildRosterInfo(i)
-        if note == getShortCharacterName(name) and rankIndex < 6 then
+        if note == getShortCharacterName(name) and rankIndex <= WD.db.profile.minGuildRank.id then
             isAlt = "yes"
             break
         end
@@ -126,7 +126,7 @@ function WD:InitGuildRosterModule(parent)
         if WDGR.sorted == param then
             WD:SortGuildRoster(param, not WD.cache.rostersortinverse, function() updateGuildRosterFrame() end)
         else
-            WD:SortGuildRoster(param, false, function() updateGuildRosterFrame() end) 
+            WD:SortGuildRoster(param, false, function() updateGuildRosterFrame() end)
         end
         WDGR.sorted = param
     end
@@ -185,7 +185,7 @@ function WD:OnGuildRosterUpdate()
     local altInfos = {}
     for i=1,GetNumGuildMembers() do
         local name, rank, rankIndex, _, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
-        if officernote and (rankIndex == 0 or rankIndex <= WD.db.profile.minGuildRank.id) then
+        if officernote and officernote ~= "" and rankIndex <= WD.db.profile.minGuildRank.id then
             local info = {}
             info.index = i
             info.name, info.class, info.rank = name, class, rank
@@ -274,7 +274,7 @@ function WD:SavePullsToGuildRoster(v)
     end
 end
 
-function WD:SavePenaltyPointsToGuildRoster(v)
+function WD:SavePenaltyPointsToGuildRoster(v, isRevert)
     local name = self:FindMain(getFullCharacterName(v.name))
     if WD.cache.roster[name] then
         local info = WD.cache.roster[name]
@@ -286,7 +286,9 @@ function WD:SavePenaltyPointsToGuildRoster(v)
             GuildRosterSetOfficerNote(info.index, info.points..","..info.pulls)
         end
 
-        WD:AddHistory(v)
+        if not isRevert then
+            WD:AddHistory(v)
+        end
     end
 end
 

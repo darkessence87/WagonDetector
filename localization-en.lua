@@ -15,7 +15,8 @@ WD_HELP = "Available commands:\
 /wd stoptest - ends test encounter\
 /wd wipe - wipes guild roster statistics\
 /wd interrupt - interrupts current active encounter\
-/wd pull - blocks next upcoming encounter for other RLs or officers"
+/wd pull - blocks next upcoming encounter for other RLs or officers\
+/wd clear - totally erases history"
 
 WD_PRINT_SUCCESS = "%s [NICE] %s: %s (%d penalty points)"
 WD_PRINT_FAILURE = "%s [FAIL] %s: %s (%d penalty points)"
@@ -43,6 +44,8 @@ WD_BUTTON_ENCOUNTERS_MODULE = "Encounters"
 WD_BUTTON_GUILD_ROSTER_MODULE = "Guild roster"
 WD_BUTTON_LAST_ENCOUNTER_MODULE = "Last encounter"
 WD_BUTTON_HISTORY_MODULE = "History"
+WD_BUTTON_HISTORY_FILTER = "Filters:"
+WD_BUTTON_CLEAR = "Clear history"
 WD_BUTTON_DELETE = "Delete"
 WD_BUTTON_REVERT = "Revert"
 WD_BUTTON_NEW_RULE = "New rule"

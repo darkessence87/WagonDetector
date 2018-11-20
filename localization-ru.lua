@@ -19,7 +19,8 @@ WD_HELP = "Доступные команды:\
 /wd stoptest - останавливает тест боя\
 /wd wipe - сбрасывает статистику очков гильдии\
 /wd interrupt - прерывает сбор статистики на текущем пуле\
-/wd pull - блокирует следующий бой для других РЛов или офицеров"
+/wd pull - блокирует следующий бой для других РЛов или офицеров\
+/wd clear - полностью очищает историю"
 
 WD_PRINT_SUCCESS = "%s [КРАСАВА] %s: %s (%d штраф очков)"
 WD_PRINT_FAILURE = "%s [ВАГОН] %s: %s (%d штраф очков)"
@@ -47,6 +48,8 @@ WD_BUTTON_ENCOUNTERS_MODULE = "Список правил"
 WD_BUTTON_GUILD_ROSTER_MODULE = "Статистика гильдии"
 WD_BUTTON_LAST_ENCOUNTER_MODULE = "Последний бой"
 WD_BUTTON_HISTORY_MODULE = "История"
+WD_BUTTON_HISTORY_FILTER = "Фильтры:"
+WD_BUTTON_CLEAR = "Очистить историю"
 WD_BUTTON_DELETE = "Удалить"
 WD_BUTTON_REVERT = "Отмена"
 WD_BUTTON_NEW_RULE = "Новое правило"

@@ -4,8 +4,11 @@ local WDMF = WD.mainFrame
 WDMF.encounter = {}
 WDMF.encounter.isBlockedByAnother = 0
 
-WD.cache = {}
+if not WD.cache then WD.cache = {} end
 WD.cache.raidroster = {}
+
+local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
+local playerName = UnitName("player") .. "-" .. currentRealmName
 
 encounterIDs = {
     [0] = "Test",
@@ -41,8 +44,6 @@ local RoleSpecializations = {
     ["MELEE"]   = {251, 252, 577, 103, 255, 269, 70, 259, 260, 261, 263, 71, 72},   -- 13
     ["RANGED"]  = {102, 253, 254, 62, 63, 64, 258, 262, 265, 266, 267},             -- 11
 }
-
-local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
 
 local potionSpellIds = {
     [279151] = "/battle-potion-of-intellect",
@@ -219,10 +220,10 @@ local function addSuccess(timestamp, name, msg, points)
     local niceBro = {}
     niceBro.encounter = WDMF.encounter.name
     niceBro.timestamp = getTimedDiff(WDMF.encounter.startTime, timestamp)
-    niceBro.name = name
+    niceBro.name = getFullCharacterName(name)
     niceBro.reason = msg
     niceBro.points = points
-    niceBro.role = getRole(name)
+    niceBro.role = getRole(niceBro.name)
     WDMF.encounter.fuckers[#WDMF.encounter.fuckers+1] = niceBro
 
     if WDMF.encounter.isBlockedByAnother == 0 then
@@ -245,10 +246,10 @@ local function addFail(timestamp, name, msg, points)
     local fucker = {}
     fucker.encounter = WDMF.encounter.name
     fucker.timestamp = getTimedDiff(WDMF.encounter.startTime, timestamp)
-    fucker.name = name
+    fucker.name = getFullCharacterName(name)
     fucker.reason = msg
     fucker.points = points
-    fucker.role = getRole(name)
+    fucker.role = getRole(fucker.name)
     WDMF.encounter.fuckers[#WDMF.encounter.fuckers+1] = fucker
 
     if WDMF.encounter.isBlockedByAnother == 0 then
@@ -295,13 +296,51 @@ local function checkConsumables(timestamp, name, unit, rules)
     end
 
     if noflask and noflask == true then
-        addFail(timestamp, getShortCharacterName(name), WD_RULE_FLASKS, rules["EV_FLASKS"].points)
+        addFail(timestamp, name, WD_RULE_FLASKS, rules["EV_FLASKS"].points)
     end
     if nofood and nofood == true then
-        addFail(timestamp, getShortCharacterName(name), WD_RULE_FOOD, rules["EV_FOOD"].points)
+        addFail(timestamp, name, WD_RULE_FOOD, rules["EV_FOOD"].points)
     end
     if norune and norune == true then
-        addFail(timestamp, getShortCharacterName(name), WD_RULE_RUNES, rules["EV_RUNES"].points)
+        addFail(timestamp, name, WD_RULE_RUNES, rules["EV_RUNES"].points)
+    end
+end
+
+local function getSpecialization(name, class)
+    local specId = nil
+    if name == playerName then
+        specId = GetSpecialization()
+    else
+        specId = GetInspectSpecialization(name)
+    end
+
+    if specId and ClassSpecializations[class][specId] then
+        return ClassSpecializations[class][specId]
+    end
+
+    return 0
+end
+
+local function updateRaidRoster()
+    for i=1, GetNumGroupMembers() do
+        local unit = "raid"..i
+        local name, realm = UnitName(unit)
+        if not realm or realm == "" then
+            realm = currentRealmName
+        end
+        local _,class = UnitClass(unit)
+
+        local p = {}
+        p.name = name.."-"..realm
+        p.unit = unit
+        p.class = class
+        WD.cache.raidroster[p.name] = p
+
+        if p.name == playerName then
+            WD.cache.raidroster[p.name].specId = getSpecialization(p.name, p.class)
+        else
+            NotifyInspect(unit)
+        end
     end
 end
 
@@ -330,7 +369,7 @@ function WDMF:OnCombatEvent(...)
         if rules["EV_POTIONS"].points then
             local role = getRole(dst_name)
             if (role == "DAMAGE" or role == "Unknown") and potionSpellIds[spell_id] then
-                addSuccess(timestamp, getShortCharacterName(dst_name), WD_RULE_POTIONS, rules["EV_POTIONS"].points)
+                addSuccess(timestamp, dst_name, WD_RULE_POTIONS, rules["EV_POTIONS"].points)
             end
         end
     end
@@ -411,35 +450,23 @@ function WDMF:OnEvent(event, ...)
         self:OnAddonMessage(...)
     elseif event == "ADDON_LOADED" then
         C_ChatInfo.RegisterAddonMessagePrefix("WDCM")
+        updateRaidRoster()
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        WD.cache.raidroster = {}
+        updateRaidRoster()
     elseif event == "RAID_ROSTER_UPDATE" then
         WD.cache.raidroster = {}
-        for i=1, GetNumGroupMembers() do
-            local unit = "raid"..i
-            local name, realm = UnitName(unit)
-            realm = realm or currentRealmName
-            local _,class = UnitClass(unit)
-
-            local p = {}
-            p.name = name.."-"..realm
-            p.unit = unit
-            p.class = class
-            WD.cache.raidroster[p.name] = p
-
-            NotifyInspect(unit)
-        end
+        updateRaidRoster()
     elseif event == "INSPECT_READY" then
         if not WD.cache.raidroster then return end
         local guid = ...
         local _,_,_,race,_,name,realm = GetPlayerInfoByGUID(guid)
-        realm = realm or currentRealmName
+        if not realm or realm == "" then
+            realm = currentRealmName
+        end
         name = name.."-"..realm
         if WD.cache.raidroster[name] then
-            local p = WD.cache.raidroster[name]
-            local specId = GetInspectSpecialization(name)
-            if specId and ClassSpecializations[p.class][specId] then
-                WD.cache.raidroster[name].specId = ClassSpecializations[p.class][specId]
-                print(name)
-            end
+            WD.cache.raidroster[name].specId = getSpecialization(name, WD.cache.raidroster[name].class)
         end
     end
 end
@@ -458,6 +485,10 @@ function WDMF:StartEncounter(encounterID, encounterName)
     self.encounter.players = {}
 
     if UnitInRaid("player") ~= nil then
+        if #WD.cache.raidroster == 0 then
+            updateRaidRoster()
+        end
+
         for _,v in pairs(WD.cache.raidroster) do
             if UnitIsVisible(v.unit) then
                 self.encounter.players[#self.encounter.players+1] = v
@@ -465,18 +496,14 @@ function WDMF:StartEncounter(encounterID, encounterName)
             end
         end
     else
-        local name = UnitName("player")
         local _,class = UnitClass("player")
 
         local p = {}
-        p.name = name
+        p.name = playerName
         p.unit = "player"
         p.class = class
         WD.cache.raidroster[p.name] = p
-        local specId = GetSpecialization()
-        if specId and ClassSpecializations[class][specId] then
-            WD.cache.raidroster[p.name].specId = ClassSpecializations[p.class][specId]
-        end
+        WD.cache.raidroster[p.name].specId = getSpecialization(p.name, p.class)
 
         self.encounter.players[#self.encounter.players+1] = p
 
@@ -525,9 +552,9 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
     if msgId ~= "WDCM" then return end
 
     local cmd, data = string.match(msg, "^(.*):(.*)$")
-    local receiver, realm = UnitName("player")
-    realm = realm or currentRealmName
-    receiver = receiver.."-"..realm
+    local receiver = playerName
+
+    sender = getFullCharacterName(sender)
 
     if WD:IsOfficer(receiver) == false then
         print("You are not officer to receive message")

@@ -656,8 +656,8 @@ local function initExportWindow()
     r.editBox:SetJustifyH("LEFT")
     r.editBox:SetMaxBytes(nil)
     r.editBox:SetMaxLetters(2048)
-    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end);
-    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end);
+    r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
+    r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end)
     r.editBox:Show()
 
     r:Hide()
@@ -699,7 +699,7 @@ local function initImportEncounterWindow()
     r.editBox:SetMaxLetters(2048)
     r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
     r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end)
-    r.editBox:SetScript("OnShow", function() r.editBox:SetText(""); end)
+    r.editBox:SetScript("OnShow", function() r.editBox:SetText(""); r.editBox:SetFocus() end)
     r.editBox:Show()
 
     r.button = createButton(r)

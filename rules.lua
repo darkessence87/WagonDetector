@@ -614,7 +614,7 @@ local function initExportEncounterWindow()
     r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
-    function exportEncounter(encounterName)
+    function tryExportEncounter(encounterName)
         WDRM.exportEncounter:Hide()
         local rules = {}
         for _,v in pairs(WD.db.profile.rules) do
@@ -627,7 +627,7 @@ local function initExportEncounterWindow()
 
     local items0 = {}
     for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i], func = function() exportEncounter(encounterTypes[i]) end }
+        local item = { name = encounterTypes[i], func = function() tryExportEncounter(encounterTypes[i]) end }
         table.insert(items0, item)
     end
 

@@ -306,40 +306,41 @@ local function checkConsumables(timestamp, name, unit, rules)
     end
 end
 
-local function getSpecialization(name, class)
+local function getSpecialization(name, class, unit)
     local specId = nil
     if name == playerName then
         specId = GetSpecialization()
+        if specId and ClassSpecializations[class][specId] then
+            return ClassSpecializations[class][specId]
+        end
     else
-        specId = GetInspectSpecialization(name)
-    end
-
-    if specId and ClassSpecializations[class][specId] then
-        return ClassSpecializations[class][specId]
+        return GetInspectSpecialization(unit)
     end
 
     return 0
 end
 
-local function updateRaidRoster()
-    for i=1, GetNumGroupMembers() do
-        local unit = "raid"..i
-        local name, realm = UnitName(unit)
-        if not realm or realm == "" then
-            realm = currentRealmName
-        end
-        local _,class = UnitClass(unit)
+local function updateRaidSpec()
+    if UnitInRaid("player") ~= nil then
+        for i=1, GetNumGroupMembers() do
+            local unit = "raid"..i
+            local name, realm = UnitName(unit)
+            if not realm or realm == "" then
+                realm = currentRealmName
+            end
+            local _,class = UnitClass(unit)
 
-        local p = {}
-        p.name = name.."-"..realm
-        p.unit = unit
-        p.class = class
-        WD.cache.raidroster[p.name] = p
+            local p = {}
+            p.name = name.."-"..realm
+            p.unit = unit
+            p.class = class
+            WD.cache.raidroster[p.name] = p
 
-        if p.name == playerName then
-            WD.cache.raidroster[p.name].specId = getSpecialization(p.name, p.class)
-        else
-            NotifyInspect(unit)
+            if p.name == playerName then
+                WD.cache.raidroster[p.name].specId = getSpecialization(p.name, p.class, p.unit)
+            else
+                NotifyInspect(unit)
+            end
         end
     end
 end
@@ -448,15 +449,10 @@ function WDMF:OnEvent(event, ...)
         self:OnCombatEvent(CombatLogGetCurrentEventInfo())
     elseif event == "CHAT_MSG_ADDON" then
         self:OnAddonMessage(...)
-    elseif event == "ADDON_LOADED" then
-        C_ChatInfo.RegisterAddonMessagePrefix("WDCM")
-        updateRaidRoster()
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        updateRaidSpec()
     elseif event == "PLAYER_ENTERING_WORLD" then
-        WD.cache.raidroster = {}
-        updateRaidRoster()
-    elseif event == "RAID_ROSTER_UPDATE" then
-        WD.cache.raidroster = {}
-        updateRaidRoster()
+        updateRaidSpec()
     elseif event == "INSPECT_READY" then
         if not WD.cache.raidroster then return end
         local guid = ...
@@ -466,7 +462,7 @@ function WDMF:OnEvent(event, ...)
         end
         name = name.."-"..realm
         if WD.cache.raidroster[name] then
-            WD.cache.raidroster[name].specId = getSpecialization(name, WD.cache.raidroster[name].class)
+            WD.cache.raidroster[name].specId = getSpecialization(name, WD.cache.raidroster[name].class, WD.cache.raidroster[name].unit)
         end
     end
 end
@@ -485,14 +481,27 @@ function WDMF:StartEncounter(encounterID, encounterName)
     self.encounter.players = {}
 
     if UnitInRaid("player") ~= nil then
-        if #WD.cache.raidroster == 0 then
-            updateRaidRoster()
-        end
+        for i=1, GetNumGroupMembers() do
+            local unit = "raid"..i
+            local name, realm = UnitName(unit)
+            if not realm or realm == "" then
+                realm = currentRealmName
+            end
+            local _,class = UnitClass(unit)
 
-        for _,v in pairs(WD.cache.raidroster) do
-            if UnitIsVisible(v.unit) then
-                self.encounter.players[#self.encounter.players+1] = v
-                checkConsumables(self.encounter.startTime, v.name, v.unit, self.encounter.rules)
+            local p = {}
+            p.name = name.."-"..realm
+            p.unit = unit
+            p.class = class
+
+            if UnitIsVisible(p.unit) then
+                if WD.cache.raidroster[p.name] then
+                    p.specId = WD.cache.raidroster[p.name].specId
+                else
+                    NotifyInspect(p.unit)
+                end
+                self.encounter.players[#self.encounter.players+1] = p
+                checkConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
             end
         end
     else
@@ -503,7 +512,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
         p.unit = "player"
         p.class = class
         WD.cache.raidroster[p.name] = p
-        WD.cache.raidroster[p.name].specId = getSpecialization(p.name, p.class)
+        WD.cache.raidroster[p.name].specId = getSpecialization(p.name, p.class, p.unit)
 
         self.encounter.players[#self.encounter.players+1] = p
 
@@ -585,7 +594,7 @@ function WD:EnableConfig()
         WDMF:RegisterEvent("ENCOUNTER_START")
         WDMF:RegisterEvent("ENCOUNTER_END")
         WDMF:RegisterEvent("INSPECT_READY")
-        WDMF:RegisterEvent("RAID_ROSTER_UPDATE")
+        WDMF:RegisterEvent("GROUP_ROSTER_UPDATE")
 
         WD.db.profile.isEnabled = true
         sendMessage(WD_ENABLED)
@@ -594,7 +603,7 @@ function WD:EnableConfig()
         WDMF:UnregisterEvent("ENCOUNTER_START")
         WDMF:UnregisterEvent("ENCOUNTER_END")
         WDMF:UnregisterEvent("INSPECT_READY")
-        WDMF:UnregisterEvent("RAID_ROSTER_UPDATE")
+        WDMF:UnregisterEvent("GROUP_ROSTER_UPDATE")
 
         WD.db.profile.isEnabled = false
         sendMessage(WD_DISABLED)

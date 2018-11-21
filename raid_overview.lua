@@ -3,6 +3,7 @@ local WDRO = nil
 
 if not WD.cache then WD.cache = {} end
 WD.cache.raidroster = {}
+WD.cache.raidrosterkeys = {}
 
 local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
 local playerName = UnitName("player") .. "-" .. currentRealmName
@@ -72,15 +73,21 @@ local function updateRaidOverviewMember(data, parent)
             member.column = {}
 
             local index = 1
-            addNextColumn(parent, member, index, "CENTER", getShortCharacterName(v.name))
-            member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
+            addNextColumn(parent, member, index, "LEFT", getShortCharacterName(v.name))
+            if k > 1 then
+                member.column[index]:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
+                member:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
+            else
+                member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
+            end
             member.column[index]:EnableMouse(false)
             local r,g,b = GetClassColor(v.class)
             member.column[index].txt:SetTextColor(r, g, b, 1)
 
-            table.insert(parent.members, member)
+            parent.members[k] = member
         else
             local member = parent.members[k]
+            member.info = v
             member.column[1].txt:SetText(getShortCharacterName(v.name))
             local r,g,b = GetClassColor(v.class)
             member.column[1].txt:SetTextColor(r, g, b, 1)
@@ -98,15 +105,17 @@ end
 local function updateRaidOverviewFrame()
     -- sort by name
     local func = function(a, b)
-        if a.name < b.name then return true
+        if WD.cache.raidroster[a].name < WD.cache.raidroster[b].name then return true
         else
             return false
         end
     end
-    table.sort(WD.cache.raidroster, func)
 
-    local tanks, healers, melees, ranged = {}, {}, {}, {}
-    for k,v in pairs(WD.cache.raidroster) do
+    table.sort(WD.cache.raidrosterkeys, func)
+
+    local tanks, healers, melees, ranged, unknown = {}, {}, {}, {}, {}
+    for k=1,#WD.cache.raidrosterkeys do
+        local v = WD.cache.raidroster[WD.cache.raidrosterkeys[k]]
         local role = getRoleBySpecId(v.specId)
         if role == "Tank" then
             tanks[#tanks+1] = v
@@ -116,6 +125,8 @@ local function updateRaidOverviewFrame()
             melees[#melees+1] = v
         elseif role == "Ranged" then
             ranged[#ranged+1] = v
+        else
+            unknown[#unknown+1] = v
         end
     end
 
@@ -123,9 +134,10 @@ local function updateRaidOverviewFrame()
     updateRaidOverviewMember(healers, WDRO.healers)
     updateRaidOverviewMember(melees, WDRO.melees)
     updateRaidOverviewMember(ranged, WDRO.ranged)
+    updateRaidOverviewMember(unknown, WDRO.unknown)
 end
 
-local function updateRaidSpec()
+local function updateRaidSpec(inspected)
     if UnitInRaid("player") ~= nil then
         for i=1, GetNumGroupMembers() do
             local unit = "raid"..i
@@ -143,21 +155,53 @@ local function updateRaidSpec()
             if p.name == playerName then
                 p.specId = getSpecialization(p.name, p.class, p.unit)
             else
-                NotifyInspect(unit)
+                if not inspected then
+                    NotifyInspect(unit)
+                end
             end
 
-            WD.cache.raidroster[p.name] = p
+            if WD.cache.raidroster[p.name] then
+                WD.cache.raidroster[p.name].unit = p.unit
+            else
+                WD.cache.raidrosterkeys[#WD.cache.raidrosterkeys+1] = p.name
+                WD.cache.raidroster[p.name] = p
+            end
+        end
+
+        for k,v in pairs(WD.cache.raidrosterkeys) do
+            local data = WD.cache.raidroster[v]
+            if UnitInRaid(data.unit) then
+                local name, realm = UnitName(data.unit)
+                if not realm or realm == "" then
+                    realm = currentRealmName
+                end
+                name = name.."-"..realm
+
+                if name ~= data.name then
+                    WD.cache.raidroster[v] = nil
+                    table.remove(WD.cache.raidrosterkeys, k)
+                end
+            else
+                WD.cache.raidroster[v] = nil
+                table.remove(WD.cache.raidrosterkeys, k)
+            end
         end
     else
+        table.wipe(WD.cache.raidrosterkeys)
+        table.wipe(WD.cache.raidroster)
+
         local _,class = UnitClass("player")
         local p = {}
         p.name = playerName
         p.unit = "player"
         p.class = class
         p.specId = getSpecialization(p.name, p.class, p.unit)
+        if not WD.cache.raidroster[p.name] then
+            WD.cache.raidrosterkeys[#WD.cache.raidrosterkeys+1] = p.name
+        end
         WD.cache.raidroster[p.name] = p
     end
-    
+
     updateRaidOverviewFrame()
 end
 
@@ -176,11 +220,15 @@ function WD:InitRaidOverviewModule(parent)
     WDRO.ranged = {}
     WDRO.ranged.headers = {}
     WDRO.ranged.members = {}
+    WDRO.unknown = {}
+    WDRO.unknown.headers = {}
+    WDRO.unknown.members = {}
 
     table.insert(WDRO.tanks.headers,    createTableHeader(WDRO, "Tanks",    1,   -30, 150, 20))
     table.insert(WDRO.healers.headers,  createTableHeader(WDRO, "Healers",  152, -30, 150, 20))
     table.insert(WDRO.melees.headers,   createTableHeader(WDRO, "Melee",    303, -30, 150, 20))
     table.insert(WDRO.ranged.headers,   createTableHeader(WDRO, "Ranged",   454, -30, 150, 20))
+    table.insert(WDRO.unknown.headers,   createTableHeader(WDRO, "Unknown",   605, -30, 150, 20))
 
     WDRO:RegisterEvent("GROUP_ROSTER_UPDATE")
     WDRO:RegisterEvent("INSPECT_READY")
@@ -200,13 +248,14 @@ function WD:InitRaidOverviewModule(parent)
             if WD.cache.raidroster[name] then
                 WD.cache.raidroster[name].specId = getSpecialization(name, WD.cache.raidroster[name].class, WD.cache.raidroster[name].unit)
             end
+            updateRaidSpec("inspected")
         elseif event == "PLAYER_ENTERING_WORLD" then
             updateRaidSpec()
         elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
             updateRaidSpec()
         end
     end)
-    
+
     updateRaidSpec()
 end
 

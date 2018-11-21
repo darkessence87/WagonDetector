@@ -9,7 +9,7 @@ function WD:InitLastEncounterModule(parent)
     WDLE.headers = {}
     local h = createTableHeader(WDLE, WD_BUTTON_TIME, x, y, 70, 20)
     table.insert(WDLE.headers, h)
-    h = createTableHeaderNext(WDLE, h, WD_BUTTON_NAME, 100, 20)
+    h = createTableHeaderNext(WDLE, h, WD_BUTTON_NAME, 200, 20)
     table.insert(WDLE.headers, h)
     h = createTableHeaderNext(WDLE, h, WD_BUTTON_ROLE, 50, 20)
     table.insert(WDLE.headers, h)

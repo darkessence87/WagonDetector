@@ -13,10 +13,10 @@ encounterIDs = {
     [2144] = "UD_TALOC",
     [2141] = "UD_MOTHER",
     [2136] = "UD_ZEKVOZ",
-    [-1] = "UD_VECTIS",
-    [-1] = "UD_FETID",
-    [-1] = "UD_ZUL",
-    [-1] = "UD_MYTRAX",
+    [2134] = "UD_VECTIS",
+    [2128] = "UD_FETID",
+    [2145] = "UD_ZUL",
+    [2135] = "UD_MYTRAX",
     [2122] = "UD_GHUUN",
 }
 
@@ -428,7 +428,7 @@ function WDMF:StopEncounter()
         end
 
         -- save pull information
-        if WD.cache.roster then
+        if self.encounter.players then
             for _,v in pairs(self.encounter.players) do
                 WD:SavePullsToGuildRoster(v)
             end

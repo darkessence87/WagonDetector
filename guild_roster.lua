@@ -136,10 +136,15 @@ function WD:InitGuildRosterModule(parent)
     end
 
     local h = createTableHeader(WDGR, WD_BUTTON_NAME, x, y, 150, 20, function() headerButtonFunction("BY_NAME") end)
+    table.insert(WDGR.headers, h)
     h = createTableHeaderNext(WDGR, h, WD_BUTTON_RANK, 75, 20, function() headerButtonFunction("BY_RANK") end)
+    table.insert(WDGR.headers, h)
     h = createTableHeaderNext(WDGR, h, WD_BUTTON_POINTS, 75, 20, function() headerButtonFunction("BY_POINTS") end)
+    table.insert(WDGR.headers, h)
     h = createTableHeaderNext(WDGR, h, WD_BUTTON_PULLS, 75, 20, function() headerButtonFunction("BY_PULLS") end)
-    createTableHeaderNext(WDGR, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
+    table.insert(WDGR.headers, h)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
+    table.insert(WDGR.headers, h)
 
     WD:OnGuildRosterUpdate()
     WD:SortGuildRoster("BY_NAME", false, function() updateGuildRosterFrame() end)
@@ -189,7 +194,7 @@ function WD:OnGuildRosterUpdate()
         if officernote and officernote == "" then
             officernote = "0,0"
         end
-        if officernote and officernote ~= "" and rankIndex <= WD.db.profile.minGuildRank.id then
+        if officernote and rankIndex <= WD.db.profile.minGuildRank.id then
             local info = {}
             info.index = i
             info.name, info.class, info.rank = name, class, rank

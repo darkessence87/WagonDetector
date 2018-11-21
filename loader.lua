@@ -32,14 +32,10 @@ function WD:OnInitialize()
     C_ChatInfo.RegisterAddonMessagePrefix("WDCM")
 
     if self.mainFrame then
-        self.mainFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-
         if WD.db.profile.isEnabled == true then
             self.mainFrame:RegisterEvent("CHAT_MSG_ADDON")
             self.mainFrame:RegisterEvent("ENCOUNTER_START")
             self.mainFrame:RegisterEvent("ENCOUNTER_END")
-            self.mainFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-            self.mainFrame:RegisterEvent("INSPECT_READY")
         end
 
         self.mainFrame:SetScript("OnEvent", function(self, ...) self:OnEvent(...); end)

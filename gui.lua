@@ -147,6 +147,8 @@ local function createModuleFrame(name)
         WD:InitLastEncounterModule(m)
     elseif name == "history" then
         WD:InitHistoryModule(m)
+    elseif name == "raid_overview" then
+        WD:InitRaidOverviewModule(m)
     end
 
     return m
@@ -178,16 +180,20 @@ function WD:CreateGuiFrame()
         if #gRanks == 0 then return end
 
         -- modules frames
+        local x, y = 20, -30
+        local dy = -21
         local mainF = createModuleFrame("main")
-        createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, 20, -30)
+        createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, x, y)
         local encF = createModuleFrame("encounters")
-        createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, 20, -51)
+        createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, x, y + dy)
         local pointsF = createModuleFrame("guild_roster")
-        createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, 20, -72)
+        createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, x, y + 2 * dy)
+        local raidF = createModuleFrame("raid_overview")
+        createModuleButton(raidF, WD_BUTTON_RAID_OVERVIEW_MODULE, x, y + 3 * dy)
         local lastEncF = createModuleFrame("last_encounter")
-        createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, 20, -93)
+        createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, x, y + 4 * dy)
         local historyF = createModuleFrame("history")
-        createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, 20, -114)
+        createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, x, y + 5 * dy)
         hideModules()
 
         WDGF:UnregisterEvent("GUILD_ROSTER_UPDATE")

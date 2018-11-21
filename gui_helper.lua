@@ -410,7 +410,6 @@ function createTableHeader(self, name, x, y, xSize, ySize, onClick)
     button.txt:SetPoint("LEFT", button, "LEFT", 0, 0)
     button.t:SetColorTexture(.5, .5, .5, 1)
     if onClick then button:EnableMouse(true); button:SetScript("OnClick", onClick) end
-    table.insert(self.headers, button)
     return button
 end
 
@@ -424,7 +423,6 @@ function createTableHeaderNext(self, prev, name, xSize, ySize, onClick)
     button.txt:SetPoint("LEFT", button, "LEFT", 0, 0)
     button.t:SetColorTexture(.5, .5, .5, 1)
     if onClick then button:EnableMouse(true); button:SetScript("OnClick", onClick) end
-    table.insert(self.headers, button)
     return button
 end
 

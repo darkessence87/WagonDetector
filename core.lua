@@ -418,6 +418,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
 end
 
 function WDMF:StopEncounter()
+    if not self.encounter.startTime then return end
     if self.encounter.stopped == 1 then return end
     self.encounter.endTime = time()
 
@@ -476,9 +477,12 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
         if cmd == "block_encounter" then
             self.encounter.isBlockedByAnother = 1
             print(string.format(WD_LOCKED_BY, sender))
-        elseif cmd == "share_encounter" then
-            local encounterName, str = string.match(data, "^(.*)$(.*)$")
-            WD:ReceiveSharedEncounter(sender, encounterName, str)
+        elseif cmd == "request_share_encounter" then
+            WD:ReceiveSharedEncounter(sender, data)
+        elseif cmd == "response_share_encounter" then
+            WD:SendSharedEncounter(sender, data)
+        elseif cmd == "receive_rule" then
+            WD:ReceiveRequestedRule(sender, data)
         elseif cmd == "share_rule" then
             WD:ReceiveSharedRule(sender, data)
         end
@@ -503,7 +507,7 @@ function WD:EnableConfig()
     end
 end
 
-function WD:SendAddonMessage(cmd, data)
+function WD:SendAddonMessage(cmd, data, target)
     if not cmd then return end
     if not data then data = "" end
 
@@ -513,5 +517,9 @@ function WD:SendAddonMessage(cmd, data)
 
     local msgId = "WDCM"
     local msg = cmd..":"..data
-    C_ChatInfo.SendAddonMessage(msgId, msg, "GUILD")
+    if target then
+        C_ChatInfo.SendAddonMessage(msgId, msg, "WHISPER", target)
+    else
+        C_ChatInfo.SendAddonMessage(msgId, msg, "GUILD")
+    end
 end

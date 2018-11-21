@@ -72,8 +72,8 @@ WD_IMPORT_SHARED_QUESTION = "%s хочет поделиться с вами пр
 WD_BUTTON_SHARE_ENCOUNTERS = "Поделиться правилами"
 WD_IMPORT_SHARED_ENCOUNTER_QUESTION = "%s хочет поделиться с вами правилами боя \"%s\". Это действие перетрёт все существующие правила для этого боя"
 
-WD_RULE_DAMAGE_TAKEN = "получение >=%d урона от %s"
-WD_RULE_DAMAGE_TAKEN_AMOUNT = "получение урона от %s"
+WD_RULE_DAMAGE_TAKEN_AMOUNT = "получение >=%d урона от %s"
+WD_RULE_DAMAGE_TAKEN = "получение урона от %s"
 WD_RULE_DEATH = "смерть от %s"
 WD_RULE_DEATH_UNIT = "смерть %s"
 WD_RULE_APPLY_AURA = "получение ауры %s"

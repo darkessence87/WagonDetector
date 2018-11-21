@@ -1,6 +1,8 @@
 
 local WDRM = nil
 
+local insertQueue = {}
+
 encounterTypes = {
     "Test",
     "ALL",
@@ -106,9 +108,9 @@ end
 local function getRuleDescription(rule)
     if rule.type == "EV_DAMAGETAKEN" then
         if rule.arg1 > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN, rule.arg1, getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, rule.arg1, getSpellLinkById(rule.arg0))
         else
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkById(rule.arg0))
         end
     elseif rule.type == "EV_DEATH" then
         return string.format(WD_RULE_DEATH, getSpellLinkById(rule.arg0))
@@ -237,8 +239,7 @@ end
 
 local function shareEncounter(encounterName, rules)
     if not rules or #rules == 0 then return end
-    local txt = encode64(table.tostring(rules))
-    WD:SendAddonMessage("share_encounter", encounterName.."$"..txt)
+    WD:SendAddonMessage("request_share_encounter", encounterName)
 end
 
 local function updateRuleLines()
@@ -350,7 +351,6 @@ end
 local function insertRule(rule)
     if rule.points ~= "" and rule.points ~= 0 then
         if isDuplicate(rule) == false then
-            rule.isActive = true
             WD.db.profile.rules[#WD.db.profile.rules+1] = rule
             updateRuleLines()
         else
@@ -663,6 +663,57 @@ local function initExportWindow()
     r:Hide()
 end
 
+local function initPopupLogic()
+    StaticPopupDialogs["WD_ACCEPT_IMPORT"] = {
+        text = WD_IMPORT_QUESTION,
+        button1 = WD_BUTTON_IMPORT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            insertEncounter(importEncounter(r.editBox:GetText()))
+            r:Hide()
+        end,
+        OnCancel = function()
+            r:Hide()
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
+
+    StaticPopupDialogs["WD_ACCEPT_SHARED_RULE"] = {
+        text = WD_IMPORT_SHARED_QUESTION,
+        button1 = WD_BUTTON_ACCEPT,
+        button2 = WD_BUTTON_CANCEL,
+        OnAccept = function()
+            if WDRM.sharedRule then
+                local rule = importRule(WDRM.sharedRule)
+                if rule.type then
+                    insertRule(rule)
+                else
+                    print("Could not parse rule")
+                end
+                WDRM.sharedRule = nil
+            end
+        end,
+        OnHide = function()
+            if #insertQueue > 0 then
+                local sender = insertQueue[1].sender
+                WDRM.sharedRule = insertQueue[1].str
+                table.remove(insertQueue, 1)
+                StaticPopup_Show("WD_ACCEPT_SHARED_RULE", sender)
+            end
+        end,
+        OnCancel = function()
+            if WDRM.sharedRule then WDRM.sharedRule = nil end
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = false,
+        preferredIndex = 3,
+    }
+end
+
 local function initImportEncounterWindow()
     WDRM.importEncounter = CreateFrame("Frame", nil, WDRM)
     local r = WDRM.importEncounter
@@ -711,46 +762,7 @@ local function initImportEncounterWindow()
 
     r:Hide()
 
-    StaticPopupDialogs["WD_ACCEPT_IMPORT"] = {
-        text = WD_IMPORT_QUESTION,
-        button1 = WD_BUTTON_IMPORT,
-        button2 = WD_BUTTON_CANCEL,
-        OnAccept = function()
-            insertEncounter(importEncounter(r.editBox:GetText()))
-            r:Hide()
-        end,
-        OnCancel = function()
-            r:Hide()
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = false,
-        preferredIndex = 3,
-    }
-
-    StaticPopupDialogs["WD_ACCEPT_SHARED_RULE"] = {
-        text = WD_IMPORT_SHARED_QUESTION,
-        button1 = WD_BUTTON_ACCEPT,
-        button2 = WD_BUTTON_CANCEL,
-        OnAccept = function()
-            if WDRM.sharedRule then
-                local rule = importRule(WDRM.sharedRule)
-                if rule.type then
-                    insertRule(rule)
-                else
-                    print("Could not parse rule")
-                end
-                WDRM.sharedRule = ""
-            end
-        end,
-        OnCancel = function()
-            if WDRM.sharedRule then WDRM.sharedRule = "" end
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = false,
-        preferredIndex = 3,
-    }
+    initPopupLogic()
 end
 
 local function initShareEncounterWindow()
@@ -788,19 +800,13 @@ local function initShareEncounterWindow()
         button1 = WD_BUTTON_ACCEPT,
         button2 = WD_BUTTON_CANCEL,
         OnAccept = function()
-            if WDRM.sharedRule then
-                local rules = WD:ImportEncounter(WDRM.sharedRule)
-                if rules and #rules > 0 then
-                    insertEncounter(rules)
-                else
-                    print("Could not parse rule")
-                end
-
-                WDRM.sharedRule = ""
+            if WDRM.sharedEncounter then
+                WD:SendAddonMessage("response_share_encounter", WDRM.sharedEncounter)
             end
+            WDRM.sharedEncounter = nil
         end,
         OnCancel = function()
-            if WDRM.sharedRule then WDRM.sharedRule = "" end
+            if WDRM.sharedEncounter then WDRM.sharedEncounter = nil end
         end,
         timeout = 0,
         whileDead = true,
@@ -887,11 +893,36 @@ function WD:InitEncountersModule(parent)
 end
 
 function WD:ReceiveSharedRule(sender, str)
+    if WDRM.sharedRule then
+        local data = {}
+        data.sender = sender
+        data.str = str
+        insertQueue[#insertQueue+1] = data
+        return
+    end
     WDRM.sharedRule = str
     StaticPopup_Show("WD_ACCEPT_SHARED_RULE", sender)
 end
 
-function WD:ReceiveSharedEncounter(sender, encounter, str)
-    WDRM.sharedRule = str
+function WD:ReceiveSharedEncounter(sender, encounter)
+    WDRM.sharedEncounter = encounter
     StaticPopup_Show("WD_ACCEPT_SHARED_ENCOUNTER", sender, encounter)
+end
+
+function WD:SendSharedEncounter(sender, encounterName)
+    for _,v in pairs(WD.db.profile.rules) do
+        if v.encounter == encounterName then
+            local txt = encode64(table.tostring(v))
+            WD:SendAddonMessage("receive_rule", txt, sender)
+        end
+    end
+end
+
+function WD:ReceiveRequestedRule(sender, data)
+    local rule = importRule(data)
+    if rule.type then
+        insertRule(rule)
+    else
+        print("Could not parse rule from " .. sender)
+    end
 end

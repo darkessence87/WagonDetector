@@ -669,11 +669,11 @@ local function initPopupLogic()
         button1 = WD_BUTTON_IMPORT,
         button2 = WD_BUTTON_CANCEL,
         OnAccept = function()
-            insertEncounter(importEncounter(r.editBox:GetText()))
-            r:Hide()
+            insertEncounter(importEncounter(WDRM.importEncounter.editBox:GetText()))
+            WDRM.importEncounter:Hide()
         end,
         OnCancel = function()
-            r:Hide()
+            WDRM.importEncounter:Hide()
         end,
         timeout = 0,
         whileDead = true,
@@ -748,6 +748,7 @@ local function initImportEncounterWindow()
     r.editBox:SetJustifyH("LEFT")
     r.editBox:SetMaxBytes(nil)
     r.editBox:SetMaxLetters(2048)
+    r.editBox:SetScript("OnEnterPressed", function() tryImportEncounter(r.editBox:GetText()) end)
     r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
     r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end)
     r.editBox:SetScript("OnShow", function() r.editBox:SetText(""); r.editBox:SetFocus() end)

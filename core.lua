@@ -335,13 +335,13 @@ function WDMF:OnCombatEvent(...)
 
     if event == "UNIT_DIED" then
         for i=1,#self.encounter.players do
-            if self.encounter.players[i].name == getFullCharacterName(dst_name) then
+            if getFullCharacterName(self.encounter.players[i].name) == getFullCharacterName(dst_name) then
                 self.encounter.deaths = self.encounter.deaths + 1
                 break
             end
         end
 
-        if rules["EV_DEATH_UNIT"].unit == dst_name then
+        if rules["EV_DEATH_UNIT"].unit == getShortCharacterName(dst_name) then
             addSuccess(timestamp, dst_name, string.format(WD_RULE_DEATH_UNIT, dst_name), rules["EV_DEATH_UNIT"].points)
         end
     end

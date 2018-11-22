@@ -266,7 +266,10 @@ function WD:GetRole(name)
     end
 
     local specId = WD.cache.raidroster[name].specId
-    if specId == 0 then return role end
+    if specId == 0 then
+        NotifyInspect(WD.cache.raidroster[name].unit)
+        return role
+    end
 
     return getRoleBySpecId(specId)
 end

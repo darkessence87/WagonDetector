@@ -356,6 +356,10 @@ function WDMF:OnEvent(event, ...)
     elseif event == "ENCOUNTER_END" then
         self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         self:StopEncounter()
+
+        if WD.db.profile.autoTrack == false then
+            self:StopPull()
+        end
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
         self:OnCombatEvent(CombatLogGetCurrentEventInfo())
     elseif event == "CHAT_MSG_ADDON" then
@@ -367,16 +371,16 @@ function WDMF:StartEncounter(encounterID, encounterName)
     local pullId = 1
     if WD.db.profile.encounters[encounterName] then pullId = WD.db.profile.encounters[encounterName] + 1 end
 
-    sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
-    WD:AddPullHistory(encounterName)
-
-    self.encounter.id = encounterID
-    self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
-    self.encounter.startTime = time()
-    self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
-    self.encounter.players = {}
-
     if UnitInRaid("player") ~= nil then
+        sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
+        WD:AddPullHistory(encounterName)
+
+        self.encounter.id = encounterID
+        self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
+        self.encounter.startTime = time()
+        self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
+        self.encounter.players = {}
+
         for i=1, GetNumGroupMembers() do
             local unit = "raid"..i
             local name, realm = UnitName(unit)
@@ -400,7 +404,16 @@ function WDMF:StartEncounter(encounterID, encounterName)
                 checkConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
             end
         end
-    else
+    elseif encounterName == "Test" then
+        sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
+        WD:AddPullHistory(encounterName)
+
+        self.encounter.id = encounterID
+        self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
+        self.encounter.startTime = time()
+        self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
+        self.encounter.players = {}
+
         local _,class = UnitClass("player")
 
         local p = {}
@@ -454,8 +467,17 @@ function WDMF:ResetEncounter()
     self.encounter.stopped = 0
 end
 
+function WDMF:StartPull()
+    self:RegisterEvent("ENCOUNTER_START")
+    self:RegisterEvent("ENCOUNTER_END")
+end
+
+function WDMF:StopPull()
+    self:UnregisterEvent("ENCOUNTER_START")
+    self:UnregisterEvent("ENCOUNTER_END")
+end
+
 function WDMF:OnAddonMessage(msgId, msg, channel, sender)
-    -- /dump WD:SendAddonMessage("cmd1", "data1")
     if msgId ~= "WDCM" then return end
 
     local cmd, data = string.match(msg, "^(.*):(.*)$")
@@ -477,6 +499,14 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
         if cmd == "block_encounter" then
             self.encounter.isBlockedByAnother = 1
             print(string.format(WD_LOCKED_BY, sender))
+            if WD.db.profile.autoTrack == false then
+                WDMF:StartPull()
+            end
+        elseif cmd == "reset_encounter" then
+            self.encounter.isBlockedByAnother = 0
+            if WD.db.profile.autoTrack == false then
+                WDMF:StopPull()
+            end
         elseif cmd == "request_share_encounter" then
             WD:ReceiveSharedEncounter(sender, data)
         elseif cmd == "response_share_encounter" then
@@ -489,30 +519,14 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
     end
 end
 
-function WD:EnableConfig()
-    if WD.db.profile.isEnabled == false then
-        WDMF:RegisterEvent("CHAT_MSG_ADDON")
-        WDMF:RegisterEvent("ENCOUNTER_START")
-        WDMF:RegisterEvent("ENCOUNTER_END")
-
-        WD.db.profile.isEnabled = true
-        sendMessage(WD_ENABLED)
-    else
-        WDMF:UnregisterEvent("CHAT_MSG_ADDON")
-        WDMF:UnregisterEvent("ENCOUNTER_START")
-        WDMF:UnregisterEvent("ENCOUNTER_END")
-
-        WD.db.profile.isEnabled = false
-        sendMessage(WD_DISABLED)
-    end
-end
-
 function WD:SendAddonMessage(cmd, data, target)
     if not cmd then return end
     if not data then data = "" end
 
-    if cmd == "block_encounter" then
+    local channelType = "GUILD"
+    if cmd == "block_encounter" or cmd == "reset_encounter" then
         WDMF.encounter.isBlockedByAnother = 0
+        channelType = "RAID"
     end
 
     local msgId = "WDCM"
@@ -520,6 +534,25 @@ function WD:SendAddonMessage(cmd, data, target)
     if target then
         C_ChatInfo.SendAddonMessage(msgId, msg, "WHISPER", target)
     else
-        C_ChatInfo.SendAddonMessage(msgId, msg, "GUILD")
+        C_ChatInfo.SendAddonMessage(msgId, msg, channelType)
+    end
+end
+
+function WD:EnableConfig()
+    if WD.db.profile.isEnabled == false then
+        WDMF:RegisterEvent("CHAT_MSG_ADDON")
+
+        if WD.db.profile.autoTrack == true then
+            WDMF:StartPull()
+        end
+
+        WD.db.profile.isEnabled = true
+        sendMessage(WD_ENABLED)
+    else
+        WDMF:StopPull()
+        WDMF:UnregisterEvent("CHAT_MSG_ADDON")
+
+        WD.db.profile.isEnabled = false
+        sendMessage(WD_DISABLED)
     end
 end

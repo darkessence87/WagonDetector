@@ -257,6 +257,10 @@ function WD:InitRaidOverviewModule(parent)
     end)
 
     updateRaidSpec()
+
+    function WDRO:OnUpdate()
+        updateRaidSpec()
+    end
 end
 
 function WD:GetRole(name)

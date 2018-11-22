@@ -123,7 +123,23 @@ local function initMainModule(mainF)
     updateDropDownMenu(mainF.dropFrame1, "GuildRanks", items3)
     mainF.dropFrame1:SetSize(250, 20)
     mainF.dropFrame1:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 100, -5)
-    mainF.dropFrame1:SetScript("OnShow", function() mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name) end)
+    mainF.dropFrame1:SetScript("OnShow", function()
+        if WD.db.profile.minGuildRank then
+            mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name)
+        end
+    end)
+
+    function mainF:OnUpdate()
+        WD:OnGuildRosterUpdate()
+        mainF.autotrackButton:SetChecked(WD.db.profile.autoTrack)
+        mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
+        mainF.dropFrame0.txt:SetText(WD.db.profile.chat)
+        mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name)
+        mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
+        mainF.lockButton:SetChecked(WD.db.profile.isLocked)
+        mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths)
+        mainF.penaltyButton:SetChecked(WD.db.profile.enablePenalties)
+    end
 end
 
 local function createModuleButton(module, name, ySize, yOffset)
@@ -217,6 +233,12 @@ function WD:CreateGuiFrame()
     else
         WDGF:RegisterForDrag()
         WDGF:SetMovable(false)
+    end
+
+    function WDGF:OnUpdate()
+        for _,v in pairs(WDGF.module) do
+            v:OnUpdate()
+        end
     end
 end
 

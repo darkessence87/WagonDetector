@@ -257,6 +257,21 @@ local function checkConsumables(timestamp, name, unit, rules)
     end
 end
 
+function WDMF:OnUpdate()
+    if WD.db.profile.isEnabled == true then
+        self:RegisterEvent("CHAT_MSG_ADDON")
+
+        if WD.db.profile.autoTrack == true then
+            self:StartPull()
+        else
+            self:StopPull()
+        end
+    else
+        self:StopPull()
+        self:UnregisterEvent("CHAT_MSG_ADDON")
+    end
+end
+
 function WDMF:OnCombatEvent(...)
     if self.encounter.interrupted == 1 then
         return

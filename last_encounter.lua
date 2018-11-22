@@ -19,6 +19,10 @@ function WD:InitLastEncounterModule(parent)
     table.insert(WDLE.headers, h)
 
     WDLE:SetScript("OnShow", function() WD:RefreshLastEncounterFrame() end)
+
+    function WDLE:OnUpdate()
+        WD:RefreshLastEncounterFrame()
+    end
 end
 
 function WD:RefreshLastEncounterFrame()

@@ -57,7 +57,7 @@ local function editRuleLine(ruleLine)
     end
 
     -- arg0
-    if rule ~= "EV_POTIONS" and rule ~= "EV_FLASKS" and rule ~= "EV_FOOD" and rule ~= "EV_RUNES" then
+    if ruleLine.rule.type ~= "EV_POTIONS" and ruleLine.rule.type ~= "EV_FLASKS" and ruleLine.rule.type ~= "EV_FOOD" and ruleLine.rule.type ~= "EV_RUNES" then
         local txt = ruleLine.rule.arg0
         newRuleFrame.editBox0:SetText(txt)
         newRuleFrame.editBox0:SetScript("OnEscapePressed", function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
@@ -352,13 +352,14 @@ local function insertRule(rule)
     if rule.points ~= "" and rule.points ~= 0 then
         if isDuplicate(rule) == false then
             WD.db.profile.rules[#WD.db.profile.rules+1] = rule
-            updateRuleLines()
         else
             print("This rule already exists")
         end
     else
         print("Could not add rule with empty points")
     end
+
+    updateRuleLines()
 end
 
 local function insertEncounter(rules)
@@ -891,6 +892,10 @@ function WD:InitEncountersModule(parent)
     initShareEncounterWindow()
 
     updateRuleLines()
+
+    function WDRM:OnUpdate()
+        updateRuleLines()
+    end
 end
 
 function WD:ReceiveSharedRule(sender, str)

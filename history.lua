@@ -318,6 +318,10 @@ function WD:InitHistoryModule(parent)
     initExportWindow()
 
     WDHM:SetScript("OnShow", function() applyFilters(); refreshHistoryFrame() end)
+
+    function WDHM:OnUpdate()
+        refreshHistoryFrame()
+    end
 end
 
 function WD:AddHistory(v)
@@ -338,8 +342,8 @@ end
 function WD:ClearHistory()
     table.wipe(WD.db.profile.history)
     table.wipe(WD.cache.history)
-    
+
     refreshHistoryFrame()
-    
+
     print("History cleared")
 end

@@ -20,12 +20,12 @@ function WD:OnInitialize()
     self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("WD", "Wagon Detector")
 
     self.db = LibStub("AceDB-3.0"):New("WD_DB", self.defaults, true)
-    self.db.RegisterCallback(self, "OnProfileChanged", "ReloadProfile")
-    self.db.RegisterCallback(self, "OnProfileCopied", "ReloadProfile")
-    self.db.RegisterCallback(self, "OnProfileReset", "ReloadProfile")
+    self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+    self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileCopied")
+    self.db.RegisterCallback(self, "OnProfileReset", "OnProfileReset")
 
     LibStub("AceConfig-3.0"):RegisterOptionsTable("WD-Profiles", LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db))
-    self.profileFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("WD-Profiles", "Profiles", "WD")
+    self.profileFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("WD-Profiles", "Profiles", "Wagon Detector")
 
     SLASH_WD1 = "/wd"
     SlashCmdList["WD"] = function(...) self:SlashHandler(...) end
@@ -46,21 +46,42 @@ function WD:OnInitialize()
     end
 
     -- reload history
-    for i=1, #WD.db.profile.history do
-        WD.db.profile.history[i].index = i
+    for i=1, #self.db.profile.history do
+        self.db.profile.history[i].index = i
+    end
+
+    self:OnUpdate()
+end
+
+local function loadDefaultRules(self)
+    if #self.db.profile.rules == 0 then
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZMQVNLUyIsYXJnMT0iIixlbmNvdW50ZXI9IkFMTCIscG9pbnRzPTEsYXJnMD0iIn0=")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZPT0QiLGFyZzE9IiIsZW5jb3VudGVyPSJBTEwiLHBvaW50cz0xLGFyZzA9IiJ9")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1JVTkVTIixhcmcxPSIiLGVuY291bnRlcj0iQUxMIixwb2ludHM9MSxhcmcwPSIifQ==")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1BPVElPTlMiLGFyZzE9IiIsZW5jb3VudGVyPSJBTEwiLHBvaW50cz0tMSxhcmcwPSIifQ==")
+    end
+end
+
+function WD:OnUpdate()
+    if self.guiFrame then
+        loadDefaultRules(self)
+        self.guiFrame:OnUpdate()
+    end
+    if self.mainFrame then
+        self.mainFrame:OnUpdate()
     end
 end
 
 function WD:LoadDefaults()
-    WD.defaults = {
+    self.defaults = {
         profile = {
             isEnabled = false,
-            isLocked = true,
+            isLocked = false,
             rules = {},
             chat = "PRINT",
             history = {},
-            sendFailImmediately = false,
-            enablePenalties = true,
+            sendFailImmediately = true,
+            enablePenalties = false,
             maxDeaths = 5,
             encounters = {},
             autoTrack = true,
@@ -68,7 +89,18 @@ function WD:LoadDefaults()
     }
 end
 
-function WD:ReloadProfile()
+function WD:OnProfileChanged()
+    self:OnUpdate()
+end
+
+function WD:OnProfileCopied()
+    self:OnUpdate()
+end
+
+function WD:OnProfileReset()
+    self:LoadDefaults()
+    self.db.profile = self.defaults.profile
+    self:OnUpdate()
 end
 
 function WD:SlashHandler(msg, box)

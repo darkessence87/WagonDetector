@@ -155,6 +155,10 @@ function WD:InitGuildRosterModule(parent)
             WD:OnGuildRosterUpdate()
         end
     end)
+
+    function WDGR:OnUpdate()
+        updateGuildRosterFrame()
+    end
 end
 
 function WD:RefreshGuildRosterFrame()
@@ -176,7 +180,7 @@ function WD:FindMain(name)
 end
 
 function WD:OnGuildRosterUpdate()
-    if not WD.db.profile.minGuildRank then
+    if not WD.db.profile.minGuildRank or not WD.db.profile.minGuildRank.name then
         local gRanks = WD:GetGuildRanks()
         for k,v in pairs(gRanks) do
             if v.id == 0 then
@@ -332,7 +336,6 @@ function WD:GetGuildRanks()
     for k,v in pairs(temp) do
         local rank = { id = k, name = v }
         table.insert(ranks, rank)
-
     end
 
     return ranks

@@ -15,7 +15,8 @@ WD_HELP = "Available commands:\
 /wd stoptest - ends test encounter\
 /wd wipe - wipes guild roster statistics\
 /wd interrupt - interrupts current active encounter\
-/wd pull - blocks next upcoming encounter for other RLs or officers\
+/wd pull - blocks next upcoming encounter for other RLs or officers, those people will track failures even with disabled auto-tracking option\
+/wd pullstop - interrupts pull and unlocks encounters for other RLs or officers\
 /wd clear - totally erases history"
 
 WD_PRINT_SUCCESS = "%s [NICE] %s: %s (%d penalty points)"
@@ -27,6 +28,7 @@ WD_REVERT_STR = "REVERT"
 WD_BUTTON_LOCK_GUI = "Lock config"
 WD_BUTTON_DEFAULT_CHAT = "Default notifications chat"
 WD_BUTTON_ENABLE_CONFIG = "Enable config"
+WD_BUTTON_AUTOTRACK = "Start tracking encounters automatically on any pull"
 WD_BUTTON_IMMEDIATE_NOTIFY = "Enable immediate fails"
 WD_BUTTON_ENABLE_PENALTIES = "Enable penalties"
 WD_BUTTON_MAX_DEATHS = "Max deaths for stop tracking:"

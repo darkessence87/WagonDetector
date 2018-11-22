@@ -1,6 +1,8 @@
 ﻿
 WD = LibStub("AceAddon-3.0"):NewAddon("Wagon Detector", "AceEvent-3.0", "AceConsole-3.0")
 
+WD.cache = {}
+
 -- basic menu
 WD.options = {
     name = "Wagon Detector",
@@ -34,8 +36,10 @@ function WD:OnInitialize()
     if self.mainFrame then
         if WD.db.profile.isEnabled == true then
             self.mainFrame:RegisterEvent("CHAT_MSG_ADDON")
-            self.mainFrame:RegisterEvent("ENCOUNTER_START")
-            self.mainFrame:RegisterEvent("ENCOUNTER_END")
+
+            if WD.db.profile.autoTrack == true then
+                self.mainFrame:StartPull()
+            end
         end
 
         self.mainFrame:SetScript("OnEvent", function(self, ...) self:OnEvent(...); end)
@@ -59,6 +63,7 @@ function WD:LoadDefaults()
             enablePenalties = true,
             maxDeaths = 5,
             encounters = {},
+            autoTrack = true,
         }
     }
 end
@@ -82,10 +87,19 @@ function WD:SlashHandler(msg, box)
         self.mainFrame.encounter.interrupted = 1
         print(WD_ENCOUNTER_INTERRUPTED)
     elseif cmd == "pull" then
+        if WD.db.profile.autoTrack == false then
+            self.mainFrame:StartPull()
+        end
         WD:SendAddonMessage("block_encounter")
+    elseif cmd == "pullstop" then
+        if WD.db.profile.autoTrack == false then
+            self.mainFrame:StopPull()
+        end
+        WD:SendAddonMessage("reset_encounter")
     elseif cmd == "clear" then
         WD:ClearHistory()
     else
         print(WD_HELP)
+        self:OpenConfig()
     end
 end

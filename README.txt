@@ -16,6 +16,7 @@ Usefull macro
 --------------------------
 # interrupt battle
 /pull 0
+/wd pullstop
 /wd interrupt
 --------------------------
 # wipe, end battle

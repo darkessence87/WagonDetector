@@ -39,7 +39,7 @@ local function initMainModule(mainF)
     mainF.lockButton:SetChecked(WD.db.profile.isLocked)
     mainF.lockButton:SetScript("OnClick", function() lockConfig() end)
     mainF.lockButton.txt = createFont(mainF.lockButton, "LEFT", WD_BUTTON_LOCK_GUI)
-    mainF.lockButton.txt:SetSize(200, 20)
+    mainF.lockButton.txt:SetSize(300, 20)
     mainF.lockButton.txt:SetPoint("LEFT", mainF.lockButton, "RIGHT", 5, 0)
 
     -- default chat selector
@@ -50,7 +50,7 @@ local function initMainModule(mainF)
         table.insert(items, item)
     end
     updateDropDownMenu(mainF.dropFrame0, WD_BUTTON_DEFAULT_CHAT, items)
-    mainF.dropFrame0:SetSize(250, 20)
+    mainF.dropFrame0:SetSize(350, 20)
     mainF.dropFrame0:SetPoint("TOPLEFT", mainF.lockButton, "BOTTOMLEFT", 0, -5)
     mainF.dropFrame0:SetScript("OnShow", function() mainF.dropFrame0.txt:SetText(WD.db.profile.chat) end)
 
@@ -60,16 +60,25 @@ local function initMainModule(mainF)
     mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
     mainF.enableButton:SetScript("OnClick", function() WD:EnableConfig() end)
     mainF.enableButton.txt = createFont(mainF.enableButton, "LEFT", WD_BUTTON_ENABLE_CONFIG)
-    mainF.enableButton.txt:SetSize(200, 20)
+    mainF.enableButton.txt:SetSize(300, 20)
     mainF.enableButton.txt:SetPoint("LEFT", mainF.enableButton, "RIGHT", 5, 0)
+
+    -- check start tracking only by macro
+    mainF.autotrackButton = createCheckButton(mainF)
+    mainF.autotrackButton:SetPoint("TOPLEFT", mainF.enableButton, "BOTTOMLEFT", 0, -5)
+    mainF.autotrackButton:SetChecked(WD.db.profile.autoTrack)
+    mainF.autotrackButton:SetScript("OnClick", function() WD.db.profile.autoTrack = not WD.db.profile.autoTrack; if WD.db.profile.autoTrack then WD.mainFrame:StartPull() else WD.mainFrame:StopPull() end end)
+    mainF.autotrackButton.txt = createFont(mainF.autotrackButton, "LEFT", WD_BUTTON_AUTOTRACK)
+    mainF.autotrackButton.txt:SetSize(300, 20)
+    mainF.autotrackButton.txt:SetPoint("LEFT", mainF.autotrackButton, "RIGHT", 5, 0)
 
     -- check immediate fail button
     mainF.immediateButton = createCheckButton(mainF)
-    mainF.immediateButton:SetPoint("TOPLEFT", mainF.enableButton, "BOTTOMLEFT", 0, -5)
+    mainF.immediateButton:SetPoint("TOPLEFT", mainF.autotrackButton, "BOTTOMLEFT", 0, -5)
     mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
     mainF.immediateButton:SetScript("OnClick", function() WD.db.profile.sendFailImmediately = not WD.db.profile.sendFailImmediately end)
     mainF.immediateButton.txt = createFont(mainF.immediateButton, "LEFT", WD_BUTTON_IMMEDIATE_NOTIFY)
-    mainF.immediateButton.txt:SetSize(200, 20)
+    mainF.immediateButton.txt:SetSize(300, 20)
     mainF.immediateButton.txt:SetPoint("LEFT", mainF.immediateButton, "RIGHT", 5, 0)
 
     -- check penalties button
@@ -78,12 +87,12 @@ local function initMainModule(mainF)
     mainF.penaltyButton:SetChecked(WD.db.profile.enablePenalties)
     mainF.penaltyButton:SetScript("OnClick", function() WD.db.profile.enablePenalties = not WD.db.profile.enablePenalties end)
     mainF.penaltyButton.txt = createFont(mainF.penaltyButton, "LEFT", WD_BUTTON_ENABLE_PENALTIES)
-    mainF.penaltyButton.txt:SetSize(200, 20)
+    mainF.penaltyButton.txt:SetSize(300, 20)
     mainF.penaltyButton.txt:SetPoint("LEFT", mainF.penaltyButton, "RIGHT", 5, 0)
 
     -- max deaths button
     mainF.maxDeathsTxt = createFontDefault(mainF, "LEFT", WD_BUTTON_MAX_DEATHS)
-    mainF.maxDeathsTxt:SetSize(200, 20)
+    mainF.maxDeathsTxt:SetSize(300, 20)
     mainF.maxDeathsTxt:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 0, -5)
     mainF.maxDeaths = createDropDownMenu(mainF)
     local items2 = {}
@@ -92,13 +101,13 @@ local function initMainModule(mainF)
         table.insert(items2, item)
     end
     updateDropDownMenu(mainF.maxDeaths, WD.db.profile.maxDeaths, items2)
-    mainF.maxDeaths:SetSize(50, 20)
+    mainF.maxDeaths:SetSize(150, 20)
     mainF.maxDeaths:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 200, -5)
     mainF.maxDeaths:SetScript("OnShow", function() mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths) end)
 
     -- default guild rank selector
     mainF.rankSelectorTxt = createFontDefault(mainF, "LEFT", WD_BUTTON_SELECT_RANK)
-    mainF.rankSelectorTxt:SetSize(100, 20)
+    mainF.rankSelectorTxt:SetSize(200, 20)
     mainF.rankSelectorTxt:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 0, -5)
     mainF.dropFrame1 = createDropDownMenu(mainF)
     local items3 = {}
@@ -112,7 +121,7 @@ local function initMainModule(mainF)
         table.insert(items3, item)
     end
     updateDropDownMenu(mainF.dropFrame1, "GuildRanks", items3)
-    mainF.dropFrame1:SetSize(150, 20)
+    mainF.dropFrame1:SetSize(250, 20)
     mainF.dropFrame1:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 100, -5)
     mainF.dropFrame1:SetScript("OnShow", function() mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name) end)
 end

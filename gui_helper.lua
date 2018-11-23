@@ -114,13 +114,13 @@ function getFullCharacterName(name)
     end
 end
 
-function getShortCharacterName(name)
+function getShortCharacterName(name, noRealm)
     local dashIndex = string.find(name, "%-")
     if not dashIndex then
         return name
     end
 
-    if currentRealmName == string.sub(name, dashIndex + 1) then
+    if noRealm or currentRealmName == string.sub(name, dashIndex + 1) then
         return string.sub(name, 1, dashIndex - 1)
     else
         return name

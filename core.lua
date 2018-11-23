@@ -20,13 +20,6 @@ encounterIDs = {
     [2122] = "UD_GHUUN",
 }
 
-local RoleSpecializations = {
-    ["TANK"]    = {250, 581, 104, 268, 66, 73},     -- 6
-    ["HEALER"]  = {105, 270, 65, 256, 257, 264},    -- 6
-    ["MELEE"]   = {251, 252, 577, 103, 255, 269, 70, 259, 260, 261, 263, 71, 72},   -- 13
-    ["RANGED"]  = {102, 253, 254, 62, 63, 64, 258, 262, 265, 266, 267},             -- 11
-}
-
 local potionSpellIds = {
     [279151] = "/battle-potion-of-intellect",
     [279152] = "/battle-potion-of-agility",
@@ -37,14 +30,14 @@ local potionSpellIds = {
     [279154] = "/battle-potion-of-stamina",
 }
 
-local flaskSpellIds = {
+WD.FLASK_IDS = {
     [251837] = "/flask-of-endless-fathoms",
     [251839] = "/flask-of-the-undertow",
     [251836] = "/flask-of-the-currents",
     [251838] = "/flask-of-the-vast-horizon",
 }
 
-local foodSpellIds = {
+WD.FOOD_IDS = {
     [257408] = "Increases critical strike by 53 for 1 hour.",
     [257410] = "Increases critical strike by 70 for 1 hour.",
     [257413] = "Increases haste by 53 for 1 hour.",
@@ -63,7 +56,7 @@ local foodSpellIds = {
     [259457] = "Stamina increased by 150.  Lasts 1 hour.",
 }
 
-local runeSpellIds = {
+WD.RUNE_IDS = {
     [270058] = "/battle-scarred-augmentation",
 }
 
@@ -242,17 +235,17 @@ local function checkConsumables(timestamp, name, unit, rules)
         local _, _, _, _, _, _, _, _, _, spellId = UnitBuff(unit, index)
 
         -- flasks
-        if spellId and flaskSpellIds[spellId] then
+        if spellId and WD.FLASK_IDS[spellId] then
             noflask = false
         end
 
         -- food
-        if spellId and foodSpellIds[spellId] then
+        if spellId and WD.FOOD_IDS[spellId] then
             nofood = false
         end
 
         -- runes
-        if spellId and runeSpellIds[spellId] then
+        if spellId and WD.RUNE_IDS[spellId] then
             norune = false
         end
     end

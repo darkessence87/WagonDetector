@@ -30,6 +30,84 @@ local RoleSpecializations = {
     ["RANGED"]  = {102, 253, 254, 62, 63, 64, 258, 262, 265, 266, 267},             -- 11
 }
 
+local function updateSpecIcon(parent, specId)
+    if specId ~= 0 then
+        local _,_,_,icon = GetSpecializationInfoByID(specId)
+        parent.icon.t:SetTexture(icon)
+    end
+end
+
+local function createSpecIcon(parent, specId)
+    parent.icon = CreateFrame("Button", nil, parent)
+    parent.icon:SetSize(16, 16)
+    parent.icon:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -2)
+    parent.icon.t = createTexture(parent.icon, "Interface\\Icons\\INV_MISC_QUESTIONMARK", "ARTWORK")
+    parent.icon.t:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    parent.icon.t:SetAllPoints()
+
+    updateSpecIcon(parent, specId)
+end
+
+local function createBuffSlot(parent, index)
+    if not parent.buffs then parent.buffs = {} end
+
+    parent.buffs[index] = CreateFrame("Button", nil, parent)
+    parent.buffs[index].t = createColorTexture(parent.buffs[index], "BACKGROUND", .2, .2, .2, 1)
+    parent.buffs[index]:SetSize(16, 16)
+    parent.buffs[index].t:SetAllPoints()
+    parent.buffs[index].t:SetColorTexture(1, 0, 0, 1)
+    parent.buffs[index].t:SetDrawLayer("ARTWORK")
+    if index > 0 then
+        parent.buffs[index]:SetPoint("TOPRIGHT", parent.buffs[index-1], "TOPLEFT", -1, 0)
+    else
+        parent.buffs[index]:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -1, -2)
+    end
+    parent.buffs[index]:SetScript("OnEnter", function(self)
+        if self.spellId then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetHyperlink(getSpellLinkById(self.spellId))
+            GameTooltip:AddLine('id: '..self.spellId, 1, 1, 1)
+            GameTooltip:Show()
+        end
+    end)
+    parent.buffs[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
+end
+
+local function setBuffSlotSpell(parent, index, spellId)
+    parent.buffs[index].spellId = spellId
+    if spellId then
+        local _, _, icon = GetSpellInfo(spellId)
+        parent.buffs[index].t:SetTexture(icon)
+        parent.buffs[index].t:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    else
+        parent.buffs[index].t:SetColorTexture(1, 0, 0, 1)
+    end
+end
+
+local function getConsumables(unit)
+    local flask, food, rune = nil, nil, nil
+    for index=1,40 do
+        local _, _, _, _, _, _, _, _, _, spellId = UnitBuff(unit, index)
+
+        -- flasks
+        if spellId and WD.FLASK_IDS[spellId] then
+            flask = spellId
+        end
+
+        -- food
+        if spellId and WD.FOOD_IDS[spellId] then
+            food = spellId
+        end
+
+        -- runes
+        if spellId and WD.RUNE_IDS[spellId] then
+            rune = spellId
+        end
+    end
+
+    return flask, food, rune
+end
+
 local function getSpecialization(name, class, unit)
     local specId = nil
     if name == playerName then
@@ -73,7 +151,7 @@ local function updateRaidOverviewMember(data, parent)
             member.column = {}
 
             local index = 1
-            addNextColumn(parent, member, index, "LEFT", getShortCharacterName(v.name))
+            addNextColumn(parent, member, index, "LEFT", getShortCharacterName(v.name, "noRealm"))
             if k > 1 then
                 member.column[index]:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
                 member:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
@@ -83,14 +161,37 @@ local function updateRaidOverviewMember(data, parent)
             member.column[index]:EnableMouse(false)
             local r,g,b = GetClassColor(v.class)
             member.column[index].txt:SetTextColor(r, g, b, 1)
+            member.column[index].txt:SetPoint("LEFT", 20, 0)
+
+            -- add buff frames
+            createBuffSlot(member, 0)
+            createBuffSlot(member, 1)
+            createBuffSlot(member, 2)
+            local flask, food, rune = getConsumables(v.unit)
+            setBuffSlotSpell(member, 0, flask)
+            setBuffSlotSpell(member, 1, food)
+            setBuffSlotSpell(member, 2, rune)
+
+            -- add specialization icon
+            createSpecIcon(member, v.specId)
 
             parent.members[k] = member
         else
             local member = parent.members[k]
             member.info = v
-            member.column[1].txt:SetText(getShortCharacterName(v.name))
+            member.column[1].txt:SetText(getShortCharacterName(v.name, "noRealm"))
             local r,g,b = GetClassColor(v.class)
             member.column[1].txt:SetTextColor(r, g, b, 1)
+
+            -- update buff frames
+            local flask, food, rune = getConsumables(v.unit)
+            setBuffSlotSpell(member, 0, flask)
+            setBuffSlotSpell(member, 1, food)
+            setBuffSlotSpell(member, 2, rune)
+
+            -- update specialization icon
+            updateSpecIcon(member, v.specId)
+
             member:Show()
         end
     end
@@ -162,6 +263,9 @@ local function updateRaidSpec(inspected)
 
             if WD.cache.raidroster[p.name] then
                 WD.cache.raidroster[p.name].unit = p.unit
+                if p.name == playerName then
+                    WD.cache.raidroster[p.name].specId = p.specId
+                end
             else
                 WD.cache.raidrosterkeys[#WD.cache.raidrosterkeys+1] = p.name
                 WD.cache.raidroster[p.name] = p
@@ -224,16 +328,17 @@ function WD:InitRaidOverviewModule(parent)
     WDRO.unknown.headers = {}
     WDRO.unknown.members = {}
 
-    table.insert(WDRO.tanks.headers,    createTableHeader(WDRO, "Tanks",    1,   -30, 150, 20))
-    table.insert(WDRO.healers.headers,  createTableHeader(WDRO, "Healers",  152, -30, 150, 20))
-    table.insert(WDRO.melees.headers,   createTableHeader(WDRO, "Melee",    303, -30, 150, 20))
-    table.insert(WDRO.ranged.headers,   createTableHeader(WDRO, "Ranged",   454, -30, 150, 20))
-    table.insert(WDRO.unknown.headers,   createTableHeader(WDRO, "Unknown",   605, -30, 150, 20))
+    table.insert(WDRO.tanks.headers,    createTableHeader(WDRO, "Tanks",    1,   -30, 160, 20))
+    table.insert(WDRO.healers.headers,  createTableHeader(WDRO, "Healers",  162, -30, 160, 20))
+    table.insert(WDRO.melees.headers,   createTableHeader(WDRO, "Melee",    323, -30, 160, 20))
+    table.insert(WDRO.ranged.headers,   createTableHeader(WDRO, "Ranged",   484, -30, 160, 20))
+    table.insert(WDRO.unknown.headers,   createTableHeader(WDRO, "Unknown", 645, -30, 160, 20))
 
     WDRO:RegisterEvent("GROUP_ROSTER_UPDATE")
     WDRO:RegisterEvent("INSPECT_READY")
     WDRO:RegisterEvent("PLAYER_ENTERING_WORLD")
     WDRO:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+    WDRO:RegisterEvent("READY_CHECK")
 
     WDRO:SetScript("OnEvent", function(self, event, ...)
         if event == "GROUP_ROSTER_UPDATE" then
@@ -253,8 +358,11 @@ function WD:InitRaidOverviewModule(parent)
             updateRaidSpec()
         elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
             updateRaidSpec()
+        elseif event == "READY_CHECK" then
+            updateRaidSpec()
         end
     end)
+    WDRO:SetScript("OnShow", function(self) updateRaidSpec() end)
 
     updateRaidSpec()
 
@@ -278,4 +386,3 @@ function WD:GetRole(name)
 
     return getRoleBySpecId(specId)
 end
-

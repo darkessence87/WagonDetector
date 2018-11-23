@@ -3,7 +3,7 @@ local WDRM = nil
 
 local insertQueue = {}
 
-encounterTypes = {
+local encounterTypes = {
     "Test",
     "ALL",
     "UD_TALOC",
@@ -16,7 +16,7 @@ encounterTypes = {
     "UD_GHUUN",
 }
 
-ruleTypes = {
+local ruleTypes = {
     "EV_DAMAGETAKEN",
     "EV_DEATH",
     "EV_AURA",
@@ -29,6 +29,16 @@ ruleTypes = {
     "EV_FLASKS",
     "EV_FOOD",
     "EV_RUNES"
+}
+
+local roleTypes = {
+    "ANY",
+    "TANK",
+    "HEALER",
+    "MELEE",
+    "RANGED",
+    "DPS",
+    "NOT_TANK"
 }
 
 local function editRuleLine(ruleLine)
@@ -55,6 +65,16 @@ local function editRuleLine(ruleLine)
             break
         end
     end
+
+    -- role
+    for i=1,#newRuleFrame.dropMenu2.items do
+        if newRuleFrame.dropMenu2.items[i].txt:GetText() == ruleLine.rule.role then
+            newRuleFrame.dropMenu2.selected = newRuleFrame.dropMenu2.items[i]
+            newRuleFrame.dropMenu2:SetText(ruleLine.rule.role)
+            break
+        end
+    end
+    newRuleFrame.dropMenu2:Show()
 
     -- arg0
     if ruleLine.rule.type ~= "EV_POTIONS" and ruleLine.rule.type ~= "EV_FLASKS" and ruleLine.rule.type ~= "EV_FOOD" and ruleLine.rule.type ~= "EV_RUNES" then
@@ -283,8 +303,10 @@ local function updateRuleLines()
             ruleLine.column[index]:SetScript("OnClick", function() v.isActive = not v.isActive end)
 
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "CENTER", v.encounter)
+            addNextColumn(WDRM, ruleLine, index, "LEFT", v.encounter)
             ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine.column[index-1], "TOPRIGHT", 2, 1)
+            index = index + 1
+            addNextColumn(WDRM, ruleLine, index, "LEFT", v.role)
             index = index + 1
             addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
             index = index + 1
@@ -317,11 +339,13 @@ local function updateRuleLines()
             ruleLine.column[1]:SetChecked(v.isActive)
             ruleLine.column[1]:SetScript("OnClick", function() v.isActive = not v.isActive end)
             ruleLine.column[2].txt:SetText(v.encounter)
-            ruleLine.column[3].txt:SetText(getRuleDescription(v))
-            ruleLine.column[4].txt:SetText(v.points)
-            ruleLine.column[5]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
-            ruleLine.column[7]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
-            ruleLine.column[8]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
+            ruleLine.column[3].txt:SetText(v.role)
+            ruleLine.column[4].txt:SetText(getRuleDescription(v))
+            ruleLine.column[5].txt:SetText(v.points)
+            ruleLine.column[6]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
+
+            ruleLine.column[8]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
+            ruleLine.column[9]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
             ruleLine:Show()
             updateScroller(WDRM.scroller.slider, #WD.db.profile.rules)
         end
@@ -337,10 +361,14 @@ local function updateRuleLines()
 end
 
 local function isDuplicate(rule)
+    if not rule.role then rule.role = "ANY" end
+
     local found = false
     for k,v in pairs(WD.db.profile.rules) do
+        if not v.role then v.role = "ANY" end
         if v.encounter == rule.encounter and v.type == rule.type and v.arg0 == rule.arg0 and v.arg1 == rule.arg1 then
             found = true
+            v.role = rule.role
             v.points = rule.points
             break
         end
@@ -390,6 +418,7 @@ local function saveRule()
     rule.arg0 = ""
     rule.arg1 = ""
     rule.points = f.editBox2:GetNumber()
+    rule.role = f.dropMenu2:GetText()
 
     if ruleType == "EV_DAMAGETAKEN" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
@@ -482,18 +511,21 @@ local function updateNewRuleMenu()
     newRuleFrame.editBox2:SetScript("OnEscapePressed", function() newRuleFrame.editBox2:SetText("points"); newRuleFrame.editBox2:ClearFocus() end)
     newRuleFrame.editBox2:SetScript("OnEditFocusGained", function() newRuleFrame.editBox2:SetText(""); end)
     newRuleFrame.editBox2:Show()
+
+    -- role
+    newRuleFrame.dropMenu2:Show()
 end
 
 local function initNewRuleWindow()
     WDRM.newRule = CreateFrame("Frame", nil, WDRM)
     local r = WDRM.newRule
     r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", WDRM.addRule, "TOPLEFT", -1, 1)
-    r:SetSize(152, 122)
+    r:SetPoint("BOTTOMLEFT", WDRM.addRule, "TOPLEFT", -1, 6)
+    r:SetSize(300, 151)
     r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
-    local xSize = 150
+    local xSize = 298
 
     local items0 = {}
     for i=1,#encounterTypes do
@@ -513,7 +545,7 @@ local function initNewRuleWindow()
 
     r.dropFrame1 = createDropDownMenu(r, "Select rule type", items1)
     r.dropFrame1:SetSize(xSize, 20)
-    r.dropFrame1:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
+    r.dropFrame1:SetPoint("TOPLEFT", r.dropFrame0, "BOTTOMLEFT", 0, -1)
 
     -- editbox arg0
     r.editBox0 = createEditBox(r)
@@ -524,47 +556,58 @@ local function initNewRuleWindow()
     -- editbox or dropdownmenu arg1
     r.editBox1 = createEditBox(r)
     r.editBox1:SetSize(xSize, 20)
-    r.editBox1:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -22)
+    r.editBox1:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
     r.editBox1:Hide()
 
     local items2 = { {name = "apply"},{name = "remove"} }
     r.dropMenu1 = createDropDownMenu(r, "Select aura action", items2)
     r.dropMenu1.txt:SetJustifyH("CENTER")
     r.dropMenu1:SetSize(xSize, 20)
-    r.dropMenu1:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -22)
+    r.dropMenu1:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
     r.dropMenu1:Hide()
 
     -- editbox arg2
     r.editBox2 = createEditBox(r)
     r.editBox2:SetNumeric()
     r.editBox2:SetSize(xSize, 20)
-    r.editBox2:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -43)
+    r.editBox2:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -22)
     r.editBox2:Hide()
+
+    -- role filter
+    local items3 = {}
+    for i=1,#roleTypes do
+        local item = { name = roleTypes[i] }
+        table.insert(items3, item)
+    end
+    r.dropMenu2 = createDropDownMenu(r, "ANY", items3)
+    r.dropMenu2.txt:SetJustifyH("CENTER")
+    r.dropMenu2:SetSize(xSize, 20)
+    r.dropMenu2:SetPoint("TOPLEFT", r.editBox2, "BOTTOMLEFT", 0, -1)
+    r.dropMenu2:Hide()
 
     r:SetScript("OnHide", function()
         r.editBox0:Hide()
         r.editBox1:Hide()
         r.editBox2:Hide()
         r.dropMenu1:Hide()
+        r.dropMenu2:Hide()
     end)
 
     r.saveButton = createButton(r)
-    r.saveButton:SetPoint("TOPLEFT", r.dropFrame0, "BOTTOMLEFT", 0, -85)
-    r.saveButton:SetSize(74, 15)
+    r.saveButton:SetPoint("TOPLEFT", r.dropMenu2, "BOTTOMLEFT", 1, -2)
+    r.saveButton:SetSize(xSize / 2 - 1, 20)
     r.saveButton:SetScript("OnClick", function() saveRule(); r:Hide() end)
     r.saveButton.t:SetColorTexture(.2, .4, .2, 1)
     r.saveButton.txt = createFont(r.saveButton, "CENTER", "Save")
-    r.saveButton.txt:SetSize(74, 15)
-    r.saveButton.txt:SetPoint("LEFT", r.saveButton, "LEFT", 0, 0)
+    r.saveButton.txt:SetAllPoints()
 
     r.cancelButton = createButton(r)
-    r.cancelButton:SetPoint("TOPLEFT", r.saveButton, "TOPRIGHT", 2, 0)
-    r.cancelButton:SetSize(74, 15)
+    r.cancelButton:SetPoint("TOPLEFT", r.saveButton, "TOPRIGHT", 1, 0)
+    r.cancelButton:SetSize(xSize / 2 - 2, 20)
     r.cancelButton:SetScript("OnClick", function() r:Hide() end)
     r.cancelButton.t:SetColorTexture(.4, .2, .2, 1)
     r.cancelButton.txt = createFont(r.cancelButton, "CENTER", "Cancel")
-    r.cancelButton.txt:SetSize(74, 15)
-    r.cancelButton.txt:SetPoint("LEFT", r.cancelButton, "LEFT", 1, 0)
+    r.cancelButton.txt:SetAllPoints()
 
     r:Hide()
 end
@@ -573,7 +616,7 @@ local function notifyEncounterRules(encounter)
     sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter))
     for _,v in pairs(WD.db.profile.rules) do
         if v.encounter == encounter and v.isActive == true then
-            local msg = string.format(WD_NOTIFY_RULE, v.points, getRuleDescription(v))
+            local msg = string.format(WD_NOTIFY_RULE, v.role, v.points, getRuleDescription(v))
             sendMessage(msg)
         end
     end
@@ -869,9 +912,11 @@ function WD:InitEncountersModule(parent)
     WDRM.headers = {}
     local h = createTableHeader(WDRM, "", x, y, 20, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeader(WDRM, WD_BUTTON_ENCOUNTER, x + 21, y, 75, 20)
+    h = createTableHeader(WDRM, WD_BUTTON_ENCOUNTER, x + 21, y, 85, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, WD_BUTTON_REASON, 395, 20)
+    h = createTableHeaderNext(WDRM, h, WD_BUTTON_ROLE, 75, 20)
+    table.insert(WDRM.headers, h)
+    h = createTableHeaderNext(WDRM, h, WD_BUTTON_REASON, 350, 20)
     table.insert(WDRM.headers, h)
     h = createTableHeaderNext(WDRM, h, WD_BUTTON_POINTS_SHORT, 50, 20)
     table.insert(WDRM.headers, h)
@@ -931,4 +976,11 @@ function WD:ReceiveRequestedRule(sender, data)
     else
         print("Could not parse rule from " .. sender)
     end
+end
+
+function WD:GetAllowedRoles(role)
+    if role == "ANY" then return {"Tank", "Healer", "Melee", "Ranged", "Unknown"} end
+    if role == "DPS" then return {"Melee", "Ranged"} end
+    if role == "NOT_TANK" then return {"Healer", "Melee", "Ranged"} end
+    return { role }
 end

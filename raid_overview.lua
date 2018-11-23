@@ -264,6 +264,7 @@ function WD:InitRaidOverviewModule(parent)
 end
 
 function WD:GetRole(name)
+    name = getFullCharacterName(name)
     local role = "Unknown"
     if not WD.cache.raidroster or not WD.cache.raidroster[name] then
         return role

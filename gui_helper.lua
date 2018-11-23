@@ -62,7 +62,6 @@ function table.tostring(tbl)
     return "{" .. table.concat(result, ",") .. "}"
 end
 
-
 local b="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 function encode64(data)
     return ((data:gsub('.', function(x)

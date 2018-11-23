@@ -50,15 +50,20 @@ function WD:OnInitialize()
         self.db.profile.history[i].index = i
     end
 
+    -- reload rules
+    for i=1, #self.db.profile.rules do
+        if not self.db.profile.rules[i].role then self.db.profile.rules[i].role = "ANY" end
+    end
+
     self:OnUpdate()
 end
 
 local function loadDefaultRules(self)
     if #self.db.profile.rules == 0 then
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZMQVNLUyIsYXJnMT0iIixlbmNvdW50ZXI9IkFMTCIscG9pbnRzPTEsYXJnMD0iIn0=")
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZPT0QiLGFyZzE9IiIsZW5jb3VudGVyPSJBTEwiLHBvaW50cz0xLGFyZzA9IiJ9")
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1JVTkVTIixhcmcxPSIiLGVuY291bnRlcj0iQUxMIixwb2ludHM9MSxhcmcwPSIifQ==")
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1BPVElPTlMiLGFyZzE9IiIsZW5jb3VudGVyPSJBTEwiLHBvaW50cz0tMSxhcmcwPSIifQ==")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZPT0QiLHJvbGU9IkFOWSIsYXJnMT0iIixlbmNvdW50ZXI9IkFMTCIscG9pbnRzPTEsaXNBY3RpdmU9dHJ1ZSxhcmcwPSIifQ==")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZMQVNLUyIscm9sZT0iQU5ZIixhcmcxPSIiLGVuY291bnRlcj0iQUxMIixwb2ludHM9MSxpc0FjdGl2ZT10cnVlLGFyZzA9IiJ9")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1JVTkVTIixyb2xlPSJBTlkiLGFyZzE9IiIsZW5jb3VudGVyPSJBTEwiLHBvaW50cz0xLGlzQWN0aXZlPXRydWUsYXJnMD0iIn0=")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1BPVElPTlMiLHJvbGU9IkFOWSIsYXJnMT0iIixlbmNvdW50ZXI9IkFMTCIscG9pbnRzPS0xLGlzQWN0aXZlPXRydWUsYXJnMD0iIn0=")
     end
 end
 

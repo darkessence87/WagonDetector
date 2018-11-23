@@ -115,26 +115,35 @@ local function getActiveRulesForEncounter(encounterId)
 
     for i=1,#WD.db.profile.rules do
         if WD.db.profile.rules[i].isActive == true and (WD.db.profile.rules[i].encounter == encounterName or WD.db.profile.rules[i].encounter == "ALL") then
+            local roles = WD:GetAllowedRoles(WD.db.profile.rules[i].role)
             local rType = WD.db.profile.rules[i].type
             local arg0 = WD.db.profile.rules[i].arg0
             local arg1 = WD.db.profile.rules[i].arg1
             local p = WD.db.profile.rules[i].points
-            if rType == "EV_DAMAGETAKEN" then
-                rules[rType][arg0] = {}
-                rules[rType][arg0].amount = arg1
-                rules[rType][arg0].points = p
-            elseif rType == "EV_DEATH" then
-                rules[rType][arg0] = p
-            elseif rType == "EV_DEATH_UNIT" then
-                rules[rType].unit = arg0
-                rules[rType].points = p
-            elseif rType == "EV_POTIONS" or rType == "EV_FLASKS" or rType == "EV_FOOD" or rType == "EV_RUNES" then
-                rules[rType].points = p
-            else
-                if not rules[rType][arg0] then
-                    rules[rType][arg0] = {}
+            for _,role in pairs(roles) do
+                if not rules[role] then rules[role] = {} end
+                if not rules[role][rType] then rules[role][rType] = {} end
+                if rType == "EV_DAMAGETAKEN" then
+                    rules[role][rType][arg0] = {}
+                    rules[role][rType][arg0].amount = arg1
+                    rules[role][rType][arg0].points = p
+                elseif rType == "EV_DEATH" then
+                    rules[role][rType][arg0] = {}
+                    rules[role][rType][arg0].points = p
+                elseif rType == "EV_DEATH_UNIT" then
+                    rules[role][rType].unit = arg0
+                    rules[role][rType].points = p
+                elseif rType == "EV_POTIONS" or rType == "EV_FLASKS" or rType == "EV_FOOD" or rType == "EV_RUNES" then
+                    rules[role][rType].points = p
+                else
+                    if not rules[role][rType][arg0] then
+                        rules[role][rType][arg0] = {}
+                    end
+                    if not rules[role][rType][arg0][arg1] then
+                        rules[role][rType][arg0][arg1] = {}
+                    end
+                    rules[role][rType][arg0][arg1].points = p
                 end
-                rules[rType][arg0][arg1] = p
             end
         end
     end
@@ -216,14 +225,15 @@ local function addFail(timestamp, name, msg, points)
 end
 
 local function checkConsumables(timestamp, name, unit, rules)
+    local role = WD:GetRole(name)
     local noflask, nofood, norune = nil, nil, nil
-    if rules["EV_FLASKS"].points then
+    if rules[role] and rules[role]["EV_FLASKS"] then
         noflask = true
     end
-    if rules["EV_FOOD"].points then
+    if rules[role] and rules[role]["EV_FOOD"] then
         nofood = true
     end
-    if rules["EV_RUNES"].points then
+    if rules[role] and rules[role]["EV_RUNES"] then
         norune = true
     end
 
@@ -247,13 +257,13 @@ local function checkConsumables(timestamp, name, unit, rules)
     end
 
     if noflask and noflask == true then
-        addFail(timestamp, name, WD_RULE_FLASKS, rules["EV_FLASKS"].points)
+        addFail(timestamp, name, WD_RULE_FLASKS, rules[role]["EV_FLASKS"].points)
     end
     if nofood and nofood == true then
-        addFail(timestamp, name, WD_RULE_FOOD, rules["EV_FOOD"].points)
+        addFail(timestamp, name, WD_RULE_FOOD, rules[role]["EV_FOOD"].points)
     end
     if norune and norune == true then
-        addFail(timestamp, name, WD_RULE_RUNES, rules["EV_RUNES"].points)
+        addFail(timestamp, name, WD_RULE_RUNES, rules[role]["EV_RUNES"].points)
     end
 end
 
@@ -281,64 +291,102 @@ function WDMF:OnCombatEvent(...)
     local timestamp, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags, spell_id, spell_name, spell_school = ...
 
     local rules = WDMF.encounter.rules
+    local src_role, dst_role = "", ""
+    if src_name then src_role = WD:GetRole(src_name) end
+    if dst_name then dst_role = WD:GetRole(dst_name) end
 
-    if event == "SPELL_AURA_APPLIED" and rules["EV_AURA"][spell_id] and rules["EV_AURA"][spell_id]["apply"] then
-        local p = rules["EV_AURA"][spell_id]["apply"]
+    if event == "SPELL_AURA_APPLIED" and
+        rules[dst_role] and
+        rules[dst_role]["EV_AURA"] and
+        rules[dst_role]["EV_AURA"][spell_id] and
+        rules[dst_role]["EV_AURA"][spell_id]["apply"]
+    then
+        local p = rules[dst_role]["EV_AURA"][spell_id]["apply"].points
         addFail(timestamp, dst_name, string.format(WD_RULE_APPLY_AURA, getSpellLinkById(spell_id)), p)
     end
 
     if event == "SPELL_AURA_REMOVED" then
-        if rules["EV_AURA"][spell_id] and rules["EV_AURA"][spell_id]["remove"] then
-            local p = rules["EV_AURA"][spell_id]["remove"]
+        if rules[dst_role] and
+           rules[dst_role]["EV_AURA"] and
+           rules[dst_role]["EV_AURA"][spell_id] and
+           rules[dst_role]["EV_AURA"][spell_id]["remove"]
+        then
+            local p = rules[dst_role]["EV_AURA"][spell_id]["remove"].points
             addFail(timestamp, dst_name, string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(spell_id)), p)
         end
 
         -- potions
-        if rules["EV_POTIONS"].points then
+        if rules[dst_role] and
+           rules[dst_role]["EV_POTIONS"]
+        then
             if potionSpellIds[spell_id] then
-                addSuccess(timestamp, dst_name, WD_RULE_POTIONS, rules["EV_POTIONS"].points)
+                local p = rules[dst_role]["EV_POTIONS"].points
+                addSuccess(timestamp, dst_name, WD_RULE_POTIONS, p)
             end
         end
     end
 
     if event == "SPELL_AURA_APPLIED_DOSE" then
+        print('SPELL_AURA_APPLIED_DOSE: '..getSpellLinkById(spell_id))
+        print(src_name)
+        print(src_role)
+        print(dst_name)
+        print(dst_role)
         local stacks = tonumber(arg[16])
-        if rules["EV_AURA_STACKS"][spell_id] and rules["EV_AURA_STACKS"][spell_id][stacks] then
-            local p = rules["EV_AURA"][spell_id]["remove"][stacks]
+        if rules[dst_role] and
+           rules[dst_role]["EV_AURA_STACKS"] and
+           rules[dst_role]["EV_AURA_STACKS"][spell_id] and
+           rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks]
+        then
+            local p = rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks].points
             addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkById(spell_id)), p)
         end
     end
 
-    if event == "SPELL_CAST_START" and rules["EV_START_CAST"][spell_id] and rules["EV_START_CAST"][spell_id][src_name] then
-        local p = rules["EV_START_CAST"][spell_id][src_name]
+    if event == "SPELL_CAST_START" and
+        rules[src_role] and
+        rules[src_role]["EV_START_CAST"] and
+        rules[src_role]["EV_START_CAST"][spell_id] and
+        rules[src_role]["EV_START_CAST"][spell_id][src_name]
+    then
+        local p = rules[src_role]["EV_START_CAST"][spell_id][src_name].points
         addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_START, src_name, getSpellLinkById(spell_id)), p)
     end
 
-    if event == "SPELL_CAST_SUCCESS" and rules["EV_CAST"][spell_id] and rules["EV_CAST"][spell_id][src_name] then
-        local p = rules["EV_CAST"][spell_id][src_name]
+    if event == "SPELL_CAST_SUCCESS" and
+        rules[src_role] and
+        rules[src_role]["EV_CAST"] and
+        rules[src_role]["EV_CAST"][spell_id] and
+        rules[src_role]["EV_CAST"][spell_id][src_name]
+    then
+        local p = rules[src_role]["EV_CAST"][spell_id][src_name].points
         addSuccess(timestamp, src_name, string.format(WD_RULE_CAST, src_name, getSpellLinkById(spell_id)), p)
     end
 
     if event == "SPELL_INTERRUPT" then
         local target_spell_id = tonumber(arg[14])
-        if rules["EV_INTERRUPTED_CAST"][target_spell_id] and rules["EV_INTERRUPTED_CAST"][target_spell_id][dst_name] then
-            local p = rules["EV_CAST"][spell_id][dst_name]
+        if rules[src_role] and
+           rules[src_role]["EV_INTERRUPTED_CAST"] and
+           rules[src_role]["EV_INTERRUPTED_CAST"][target_spell_id] and
+           rules[src_role]["EV_INTERRUPTED_CAST"][target_spell_id][dst_name]
+        then
+            local p = rules[src_role]["EV_INTERRUPTED_CAST"][spell_id][dst_name].points
             addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(spell_id)), src_name, p)
         end
     end
 
-    if event == "SPELL_DAMAGE" then
-        local death_rule = rules["EV_DEATH"][spell_id]
-        local damagetaken_rule = rules["EV_DAMAGETAKEN"][spell_id]
+    if event == "SPELL_DAMAGE" and
+        rules[dst_role]
+    then
         local amount, overkill = tonumber(arg[15]), tonumber(arg[16])
-
         local total = amount + overkill
         if overkill == 0 then total = total + 1 end
 
-        if death_rule and overkill > -1 then
-            local p = death_rule
+        if overkill > -1 and rules[dst_role]["EV_DEATH"] then
+            local p = rules[dst_role]["EV_DEATH"].points
             addFail(timestamp, dst_name, string.format(WD_RULE_DEATH, getSpellLinkById(spell_id)), p)
-        elseif damagetaken_rule then
+        elseif rules[dst_role]["EV_DAMAGETAKEN"] then
+            local damagetaken_rule = rules[dst_role]["EV_DAMAGETAKEN"]
             local p = damagetaken_rule.points
             if damagetaken_rule.amount > 0 and total > damagetaken_rule.amount then
                 addFail(timestamp, dst_name, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, getSpellLinkById(spell_id)), p)
@@ -356,8 +404,12 @@ function WDMF:OnCombatEvent(...)
             end
         end
 
-        if rules["EV_DEATH_UNIT"].unit == getShortCharacterName(dst_name) then
-            addSuccess(timestamp, dst_name, string.format(WD_RULE_DEATH_UNIT, dst_name), rules["EV_DEATH_UNIT"].points)
+        if rules[dst_role] and
+           rules[dst_role]["EV_DEATH_UNIT"] and
+           rules[dst_role]["EV_DEATH_UNIT"].unit == getShortCharacterName(dst_name)
+        then
+            local p = rules[dst_role]["EV_DEATH_UNIT"].points
+            addSuccess(timestamp, dst_name, string.format(WD_RULE_DEATH_UNIT, dst_name), p)
         end
     end
 end

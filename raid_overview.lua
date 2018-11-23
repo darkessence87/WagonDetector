@@ -31,7 +31,7 @@ local RoleSpecializations = {
 }
 
 local function updateSpecIcon(parent, specId)
-    if specId ~= 0 then
+    if specId and specId ~= 0 then
         local _,_,_,icon = GetSpecializationInfoByID(specId)
         parent.icon.t:SetTexture(icon)
     end

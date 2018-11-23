@@ -62,8 +62,8 @@ local function updateGuildRosterFrame()
             member.column[index]:EnableMouse(true)
             local r,g,b = GetClassColor(v.class)
             member.column[index].txt:SetTextColor(r, g, b, 1)
-            member.column[index]:SetScript("OnEnter", function(WDGR)
-                GameTooltip:SetOwner(WDGR, "ANCHOR_RIGHT")
+            member.column[index]:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
                 for i=1,#v.alts do
                     tooltip = tooltip..getShortCharacterName(v.alts[i]).."\n"
@@ -73,7 +73,7 @@ local function updateGuildRosterFrame()
                     GameTooltip:Show()
                 end
             end)
-            member.column[index]:SetScript("OnLeave", function(WDGR) GameTooltip_Hide() end)
+            member.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
 
             index = index + 1
             addNextColumn(WDGR, member, index, "CENTER", v.rank)
@@ -90,8 +90,8 @@ local function updateGuildRosterFrame()
             member.column[1].txt:SetText(getShortCharacterName(v.name))
             local r,g,b = GetClassColor(v.class)
             member.column[1].txt:SetTextColor(r, g, b, 1)
-            member.column[1]:SetScript("OnEnter", function(WDGR)
-                GameTooltip:SetOwner(WDGR, "ANCHOR_RIGHT")
+            member.column[1]:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
                 for i=1,#v.alts do
                     tooltip = tooltip..getShortCharacterName(v.alts[i]).."\n"

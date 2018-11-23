@@ -130,6 +130,16 @@ local function refreshHistoryFrame()
 
             index = index + 1
             addNextColumn(WDHM, member, index, "LEFT", v.reason)
+            member.column[index]:SetScript("OnEnter", function(self)
+                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h%[.*%]|h")
+                if spellId then
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
+                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
+                    GameTooltip:Show()
+                end
+            end)
+            member.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
 
             index = index + 1
             addNextColumn(WDHM, member, index, "CENTER", WD_BUTTON_REVERT)
@@ -152,6 +162,15 @@ local function refreshHistoryFrame()
             member.column[4].txt:SetText(v.role)
             member.column[5].txt:SetText(v.points)
             member.column[6].txt:SetText(v.reason)
+            member.column[6]:SetScript("OnEnter", function(self)
+                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h%[.*%]|h")
+                if spellId then
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
+                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
+                    GameTooltip:Show()
+                end
+            end)
             member.column[7]:SetScript("OnClick", function() revertHistory(v); refreshHistoryFrame() end)
             member.column[8]:SetScript("OnClick", function() deleteHistory(v); refreshHistoryFrame() end)
             member:Show()

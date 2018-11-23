@@ -17,13 +17,14 @@ local encounterTypes = {
 }
 
 local ruleTypes = {
-    "EV_DAMAGETAKEN",
-    "EV_DEATH",
     "EV_AURA",
     "EV_AURA_STACKS",
-    "EV_START_CAST",
-    "EV_CAST",
-    "EV_INTERRUPTED_CAST",
+    "EV_DISPEL",
+    "EV_CAST_START",
+    "EV_CAST_INTERRUPTED",
+    "EV_CAST_END",
+    "EV_DAMAGETAKEN",
+    "EV_DEATH",
     "EV_DEATH_UNIT",
     "EV_POTIONS",
     "EV_FLASKS",
@@ -100,6 +101,7 @@ local function editRuleLine(ruleLine)
         newRuleFrame.editBox1:Hide()
     elseif ruleLine.rule.type == "EV_DEATH"
         or ruleLine.rule.type == "EV_DEATH_UNIT"
+        or ruleLine.rule.type == "EV_DISPEL"
         or ruleLine.rule.type == "EV_POTIONS"
         or ruleLine.rule.type == "EV_FLASKS"
         or ruleLine.rule.type == "EV_FOOD"
@@ -142,12 +144,14 @@ local function getRuleDescription(rule)
         end
     elseif rule.type == "EV_AURA_STACKS" then
         return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkById(rule.arg0))
-    elseif rule.type == "EV_START_CAST" then
+    elseif rule.type == "EV_CAST_START" then
         return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkById(rule.arg0))
-    elseif rule.type == "EV_CAST" then
+    elseif rule.type == "EV_CAST_END" then
         return string.format(WD_RULE_CAST, rule.arg1, getSpellLinkById(rule.arg0))
-    elseif rule.type == "EV_INTERRUPTED_CAST" then
-        return string.format(WD_RULE_CAST_INTERRUPT, getSpellLinkById(rule.arg0), rule.arg1)
+    elseif rule.type == "EV_CAST_INTERRUPTED" then
+        return string.format(WD_RULE_CAST_INTERRUPT, rule.arg1, getSpellLinkById(rule.arg0))
+    elseif rule.type == "EV_DISPEL" then
+        return string.format(WD_RULE_DISPEL, getSpellLinkById(rule.arg0))
     elseif rule.type == "EV_DEATH_UNIT" then
         return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
     elseif rule.type == "EV_POTIONS" then
@@ -309,6 +313,18 @@ local function updateRuleLines()
             addNextColumn(WDRM, ruleLine, index, "LEFT", v.role)
             index = index + 1
             addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
+            ruleLine.column[index]:SetScript("OnEnter", function(self)
+                local reason = getRuleDescription(v)
+                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h%[.*%]|h")
+                if spellId then
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
+                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
+                    GameTooltip:Show()
+                end
+            end)
+            ruleLine.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
+
             index = index + 1
             addNextColumn(WDRM, ruleLine, index, "CENTER", v.points)
             index = index + 1
@@ -341,6 +357,17 @@ local function updateRuleLines()
             ruleLine.column[2].txt:SetText(v.encounter)
             ruleLine.column[3].txt:SetText(v.role)
             ruleLine.column[4].txt:SetText(getRuleDescription(v))
+            ruleLine.column[4]:SetScript("OnEnter", function(self)
+                local reason = getRuleDescription(v)
+                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h%[.*%]|h")
+                if spellId then
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
+                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
+                    GameTooltip:Show()
+                end
+            end)
+
             ruleLine.column[5].txt:SetText(v.points)
             ruleLine.column[6]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
 
@@ -377,14 +404,8 @@ local function isDuplicate(rule)
 end
 
 local function insertRule(rule)
-    if rule.points ~= "" and rule.points ~= 0 then
-        if isDuplicate(rule) == false then
-            WD.db.profile.rules[#WD.db.profile.rules+1] = rule
-        else
-            print("This rule already exists")
-        end
-    else
-        print("Could not add rule with empty points")
+    if isDuplicate(rule) == false then
+        WD.db.profile.rules[#WD.db.profile.rules+1] = rule
     end
 
     updateRuleLines()
@@ -432,17 +453,19 @@ local function saveRule()
     elseif ruleType == "EV_AURA_STACKS" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = tonumber(f.editBox1:GetText()) or 1
-    elseif ruleType == "EV_START_CAST" then
+    elseif ruleType == "EV_CAST_START" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.editBox1:GetText()
-    elseif ruleType == "EV_CAST" then
+    elseif ruleType == "EV_CAST_END" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.editBox1:GetText()
-    elseif ruleType == "EV_INTERRUPTED_CAST" then
+    elseif ruleType == "EV_CAST_INTERRUPTED" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.editBox1:GetText()
     elseif ruleType == "EV_DEATH_UNIT" then
         rule.arg0 = f.editBox0:GetText()
+    elseif ruleType == "EV_DISPEL" then
+        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
     elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" then
         -- nothing to do here
     else
@@ -482,6 +505,7 @@ local function updateNewRuleMenu()
         newRuleFrame.dropMenu1:Show()
     elseif rule == "EV_DEATH"
         or rule == "EV_DEATH_UNIT"
+        or rule == "EV_DISPEL"
         or rule == "EV_POTIONS"
         or rule == "EV_FLASKS"
         or rule == "EV_FOOD"
@@ -495,7 +519,7 @@ local function updateNewRuleMenu()
             ruleTxt = "amount or any"
         elseif rule == "EV_AURA_STACKS" then
             ruleTxt = "stacks or 1"
-        elseif rule == "EV_START_CAST" or rule == "EV_CAST" or rule == "EV_INTERRUPTED_CAST" then
+        elseif rule == "EV_CAST_START" or rule == "EV_CAST_END" or rule == "EV_CAST_INTERRUPTED" then
             ruleTxt = "unit name"
         end
         newRuleFrame.editBox1:SetText(ruleTxt)

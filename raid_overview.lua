@@ -82,6 +82,14 @@ local function setBuffSlotSpell(parent, index, spellId)
     else
         parent.buffs[index].t:SetColorTexture(1, 0, 0, 1)
     end
+    parent.buffs[index]:SetScript("OnEnter", function(self)
+        if self.spellId then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetHyperlink(getSpellLinkById(self.spellId))
+            GameTooltip:AddLine('id: '..self.spellId, 1, 1, 1)
+            GameTooltip:Show()
+        end
+    end)
 end
 
 local function getConsumables(unit)
@@ -142,7 +150,8 @@ local function getRoleBySpecId(specId)
 end
 
 local function updateRaidOverviewMember(data, parent)
-    for k,v in pairs(data) do
+    for k,n in pairs(data) do
+        local v = WD.cache.raidroster[n]
         if not parent.members[k] then
             local member = CreateFrame("Frame", nil, parent.headers[1])
             member.info = v
@@ -206,7 +215,19 @@ end
 local function updateRaidOverviewFrame()
     -- sort by name
     local func = function(a, b)
-        if WD.cache.raidroster[a].name < WD.cache.raidroster[b].name then return true
+        if not WD.cache.raidroster[a] or not WD.cache.raidroster[b] then return false end
+        if WD.cache.raidroster[a].class < WD.cache.raidroster[b].class then
+            return true
+        elseif WD.cache.raidroster[a].class > WD.cache.raidroster[b].class then
+            return false
+        elseif WD.cache.raidroster[a].specId and WD.cache.raidroster[b].specId and WD.cache.raidroster[a].specId < WD.cache.raidroster[b].specId then
+            return true
+        elseif WD.cache.raidroster[a].specId and WD.cache.raidroster[b].specId and WD.cache.raidroster[a].specId > WD.cache.raidroster[b].specId then
+            return false
+        elseif WD.cache.raidroster[a].name < WD.cache.raidroster[b].name then
+            return true
+        elseif WD.cache.raidroster[a].name > WD.cache.raidroster[b].name then
+            return false
         else
             return false
         end
@@ -219,15 +240,15 @@ local function updateRaidOverviewFrame()
         local v = WD.cache.raidroster[WD.cache.raidrosterkeys[k]]
         local role = getRoleBySpecId(v.specId)
         if role == "Tank" then
-            tanks[#tanks+1] = v
+            tanks[#tanks+1] = WD.cache.raidrosterkeys[k]
         elseif role == "Healer" then
-            healers[#healers+1] = v
+            healers[#healers+1] = WD.cache.raidrosterkeys[k]
         elseif role == "Melee" then
-            melees[#melees+1] = v
+            melees[#melees+1] = WD.cache.raidrosterkeys[k]
         elseif role == "Ranged" then
-            ranged[#ranged+1] = v
+            ranged[#ranged+1] = WD.cache.raidrosterkeys[k]
         else
-            unknown[#unknown+1] = v
+            unknown[#unknown+1] = WD.cache.raidrosterkeys[k]
         end
     end
 

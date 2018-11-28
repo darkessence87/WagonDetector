@@ -85,30 +85,30 @@ local function editRuleLine(ruleLine)
 
     -- encounter
     local encounterName = WD.EncounterNames[ruleLine.rule.journalId]
-    local frame = findDropDownFrameByName(newRuleFrame.dropFrame0, encounterName)
+    local frame = findDropDownFrameByName(newRuleFrame.menus["encounters"], encounterName)
     if frame then
-        newRuleFrame.dropFrame0.selected = frame
-        newRuleFrame.dropFrame0:SetText(encounterName)
+        newRuleFrame.menus["encounters"].selected = frame
+        newRuleFrame.menus["encounters"]:SetText(encounterName)
     end
 
     -- rule
-    for i=1,#newRuleFrame.dropFrame1.items do
-        if newRuleFrame.dropFrame1.items[i].txt:GetText() == ruleLine.rule.type then
-            newRuleFrame.dropFrame1.selected = newRuleFrame.dropFrame1.items[i]
-            newRuleFrame.dropFrame1:SetText(ruleLine.rule.type)
+    for i=1,#newRuleFrame.menus["rule_types"].items do
+        if newRuleFrame.menus["rule_types"].items[i].txt:GetText() == ruleLine.rule.type then
+            newRuleFrame.menus["rule_types"].selected = newRuleFrame.menus["rule_types"].items[i]
+            newRuleFrame.menus["rule_types"]:SetText(ruleLine.rule.type)
             break
         end
     end
 
     -- role
-    for i=1,#newRuleFrame.dropMenu2.items do
-        if newRuleFrame.dropMenu2.items[i].txt:GetText() == ruleLine.rule.role then
-            newRuleFrame.dropMenu2.selected = newRuleFrame.dropMenu2.items[i]
-            newRuleFrame.dropMenu2:SetText(ruleLine.rule.role)
+    for i=1,#newRuleFrame.menus["roles"].items do
+        if newRuleFrame.menus["roles"].items[i].txt:GetText() == ruleLine.rule.role then
+            newRuleFrame.menus["roles"].selected = newRuleFrame.menus["roles"].items[i]
+            newRuleFrame.menus["roles"]:SetText(ruleLine.rule.role)
             break
         end
     end
-    newRuleFrame.dropMenu2:Show()
+    newRuleFrame.menus["roles"]:Show()
 
     -- arg0
     if ruleLine.rule.type ~= "EV_POTIONS" and ruleLine.rule.type ~= "EV_FLASKS" and ruleLine.rule.type ~= "EV_FOOD" and ruleLine.rule.type ~= "EV_RUNES" then
@@ -123,14 +123,14 @@ local function editRuleLine(ruleLine)
 
     -- arg1
     if ruleLine.rule.type == "EV_AURA" then
-        for i=1,#newRuleFrame.dropMenu1.items do
-            if newRuleFrame.dropMenu1.items[i].txt:GetText() == ruleLine.rule.arg1 then
-                newRuleFrame.dropMenu1.selected = newRuleFrame.dropMenu1.items[i]
-                newRuleFrame.dropMenu1:SetText(ruleLine.rule.arg1)
+        for i=1,#newRuleFrame.menus["aura_actions"].items do
+            if newRuleFrame.menus["aura_actions"].items[i].txt:GetText() == ruleLine.rule.arg1 then
+                newRuleFrame.menus["aura_actions"].selected = newRuleFrame.menus["aura_actions"].items[i]
+                newRuleFrame.menus["aura_actions"]:SetText(ruleLine.rule.arg1)
                 break
             end
         end
-        newRuleFrame.dropMenu1:Show()
+        newRuleFrame.menus["aura_actions"]:Show()
         newRuleFrame.editBox1:Hide()
     elseif ruleLine.rule.type == "EV_DEATH"
         or ruleLine.rule.type == "EV_DEATH_UNIT"
@@ -141,7 +141,7 @@ local function editRuleLine(ruleLine)
         or ruleLine.rule.type == "EV_RUNES"
     then
         newRuleFrame.editBox1:Hide()
-        newRuleFrame.dropMenu1:Hide()
+        newRuleFrame.menus["aura_actions"]:Hide()
     else
         local ruleTxt = ruleLine.rule.arg1
         newRuleFrame.editBox1:SetText(ruleTxt)
@@ -149,7 +149,7 @@ local function editRuleLine(ruleLine)
         newRuleFrame.editBox1:SetScript("OnEditFocusGained", function() newRuleFrame.editBox1:SetText(""); end)
         newRuleFrame.editBox1:Show()
         newRuleFrame.editBox1:ClearFocus()
-        newRuleFrame.dropMenu1:Hide()
+        newRuleFrame.menus["aura_actions"]:Hide()
     end
 
     -- points
@@ -486,9 +486,9 @@ end
 
 local function saveRule()
     local f = WDRM.menus["new_rule"]
-    if not f.dropFrame0.selected or not f.dropFrame1.selected then return end
-    local journalId = f.dropFrame0.selected.data.journalId
-    local ruleType = f.dropFrame1.selected.txt:GetText()
+    if not f.menus["encounters"].selected or not f.menus["rule_types"].selected then return end
+    local journalId = f.menus["encounters"].selected.data.journalId
+    local ruleType = f.menus["rule_types"].selected.txt:GetText()
 
     local rule = {}
     rule.journalId = journalId
@@ -496,7 +496,7 @@ local function saveRule()
     rule.arg0 = ""
     rule.arg1 = ""
     rule.points = f.editBox2:GetNumber()
-    rule.role = f.dropMenu2:GetText()
+    rule.role = f.menus["roles"]:GetText()
 
     if ruleType == "EV_DAMAGETAKEN" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
@@ -505,7 +505,7 @@ local function saveRule()
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
     elseif ruleType == "EV_AURA" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = f.dropMenu1:GetText()
+        rule.arg1 = f.menus["aura_actions"]:GetText()
         if rule.arg1 ~= "apply" and rule.arg1 ~= "remove" then return end
     elseif ruleType == "EV_AURA_STACKS" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
@@ -535,9 +535,9 @@ end
 
 local function updateNewRuleMenu()
     local newRuleFrame = WDRM.menus["new_rule"]
-    if not newRuleFrame.dropFrame1.selected then return end
+    if not newRuleFrame.menus["rule_types"].selected then return end
 
-    local rule = newRuleFrame.dropFrame1.selected.txt:GetText()
+    local rule = newRuleFrame.menus["rule_types"].selected.txt:GetText()
 
     -- arg0 name (based on rule type)
     if rule ~= "EV_POTIONS" and rule ~= "EV_FLASKS" and rule ~= "EV_FOOD" and rule ~= "EV_RUNES" then
@@ -559,7 +559,7 @@ local function updateNewRuleMenu()
     -- arg1 name (based on rule type)
     if rule == "EV_AURA" then
         newRuleFrame.editBox1:Hide()
-        newRuleFrame.dropMenu1:Show()
+        newRuleFrame.menus["aura_actions"]:Show()
     elseif rule == "EV_DEATH"
         or rule == "EV_DEATH_UNIT"
         or rule == "EV_DISPEL"
@@ -569,7 +569,7 @@ local function updateNewRuleMenu()
         or rule == "EV_RUNES"
     then
         newRuleFrame.editBox1:Hide()
-        newRuleFrame.dropMenu1:Hide()
+        newRuleFrame.menus["aura_actions"]:Hide()
     else
         local ruleTxt = ""
         if rule == "EV_DAMAGETAKEN" then
@@ -584,7 +584,7 @@ local function updateNewRuleMenu()
         newRuleFrame.editBox1:SetScript("OnEditFocusGained", function() newRuleFrame.editBox1:SetText(""); end)
         newRuleFrame.editBox1:Show()
         newRuleFrame.editBox1:ClearFocus()
-        newRuleFrame.dropMenu1:Hide()
+        newRuleFrame.menus["aura_actions"]:Hide()
     end
 
     -- arg2 points
@@ -594,12 +594,13 @@ local function updateNewRuleMenu()
     newRuleFrame.editBox2:Show()
 
     -- role
-    newRuleFrame.dropMenu2:Show()
+    newRuleFrame.menus["roles"]:Show()
 end
 
 local function initNewRuleWindow()
     WDRM.menus["new_rule"] = CreateFrame("Frame", nil, WDRM)
     local r = WDRM.menus["new_rule"]
+    r.menus = {}
     r:EnableMouse(true)
     r:SetPoint("BOTTOMLEFT", WDRM.buttons["add_rule"], "TOPLEFT", -1, 6)
     r:SetSize(300, 151)
@@ -608,9 +609,9 @@ local function initNewRuleWindow()
 
     local xSize = 298
 
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList())
-    r.dropFrame0:SetSize(xSize, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList())
+    r.menus["encounters"]:SetSize(xSize, 20)
+    r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
 
     local items1 = {}
     for i=1,#ruleTypes do
@@ -618,14 +619,14 @@ local function initNewRuleWindow()
         table.insert(items1, item)
     end
 
-    r.dropFrame1 = createDropDownMenu(r, "Select rule type", items1)
-    r.dropFrame1:SetSize(xSize, 20)
-    r.dropFrame1:SetPoint("TOPLEFT", r.dropFrame0, "BOTTOMLEFT", 0, -1)
+    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", items1)
+    r.menus["rule_types"]:SetSize(xSize, 20)
+    r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
 
     -- editbox arg0
     r.editBox0 = createEditBox(r)
     r.editBox0:SetSize(xSize, 20)
-    r.editBox0:SetPoint("TOPLEFT", r.dropFrame1, "BOTTOMLEFT", 0, -1)
+    r.editBox0:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
     r.editBox0:Hide()
 
     -- editbox or dropdownmenu arg1
@@ -635,11 +636,11 @@ local function initNewRuleWindow()
     r.editBox1:Hide()
 
     local items2 = { {name = "apply"},{name = "remove"} }
-    r.dropMenu1 = createDropDownMenu(r, "Select aura action", items2)
-    r.dropMenu1.txt:SetJustifyH("CENTER")
-    r.dropMenu1:SetSize(xSize, 20)
-    r.dropMenu1:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
-    r.dropMenu1:Hide()
+    r.menus["aura_actions"] = createDropDownMenu(r, "Select aura action", items2)
+    r.menus["aura_actions"].txt:SetJustifyH("CENTER")
+    r.menus["aura_actions"]:SetSize(xSize, 20)
+    r.menus["aura_actions"]:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
+    r.menus["aura_actions"]:Hide()
 
     -- editbox arg2
     r.editBox2 = createEditBox(r)
@@ -654,22 +655,22 @@ local function initNewRuleWindow()
         local item = { name = roleTypes[i] }
         table.insert(items3, item)
     end
-    r.dropMenu2 = createDropDownMenu(r, "ANY", items3)
-    r.dropMenu2.txt:SetJustifyH("CENTER")
-    r.dropMenu2:SetSize(xSize, 20)
-    r.dropMenu2:SetPoint("TOPLEFT", r.editBox2, "BOTTOMLEFT", 0, -1)
-    r.dropMenu2:Hide()
+    r.menus["roles"] = createDropDownMenu(r, "ANY", items3)
+    r.menus["roles"].txt:SetJustifyH("CENTER")
+    r.menus["roles"]:SetSize(xSize, 20)
+    r.menus["roles"]:SetPoint("TOPLEFT", r.editBox2, "BOTTOMLEFT", 0, -1)
+    r.menus["roles"]:Hide()
 
     r:SetScript("OnHide", function()
         r.editBox0:Hide()
         r.editBox1:Hide()
         r.editBox2:Hide()
-        r.dropMenu1:Hide()
-        r.dropMenu2:Hide()
+        r.menus["aura_actions"]:Hide()
+        r.menus["roles"]:Hide()
     end)
 
     r.saveButton = createButton(r)
-    r.saveButton:SetPoint("TOPLEFT", r.dropMenu2, "BOTTOMLEFT", 1, -2)
+    r.saveButton:SetPoint("TOPLEFT", r.menus["roles"], "BOTTOMLEFT", 1, -2)
     r.saveButton:SetSize(xSize / 2 - 1, 20)
     r.saveButton:SetScript("OnClick", function() saveRule(); r:Hide() end)
     r.saveButton.t:SetColorTexture(.2, .4, .2, 1)
@@ -701,6 +702,7 @@ end
 local function initNotifyRuleWindow()
     WDRM.menus["notify_rule"] = CreateFrame("Frame", nil, WDRM)
     local r = WDRM.menus["notify_rule"]
+    r.menus = {}
     r:EnableMouse(true)
     r:SetPoint("BOTTOMLEFT", WDRM.buttons["notify"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
@@ -712,9 +714,9 @@ local function initNotifyRuleWindow()
         notifyEncounterRules(encounter)
     end
 
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList(notifyRule))
-    r.dropFrame0:SetSize(150, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList(notifyRule))
+    r.menus["encounters"]:SetSize(150, 20)
+    r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
     r:Hide()
 end
@@ -722,6 +724,7 @@ end
 local function initExportEncounterWindow()
     WDRM.menus["export_encounter"] = CreateFrame("Frame", nil, WDRM)
     local r = WDRM.menus["export_encounter"]
+    r.menus = {}
     r:EnableMouse(true)
     r:SetPoint("BOTTOMLEFT", WDRM.buttons["export"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
@@ -739,9 +742,9 @@ local function initExportEncounterWindow()
         exportEncounter(rules)
     end
 
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList(tryExportEncounter))
-    r.dropFrame0:SetSize(150, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList(tryExportEncounter))
+    r.menus["encounters"]:SetSize(150, 20)
+    r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
     r:Hide()
 end
@@ -877,6 +880,7 @@ end
 local function initShareEncounterWindow()
     WDRM.menus["share_encounter"] = CreateFrame("Frame", nil, WDRM)
     local r = WDRM.menus["share_encounter"]
+    r.menus = {}
     r:EnableMouse(true)
     r:SetPoint("BOTTOMLEFT", WDRM.buttons["share"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
@@ -894,9 +898,9 @@ local function initShareEncounterWindow()
         shareEncounter(WD.EncounterNames[encounter.journalId], rules)
     end
 
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList(share))
-    r.dropFrame0:SetSize(150, 20)
-    r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList(share))
+    r.menus["encounters"]:SetSize(150, 20)
+    r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
     StaticPopupDialogs["WD_ACCEPT_SHARED_ENCOUNTER"] = {
         text = WD_IMPORT_SHARED_ENCOUNTER_QUESTION,

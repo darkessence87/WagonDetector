@@ -67,7 +67,7 @@ local function getActiveRulesForEncounter(encounterId)
     }
 
     for i=1,#WD.db.profile.rules do
-        if WD.db.profile.rules[i].isActive == true and WD.db.profile.rules[i].journalId == journalId then
+        if WD.db.profile.rules[i].isActive == true and (WD.db.profile.rules[i].journalId == journalId or WD.db.profile.rules[i].journalId == -1) then
             local roles = WD:GetAllowedRoles(WD.db.profile.rules[i].role)
             local rType = WD.db.profile.rules[i].type
             local arg0 = WD.db.profile.rules[i].arg0

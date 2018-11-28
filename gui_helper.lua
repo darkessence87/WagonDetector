@@ -359,7 +359,7 @@ end
 
 function dropDownHide(self)
     if not self.items then return end
-    for k,v in pairs(self.items) do
+    for _,v in pairs(self.items) do
         if v.items then
             dropDownHide(v)
         end
@@ -420,13 +420,21 @@ end
 
 function createDropDownMenu(parent, name, items, grandParent)
     local dropFrame = createListButton(parent, name)
-    dropFrame:SetScript("OnClick", function()
-        if dropFrame.isVisible then
-            dropDownHide(dropFrame)
+    dropFrame:SetScript("OnClick", function(self)
+        local parent = self:GetParent()
+        if self.isVisible then
+            dropDownHide(self)
         else
-            dropDownHide(dropFrame:GetParent())
-            dropDownShow(dropFrame:GetParent())
-            dropDownShow(dropFrame)
+            dropDownHide(parent)
+            dropDownShow(parent)
+            dropDownShow(self)
+        end
+        if parent.menus then
+            for _,v in pairs(parent.menus) do
+                if v ~= self then
+                    dropDownHide(v)
+                end
+            end
         end
     end)
     dropFrame:SetScript("OnHide", function() resetDropDownMenu(dropFrame, name) end)

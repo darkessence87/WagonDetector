@@ -216,9 +216,9 @@ local function updateRaidOverviewFrame()
     -- sort by name
     local func = function(a, b)
         if not WD.cache.raidroster[a] or not WD.cache.raidroster[b] then return false end
-        if WD.cache.raidroster[a].class < WD.cache.raidroster[b].class then
+        if WD.cache.raidroster[a].class and WD.cache.raidroster[b].class and WD.cache.raidroster[a].class < WD.cache.raidroster[b].class then
             return true
-        elseif WD.cache.raidroster[a].class > WD.cache.raidroster[b].class then
+        elseif WD.cache.raidroster[a].class and WD.cache.raidroster[b].class and WD.cache.raidroster[a].class > WD.cache.raidroster[b].class then
             return false
         elseif WD.cache.raidroster[a].specId and WD.cache.raidroster[b].specId and WD.cache.raidroster[a].specId < WD.cache.raidroster[b].specId then
             return true

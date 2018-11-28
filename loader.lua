@@ -44,18 +44,6 @@ function WD:OnInitialize()
 
         self.mainFrame:SetScript("OnEvent", function(self, ...) self:OnEvent(...); end)
     end
-
-    -- reload history
-    for i=1, #self.db.profile.history do
-        self.db.profile.history[i].index = i
-    end
-
-    -- reload rules
-    for i=1, #self.db.profile.rules do
-        if not self.db.profile.rules[i].role then self.db.profile.rules[i].role = "ANY" end
-    end
-
-    self:OnUpdate()
 end
 
 local function loadDefaultRules(self)
@@ -68,6 +56,25 @@ local function loadDefaultRules(self)
 end
 
 function WD:OnUpdate()
+    WD:LoadTiers()
+
+    -- reload history
+    for i=1, #self.db.profile.history do
+        self.db.profile.history[i].index = i
+    end
+
+    -- reload rules
+    for i=1, #self.db.profile.rules do
+        if not self.db.profile.rules[i].role then self.db.profile.rules[i].role = "ANY" end
+        if not self.db.profile.rules[i].journalId or not tonumber(self.db.profile.rules[i].journalId) then
+            local journalId = WD.FindEncounterJournalIdByNameMigration(self.db.profile.rules[i].encounter) or -1
+            self.db.profile.rules[i].journalId = journalId
+            self.db.profile.rules[i].encounter = WD.EncounterNames[journalId]
+        else
+            self.db.profile.rules[i].encounter = WD.EncounterNames[self.db.profile.rules[i].journalId]
+        end
+    end
+
     if self.guiFrame then
         loadDefaultRules(self)
         self.guiFrame:OnUpdate()

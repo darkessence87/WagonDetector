@@ -3,19 +3,6 @@ local WDRM = nil
 
 local insertQueue = {}
 
-local encounterTypes = {
-    "Test",
-    "ALL",
-    "UD_TALOC",
-    "UD_MOTHER",
-    "UD_ZEKVOZ",
-    "UD_VECTIS",
-    "UD_FETID",
-    "UD_ZUL",
-    "UD_MYTRAX",
-    "UD_GHUUN",
-}
-
 local ruleTypes = {
     "EV_AURA",
     "EV_AURA_STACKS",
@@ -42,20 +29,66 @@ local roleTypes = {
     "NOT_TANK"
 }
 
+local function createTierList(fn)
+    local t = {}
+
+    local testItem = { name = "Test", id = 0, journalId = 0 }
+    if fn then testItem.func = function() fn(testItem) end end
+    table.insert(t, testItem)
+
+    local allItem = { name = "ALL", id = -1, journalId = -1 }
+    if fn then allItem.func = function() fn(allItem) end end
+    table.insert(t, allItem)
+
+    for _,tier in pairs(WD.TiersInfo) do
+        local tierItem = {}
+        tierItem.name = tier.name
+        for _,inst in pairs(tier.instances) do
+            if not tierItem.items then tierItem.items = {} end
+            local instItem = {}
+            instItem.name = inst.name
+            for _,enc in pairs(inst.encounters) do
+                if not instItem.items then instItem.items = {} end
+                local encItem = {}
+                encItem.name = enc.name
+                encItem.journalId = enc.journalId
+                if fn then encItem.func = function() fn(enc) end end
+                table.insert(instItem.items, encItem)
+            end
+            table.insert(tierItem.items, instItem)
+        end
+        table.insert(t, tierItem)
+    end
+    return t
+end
+
+local function findDropDownFrameByName(parent, name)
+    for i=1,#parent.items do
+        if parent.items[i].txt:GetText() == name then
+            return parent.items[i]
+        end
+
+        if parent.items[i].items then
+            local frame = findDropDownFrameByName(parent.items[i], name)
+            if frame then return frame end
+        end
+    end
+    return nil
+end
+
 local function editRuleLine(ruleLine)
-    local newRuleFrame = WDRM.newRule
+    local newRuleFrame = WDRM.menus["new_rule"]
     if not ruleLine then return end
 
     if newRuleFrame:IsVisible() then newRuleFrame:Hide() return end
     newRuleFrame:Show()
 
     -- encounter
-    for i=1,#newRuleFrame.dropFrame0.items do
-        if newRuleFrame.dropFrame0.items[i].txt:GetText() == ruleLine.rule.encounter then
-            newRuleFrame.dropFrame0.selected = newRuleFrame.dropFrame0.items[i]
-            newRuleFrame.dropFrame0:SetText(ruleLine.rule.encounter)
-            break
-        end
+    local encounterName = WD.EncounterNames[ruleLine.rule.journalId]
+    local frame = findDropDownFrameByName(newRuleFrame.dropFrame0, encounterName)
+    if frame then
+        newRuleFrame.dropFrame0.selected = frame
+        newRuleFrame.dropFrame0:SetText(encounterName)
     end
 
     -- rule
@@ -190,8 +223,8 @@ local function parseRule(str)
             local v = parseValue(string.sub(i, dashIndex + 1))
             if k == "type" then
                 rule.type = v
-            elseif k == "encounter" then
-                rule.encounter = v
+            elseif k == "journalId" then
+                rule.journalId = tonumber(v)
             elseif k == "arg0" then
                 rule.arg0 = v
             elseif k == "arg1" then
@@ -267,7 +300,7 @@ local function shareEncounter(encounterName, rules)
 end
 
 local function updateRuleLines()
-    if not WDRM.rules then return end
+    if not WDRM or not WDRM.rules then return end
 
     local maxWidth = 30
     local maxHeight = 545
@@ -280,12 +313,18 @@ local function updateRuleLines()
         WDRM.scroller = scroller
     end
 
-    -- sort by encounter > points
+    -- sort by journalId > points > reason
     local func = function(a, b)
-        if a.encounter < b.encounter then return true
-        elseif a.encounter > b.encounter then return false
+        if a.journalId < b.journalId then return true
+        elseif a.journalId > b.journalId then return false
+        elseif a.points > b.points then return true
+        elseif a.points < b.points then return false
+        elseif a.arg0 and b.arg0 then
+            if tonumber(a.arg0) and tonumber(b.arg0) then return tonumber(a.arg0) < tonumber(b.arg0)
+            else return tostring(a.arg0) < tostring(b.arg0)
+            end
         else
-            return a.points > b.points
+            return true
         end
     end
     table.sort(WD.db.profile.rules, func)
@@ -307,8 +346,18 @@ local function updateRuleLines()
             ruleLine.column[index]:SetScript("OnClick", function() v.isActive = not v.isActive end)
 
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "LEFT", v.encounter)
+            addNextColumn(WDRM, ruleLine, index, "LEFT", WD.EncounterNames[v.journalId])
             ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine.column[index-1], "TOPRIGHT", 2, 1)
+            local instanceName = WD.FindInstanceByJournalId(v.journalId)
+            ruleLine.column[index]:SetScript("OnEnter", function(self)
+                if instanceName then
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText(instanceName, nil, nil, nil, nil, true)
+                    GameTooltip:Show()
+                end
+            end)
+            ruleLine.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
+
             index = index + 1
             addNextColumn(WDRM, ruleLine, index, "LEFT", v.role)
             index = index + 1
@@ -354,7 +403,15 @@ local function updateRuleLines()
             ruleLine.rule = v
             ruleLine.column[1]:SetChecked(v.isActive)
             ruleLine.column[1]:SetScript("OnClick", function() v.isActive = not v.isActive end)
-            ruleLine.column[2].txt:SetText(v.encounter)
+            ruleLine.column[2].txt:SetText(WD.EncounterNames[v.journalId])
+            local instanceName = WD.FindInstanceByJournalId(v.journalId)
+            ruleLine.column[2]:SetScript("OnEnter", function(self)
+                if instanceName then
+                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                    GameTooltip:SetText(instanceName, nil, nil, nil, nil, true)
+                    GameTooltip:Show()
+                end
+            end)
             ruleLine.column[3].txt:SetText(v.role)
             ruleLine.column[4].txt:SetText(getRuleDescription(v))
             ruleLine.column[4]:SetScript("OnEnter", function(self)
@@ -393,7 +450,7 @@ local function isDuplicate(rule)
     local found = false
     for k,v in pairs(WD.db.profile.rules) do
         if not v.role then v.role = "ANY" end
-        if v.encounter == rule.encounter and v.type == rule.type and v.arg0 == rule.arg0 and v.arg1 == rule.arg1 then
+        if v.journalId == rule.journalId and v.type == rule.type and v.arg0 == rule.arg0 and v.arg1 == rule.arg1 then
             found = true
             v.role = rule.role
             v.points = rule.points
@@ -413,10 +470,10 @@ end
 
 local function insertEncounter(rules)
     if not rules or #rules == 0 then return end
-    local encounter = rules[1].encounter
+    local journalId = rules[1].journalId
     local newRules = {}
     for k,v in pairs(WD.db.profile.rules) do
-        if v.encounter ~= encounter then
+        if v.journalId ~= journalId then
             newRules[#newRules+1] = v
         end
     end
@@ -428,13 +485,13 @@ local function insertEncounter(rules)
 end
 
 local function saveRule()
-    local f = WDRM.newRule
+    local f = WDRM.menus["new_rule"]
     if not f.dropFrame0.selected or not f.dropFrame1.selected then return end
-    local encounterType = f.dropFrame0.selected.txt:GetText()
+    local journalId = f.dropFrame0.selected.data.journalId
     local ruleType = f.dropFrame1.selected.txt:GetText()
 
     local rule = {}
-    rule.encounter = encounterType
+    rule.journalId = journalId
     rule.type = ruleType
     rule.arg0 = ""
     rule.arg1 = ""
@@ -477,7 +534,7 @@ local function saveRule()
 end
 
 local function updateNewRuleMenu()
-    local newRuleFrame = WDRM.newRule
+    local newRuleFrame = WDRM.menus["new_rule"]
     if not newRuleFrame.dropFrame1.selected then return end
 
     local rule = newRuleFrame.dropFrame1.selected.txt:GetText()
@@ -541,23 +598,17 @@ local function updateNewRuleMenu()
 end
 
 local function initNewRuleWindow()
-    WDRM.newRule = CreateFrame("Frame", nil, WDRM)
-    local r = WDRM.newRule
+    WDRM.menus["new_rule"] = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.menus["new_rule"]
     r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", WDRM.addRule, "TOPLEFT", -1, 6)
+    r:SetPoint("BOTTOMLEFT", WDRM.buttons["add_rule"], "TOPLEFT", -1, 6)
     r:SetSize(300, 151)
     r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     local xSize = 298
 
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i] }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList())
     r.dropFrame0:SetSize(xSize, 20)
     r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
 
@@ -637,9 +688,10 @@ local function initNewRuleWindow()
 end
 
 local function notifyEncounterRules(encounter)
-    sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter))
+    print("encounter instance id: " .. encounter.id)
+    sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter.name))
     for _,v in pairs(WD.db.profile.rules) do
-        if v.encounter == encounter and v.isActive == true then
+        if WD.EncounterNames[v.journalId] == encounter.name and v.isActive == true then
             local msg = string.format(WD_NOTIFY_RULE, v.role, v.points, getRuleDescription(v))
             sendMessage(msg)
         end
@@ -647,26 +699,20 @@ local function notifyEncounterRules(encounter)
 end
 
 local function initNotifyRuleWindow()
-    WDRM.notifyRule = CreateFrame("Frame", nil, WDRM)
-    local r = WDRM.notifyRule
+    WDRM.menus["notify_rule"] = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.menus["notify_rule"]
     r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", WDRM.notify, "TOPLEFT", 0, 1)
+    r:SetPoint("BOTTOMLEFT", WDRM.buttons["notify"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
     r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     function notifyRule(encounter)
-        WDRM.notifyRule:Hide()
+        WDRM.menus["notify_rule"]:Hide()
         notifyEncounterRules(encounter)
     end
 
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i], func = function() notifyRule(encounterTypes[i]) end }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList(notifyRule))
     r.dropFrame0:SetSize(150, 20)
     r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -674,32 +720,26 @@ local function initNotifyRuleWindow()
 end
 
 local function initExportEncounterWindow()
-    WDRM.exportEncounter = CreateFrame("Frame", nil, WDRM)
-    local r = WDRM.exportEncounter
+    WDRM.menus["export_encounter"] = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.menus["export_encounter"]
     r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", WDRM.export, "TOPLEFT", 0, 1)
+    r:SetPoint("BOTTOMLEFT", WDRM.buttons["export"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
     r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
-    function tryExportEncounter(encounterName)
-        WDRM.exportEncounter:Hide()
+    function tryExportEncounter(encounter)
+        WDRM.menus["export_encounter"]:Hide()
         local rules = {}
         for _,v in pairs(WD.db.profile.rules) do
-            if v.encounter == encounterName then
+            if v.journalId == encounter.journalId then
                 rules[#rules+1] = v
             end
         end
         exportEncounter(rules)
     end
 
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i], func = function() tryExportEncounter(encounterTypes[i]) end }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList(tryExportEncounter))
     r.dropFrame0:SetSize(150, 20)
     r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -737,11 +777,11 @@ local function initPopupLogic()
         button1 = WD_BUTTON_IMPORT,
         button2 = WD_BUTTON_CANCEL,
         OnAccept = function()
-            insertEncounter(importEncounter(WDRM.importEncounter.editBox:GetText()))
-            WDRM.importEncounter:Hide()
+            insertEncounter(importEncounter(WDRM.menus["import_encounter"].editBox:GetText()))
+            WDRM.menus["import_encounter"]:Hide()
         end,
         OnCancel = function()
-            WDRM.importEncounter:Hide()
+            WDRM.menus["import_encounter"]:Hide()
         end,
         timeout = 0,
         whileDead = true,
@@ -783,8 +823,8 @@ local function initPopupLogic()
 end
 
 local function initImportEncounterWindow()
-    WDRM.importEncounter = CreateFrame("Frame", nil, WDRM)
-    local r = WDRM.importEncounter
+    WDRM.menus["import_encounter"] = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.menus["import_encounter"]
     r:EnableMouse(true)
     r:SetPoint("CENTER", 0, 0)
     r:SetSize(400, 400)
@@ -794,7 +834,7 @@ local function initImportEncounterWindow()
     function tryImportEncounter(str)
         local rules = importEncounter(str)
         if rules and #rules > 0 then
-            StaticPopup_Show("WD_ACCEPT_IMPORT", rules[1].encounter)
+            StaticPopup_Show("WD_ACCEPT_IMPORT", WD.EncounterNames[rules[1].journalId])
         else
             -- try import as single rule
             local rule = importRule(str)
@@ -835,32 +875,26 @@ local function initImportEncounterWindow()
 end
 
 local function initShareEncounterWindow()
-    WDRM.shareEncounter = CreateFrame("Frame", nil, WDRM)
-    local r = WDRM.shareEncounter
+    WDRM.menus["share_encounter"] = CreateFrame("Frame", nil, WDRM)
+    local r = WDRM.menus["share_encounter"]
     r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", WDRM.share, "TOPLEFT", 0, 1)
+    r:SetPoint("BOTTOMLEFT", WDRM.buttons["share"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
     r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
-    function share(encounterName)
-        WDRM.shareEncounter:Hide()
+    function share(encounter)
+        WDRM.menus["share_encounter"]:Hide()
         local rules = {}
         for _,v in pairs(WD.db.profile.rules) do
-            if v.encounter == encounterName then
+            if v.journalId == encounter.journalId then
                 rules[#rules+1] = v
             end
         end
-        shareEncounter(encounterName, rules)
+        shareEncounter(WD.EncounterNames[encounter.journalId], rules)
     end
 
-    local items0 = {}
-    for i=1,#encounterTypes do
-        local item = { name = encounterTypes[i], func = function() share(encounterTypes[i]) end }
-        table.insert(items0, item)
-    end
-
-    r.dropFrame0 = createDropDownMenu(r, "Select encounter", items0)
+    r.dropFrame0 = createDropDownMenu(r, "Select encounter", createTierList(share))
     r.dropFrame0:SetSize(150, 20)
     r.dropFrame0:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -886,61 +920,76 @@ local function initShareEncounterWindow()
     r:Hide()
 end
 
+local function onMenuClick(menu)
+    if not WDRM.menus[menu] then return end
+    if WDRM.menus[menu]:IsVisible() then
+        WDRM.menus[menu]:Hide()
+    else
+        WDRM.menus[menu]:Show()
+    end
+
+    for k,v in pairs(WDRM.menus) do
+        if k ~= menu then v:Hide() end
+    end
+end
+
 function WD:InitEncountersModule(parent)
     WDRM = parent
 
+    WDRM.menus = {}
+    WDRM.buttons = {}
     WDRM.rules = {}
 
     -- new rule button
-    WDRM.addRule = createButton(WDRM)
-    WDRM.addRule:SetPoint("TOPLEFT", WDRM, "TOPLEFT", 1, -5)
-    WDRM.addRule:SetSize(125, 20)
-    WDRM.addRule:SetScript("OnClick", function() if WDRM.newRule:IsVisible() then WDRM.newRule:Hide() else WDRM.newRule:Show() end end)
-    WDRM.addRule.txt = createFont(WDRM.addRule, "CENTER", WD_BUTTON_NEW_RULE)
-    WDRM.addRule.txt:SetAllPoints()
+    WDRM.buttons["add_rule"] = createButton(WDRM)
+    WDRM.buttons["add_rule"]:SetPoint("TOPLEFT", WDRM, "TOPLEFT", 1, -5)
+    WDRM.buttons["add_rule"]:SetSize(125, 20)
+    WDRM.buttons["add_rule"]:SetScript("OnClick", function() onMenuClick("new_rule") end)
+    WDRM.buttons["add_rule"].txt = createFont(WDRM.buttons["add_rule"], "CENTER", WD_BUTTON_NEW_RULE)
+    WDRM.buttons["add_rule"].txt:SetAllPoints()
 
     -- notify rules button
-    WDRM.notify = createButton(WDRM)
-    WDRM.notify:SetPoint("TOPLEFT", WDRM.addRule, "TOPRIGHT", 1, 0)
-    WDRM.notify:SetSize(125, 20)
-    WDRM.notify:SetScript("OnClick", function() if WDRM.notifyRule:IsVisible() then WDRM.notifyRule:Hide() else WDRM.notifyRule:Show() end end)
-    WDRM.notify.txt = createFont(WDRM.notify, "CENTER", WD_BUTTON_NOTIFY_RULES)
-    WDRM.notify.txt:SetAllPoints()
+    WDRM.buttons["notify"] = createButton(WDRM)
+    WDRM.buttons["notify"]:SetPoint("TOPLEFT", WDRM.buttons["add_rule"], "TOPRIGHT", 1, 0)
+    WDRM.buttons["notify"]:SetSize(125, 20)
+    WDRM.buttons["notify"]:SetScript("OnClick", function() onMenuClick("notify_rule") end)
+    WDRM.buttons["notify"].txt = createFont(WDRM.buttons["notify"], "CENTER", WD_BUTTON_NOTIFY_RULES)
+    WDRM.buttons["notify"].txt:SetAllPoints()
 
     -- export encounter button
-    WDRM.export = createButton(WDRM)
-    WDRM.export:SetPoint("TOPLEFT", WDRM.notify, "TOPRIGHT", 1, 0)
-    WDRM.export:SetSize(125, 20)
-    WDRM.export:SetScript("OnClick", function() if WDRM.exportEncounter:IsVisible() then WDRM.exportEncounter:Hide() else WDRM.exportEncounter:Show() end end)
-    WDRM.export.txt = createFont(WDRM.export, "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
-    WDRM.export.txt:SetAllPoints()
+    WDRM.buttons["export"] = createButton(WDRM)
+    WDRM.buttons["export"]:SetPoint("TOPLEFT", WDRM.buttons["notify"], "TOPRIGHT", 1, 0)
+    WDRM.buttons["export"]:SetSize(125, 20)
+    WDRM.buttons["export"]:SetScript("OnClick", function() onMenuClick("export_encounter") end)
+    WDRM.buttons["export"].txt = createFont(WDRM.buttons["export"], "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
+    WDRM.buttons["export"].txt:SetAllPoints()
 
     -- import encounter button
-    WDRM.import = createButton(WDRM)
-    WDRM.import:SetPoint("TOPLEFT", WDRM.export, "TOPRIGHT", 1, 0)
-    WDRM.import:SetSize(125, 20)
-    WDRM.import:SetScript("OnClick", function() if WDRM.importEncounter:IsVisible() then WDRM.importEncounter:Hide() else WDRM.importEncounter:Show() end end)
-    WDRM.import.txt = createFont(WDRM.import, "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
-    WDRM.import.txt:SetAllPoints()
+    WDRM.buttons["import"] = createButton(WDRM)
+    WDRM.buttons["import"]:SetPoint("TOPLEFT", WDRM.buttons["export"], "TOPRIGHT", 1, 0)
+    WDRM.buttons["import"]:SetSize(125, 20)
+    WDRM.buttons["import"]:SetScript("OnClick", function() onMenuClick("import_encounter") end)
+    WDRM.buttons["import"].txt = createFont(WDRM.buttons["import"], "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
+    WDRM.buttons["import"].txt:SetAllPoints()
 
     -- share encounter button
-    WDRM.share = createButton(WDRM)
-    WDRM.share:SetPoint("TOPLEFT", WDRM.import, "TOPRIGHT", 1, 0)
-    WDRM.share:SetSize(125, 20)
-    WDRM.share:SetScript("OnClick", function() if WDRM.shareEncounter:IsVisible() then WDRM.shareEncounter:Hide() else WDRM.shareEncounter:Show() end end)
-    WDRM.share.txt = createFont(WDRM.share, "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
-    WDRM.share.txt:SetAllPoints()
+    WDRM.buttons["share"] = createButton(WDRM)
+    WDRM.buttons["share"]:SetPoint("TOPLEFT", WDRM.buttons["import"], "TOPRIGHT", 1, 0)
+    WDRM.buttons["share"]:SetSize(125, 20)
+    WDRM.buttons["share"]:SetScript("OnClick", function() onMenuClick("share_encounter") end)
+    WDRM.buttons["share"].txt = createFont(WDRM.buttons["share"], "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
+    WDRM.buttons["share"].txt:SetAllPoints()
 
     -- headers
     local x, y = 1, -30
     WDRM.headers = {}
     local h = createTableHeader(WDRM, "", x, y, 20, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeader(WDRM, WD_BUTTON_ENCOUNTER, x + 21, y, 85, 20)
+    h = createTableHeader(WDRM, WD_BUTTON_ENCOUNTER, x + 21, y, 150, 20)
     table.insert(WDRM.headers, h)
     h = createTableHeaderNext(WDRM, h, WD_BUTTON_ROLE, 75, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, WD_BUTTON_REASON, 350, 20)
+    h = createTableHeaderNext(WDRM, h, WD_BUTTON_REASON, 300, 20)
     table.insert(WDRM.headers, h)
     h = createTableHeaderNext(WDRM, h, WD_BUTTON_POINTS_SHORT, 50, 20)
     table.insert(WDRM.headers, h)
@@ -986,7 +1035,7 @@ end
 
 function WD:SendSharedEncounter(sender, encounterName)
     for _,v in pairs(WD.db.profile.rules) do
-        if v.encounter == encounterName then
+        if v.journalId == encounterName then
             local txt = encode64(table.tostring(v))
             WD:SendAddonMessage("receive_rule", txt, sender)
         end

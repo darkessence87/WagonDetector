@@ -69,6 +69,8 @@ WD_BUTTON_ACCEPT = "Accept"
 WD_IMPORT_SHARED_QUESTION = "%s wants to share with you some rule"
 WD_BUTTON_SHARE_ENCOUNTERS = "Share encounters"
 WD_IMPORT_SHARED_ENCOUNTER_QUESTION = "%s wants to share with you encounter \"%s\". This will override all existing rules for this encounter"
+WD_BUTTON_CLASS = "Class"
+WD_BUTTON_CLASS_NUMBER = "Number"
 
 WD_RULE_DAMAGE_TAKEN_AMOUNT = "taking >=%d damage by %s"
 WD_RULE_DAMAGE_TAKEN = "taking damage by %s"

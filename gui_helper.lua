@@ -326,7 +326,7 @@ end
 function createListItemButton(parent, name, index)
     local button = createButton(parent, name)
     button:SetPoint("TOPLEFT", parent, "TOPRIGHT", 1, index * -21)
-    button:SetSize(125, 20)
+    button:SetSize(175, 20)
     button.txt = createFont(button, "LEFT", name)
     button.txt:SetPoint("LEFT", button, "LEFT", 5, 0)
     return button
@@ -351,12 +351,25 @@ function dropDownShow(self)
     if not self.items then return end
     for _,v in pairs(self.items) do v:Show() end
     self.isVisible = true
+
+    if self.bg then
+        self.bg:Show()
+    end
 end
 
 function dropDownHide(self)
     if not self.items then return end
-    for _,v in pairs(self.items) do v:Hide() end
+    for k,v in pairs(self.items) do
+        if v.items then
+            dropDownHide(v)
+        end
+        v:Hide()
+    end
     self.isVisible = false
+
+    if self.bg then
+        self.bg:Hide()
+    end
 end
 
 function onClickDropDown(self, item, onClick)
@@ -368,16 +381,34 @@ function onClickDropDown(self, item, onClick)
     end
 end
 
-function updateDropDownMenu(self, name, items)
+function updateDropDownMenu(self, name, items, parent)
     self.selected = nil
     self.txt:SetText(name)
     if items and #self.items == 0 then
         for k,v in pairs(items) do
-            local item = createListItemButton(self, v.name, k - 1)
-            item:SetScript("OnClick", function() onClickDropDown(self, item, v.func) end)
-            table.insert(self.items, item)
+            if v.items then
+                local item = createDropDownMenu(self, v.name, v.items, parent)
+                item:SetSize(175, 20)
+                item:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, (k - 1) * -21)
+                table.insert(self.items, item)
+            else
+                local item = createListItemButton(self, v.name, k - 1)
+                item.data = v
+                item:SetScript("OnClick", function() onClickDropDown(parent or self, item, v.func) end)
+                table.insert(self.items, item)
+            end
         end
     end
+
+    if #self.items > 1 then
+        local width = self.items[1]:GetWidth()
+        local height = #self.items * self.items[1]:GetHeight()
+        self.bg = createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
+        self.bg:SetSize(width, height)
+        self.bg:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, 0)
+        self.bg:Hide()
+    end
+
     dropDownHide(self)
 end
 
@@ -387,13 +418,21 @@ function resetDropDownMenu(self, name)
     dropDownHide(self)
 end
 
-function createDropDownMenu(parent, name, items)
+function createDropDownMenu(parent, name, items, grandParent)
     local dropFrame = createListButton(parent, name)
-    dropFrame:SetScript("OnClick", function() if dropFrame.isVisible then dropDownHide(dropFrame) else dropDownShow(dropFrame) end end)
+    dropFrame:SetScript("OnClick", function()
+        if dropFrame.isVisible then
+            dropDownHide(dropFrame)
+        else
+            dropDownHide(dropFrame:GetParent())
+            dropDownShow(dropFrame:GetParent())
+            dropDownShow(dropFrame)
+        end
+    end)
     dropFrame:SetScript("OnHide", function() resetDropDownMenu(dropFrame, name) end)
     dropFrame.items = {}
 
-    updateDropDownMenu(dropFrame, name, items)
+    updateDropDownMenu(dropFrame, name, items, grandParent or dropFrame)
     resetDropDownMenu(dropFrame, name)
 
     return dropFrame

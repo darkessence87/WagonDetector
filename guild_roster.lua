@@ -117,6 +117,64 @@ local function updateGuildRosterFrame()
             WDGR.members[i]:Hide()
         end
     end
+
+    -- update class members numbers
+    local classMembers = {}
+    for k,v in pairs(WD.cache.roster) do
+        if classMembers[v.class] then
+            classMembers[v.class] = classMembers[v.class] + 1
+        else
+            classMembers[v.class] = 1
+        end
+    end
+    for k,v in pairs(WDGR.classMembers) do
+        if classMembers and classMembers[v.class] then
+            v.column[7].txt:SetText(classMembers[v.class])
+        else
+            v.column[7].txt:SetText("0")
+        end
+    end
+end
+
+local function initClassRoster()
+    local d = #WDGR.headers
+    local x, y = 500, -30
+    local h = createTableHeader(WDGR, WD_BUTTON_CLASS, x, y, 125, 20)
+    table.insert(WDGR.headers, h)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_CLASS_NUMBER, 50, 20)
+    table.insert(WDGR.headers, h)
+
+    WDGR.classMembers = {}
+
+    local prevFrame = nil
+    for k=1,GetNumClasses() do
+        local className, class = GetClassInfo(k)
+
+        local member = CreateFrame("Frame", nil, WDGR.headers[d+1])
+        member:SetSize(WDGR.headers[d+1]:GetSize())
+        member.column = {}
+        member.class = class
+
+        local index = d + 1
+        addNextColumn(WDGR, member, index, "LEFT", className)
+        if k > 1 then
+            member.column[index]:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
+            member:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
+        else
+            member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
+            member:SetPoint("TOPLEFT", WDGR.headers[d+1], "BOTTOMLEFT", 0, -1)
+        end
+        member.column[index]:EnableMouse(false)
+        local r,g,b = GetClassColor(class)
+        member.column[index].txt:SetTextColor(r, g, b, 1)
+        member.column[index].txt:SetPoint("LEFT", 5, 0)
+
+        index = index + 1
+        addNextColumn(WDGR, member, index, "CENTER", 0)
+
+        prevFrame = member
+        table.insert(WDGR.classMembers, member)
+    end
 end
 
 function WD:InitGuildRosterModule(parent)
@@ -145,6 +203,8 @@ function WD:InitGuildRosterModule(parent)
     table.insert(WDGR.headers, h)
     h = createTableHeaderNext(WDGR, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
     table.insert(WDGR.headers, h)
+
+    initClassRoster()
 
     WD:OnGuildRosterUpdate()
     WD:SortGuildRoster("BY_NAME", false, function() updateGuildRosterFrame() end)
@@ -180,8 +240,18 @@ function WD:FindMain(name)
 end
 
 function WD:OnGuildRosterUpdate()
+    local gRanks = WD:GetGuildRanks()
+    if WD.db.profile.minGuildRank and #gRanks ~= 0 then
+        local needRankUpdate = true
+        for k,v in pairs(gRanks) do
+            if v.name == WD.db.profile.minGuildRank.name then
+                needRankUpdate = false
+                break
+            end
+        end
+        if needRankUpdate == true then WD.db.profile.minGuildRank = nil end
+    end
     if not WD.db.profile.minGuildRank or not WD.db.profile.minGuildRank.name then
-        local gRanks = WD:GetGuildRanks()
         for k,v in pairs(gRanks) do
             if v.id == 0 then
                 WD.db.profile.minGuildRank = v
@@ -328,13 +398,24 @@ end
 function WD:GetGuildRanks()
     local ranks = {}
     local temp = {}
+    local tempKeys = {}
     for i=1,GetNumGuildMembers() do
-        local _, rank, rankIndex = GetGuildRosterInfo(i)
-        temp[rankIndex] = rank
+        local _, rankName, rankIndex = GetGuildRosterInfo(i)
+        local rank = { id = rankIndex, name = rankName }
+        if not temp[rank.id] then
+            temp[rank.id] = rank
+            tempKeys[#tempKeys+1] = rank.id
+        end
     end
 
-    for k,v in pairs(temp) do
-        local rank = { id = k, name = v }
+    if #tempKeys > 1 then
+        local fn = function(a, b) return temp[a].id < temp[b].id end
+        table.sort(tempKeys, fn)
+    end
+
+    for _,k in pairs(tempKeys) do
+        local v = temp[k]
+        local rank = { id = v.id, name = v.name }
         table.insert(ranks, rank)
     end
 

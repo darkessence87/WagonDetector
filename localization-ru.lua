@@ -73,6 +73,8 @@ WD_BUTTON_ACCEPT = "Принять"
 WD_IMPORT_SHARED_QUESTION = "%s хочет поделиться с вами правилом"
 WD_BUTTON_SHARE_ENCOUNTERS = "Поделиться правилами"
 WD_IMPORT_SHARED_ENCOUNTER_QUESTION = "%s хочет поделиться с вами правилами боя \"%s\". Это действие перетрёт все существующие правила для этого боя"
+WD_BUTTON_CLASS = "Класс"
+WD_BUTTON_CLASS_NUMBER = "К-во"
 
 WD_RULE_DAMAGE_TAKEN_AMOUNT = "получение >=%d урона от %s"
 WD_RULE_DAMAGE_TAKEN = "получение урона от %s"

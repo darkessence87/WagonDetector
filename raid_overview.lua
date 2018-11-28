@@ -156,7 +156,7 @@ local function updateRaidOverviewMember(data, parent)
             local member = CreateFrame("Frame", nil, parent.headers[1])
             member.info = v
             member:SetSize(parent.headers[1]:GetSize())
-            member:SetPoint("TOPLEFT", parent.headers[1], "BOTTOMLEFT", 0, y)
+            member:SetPoint("TOPLEFT", parent.headers[1], "BOTTOMLEFT", 0, -1)
             member.column = {}
 
             local index = 1

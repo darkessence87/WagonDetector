@@ -7,19 +7,6 @@ WDMF.encounter.isBlockedByAnother = 0
 local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
 local playerName = UnitName("player") .. "-" .. currentRealmName
 
-encounterIDs = {
-    [0] = "Test",
-    [-1] = "ALL",
-    [2144] = "UD_TALOC",
-    [2141] = "UD_MOTHER",
-    [2136] = "UD_ZEKVOZ",
-    [2134] = "UD_VECTIS",
-    [2128] = "UD_FETID",
-    [2145] = "UD_ZUL",
-    [2135] = "UD_MYTRAX",
-    [2122] = "UD_GHUUN",
-}
-
 local potionSpellIds = {
     [279151] = "/battle-potion-of-intellect",
     [279152] = "/battle-potion-of-agility",
@@ -28,36 +15,6 @@ local potionSpellIds = {
     [251316] = "/potion-of-bursting-blood",
     [269853] = "/potion-of-rising-death",
     [279154] = "/battle-potion-of-stamina",
-}
-
-WD.FLASK_IDS = {
-    [251837] = "/flask-of-endless-fathoms",
-    [251839] = "/flask-of-the-undertow",
-    [251836] = "/flask-of-the-currents",
-    [251838] = "/flask-of-the-vast-horizon",
-}
-
-WD.FOOD_IDS = {
-    [257408] = "Increases critical strike by 53 for 1 hour.",
-    [257410] = "Increases critical strike by 70 for 1 hour.",
-    [257413] = "Increases haste by 53 for 1 hour.",
-    [257415] = "Increases haste by 70 for 1 hour.",
-    [257418] = "Increases mastery by 53 for 1 hour.",
-    [257420] = "Increases mastery by 70 for 1 hour.",
-    [257422] = "Increases versatility by 53 for 1 hour.",
-    [257424] = "Increases versatility by 70 for 1 hour.",
-    [259448] = "Agility increased by 75.  Lasts 1 hour.",
-    [259454] = "Agility increased by 100.  Lasts 1 hour.",
-    [259449] = "Intellect increased by 75.  Lasts 1 hour.",
-    [259455] = "Intellect increased by 100.  Lasts 1 hour.",
-    [259452] = "Strength increased by 75.  Lasts 1 hour.",
-    [259456] = "Strength increased by 100.  Lasts 1 hour.",
-    [259453] = "Stamina increased by 113.  Lasts 1 hour.",
-    [259457] = "Stamina increased by 150.  Lasts 1 hour.",
-}
-
-WD.RUNE_IDS = {
-    [270058] = "/battle-scarred-augmentation",
 }
 
 function getTimedDiff(startTime, endTime)
@@ -86,8 +43,10 @@ function getTimedDiffShort(startTime, endTime)
 end
 
 local function getActiveRulesForEncounter(encounterId)
-    local encounterName = encounterIDs[encounterId]
-    if not encounterName then
+    -- search journalId for encounter
+    local journalId = WD.FindEncounterJournalIdByCombatId(encounterId)
+    if not journalId then
+        journalId = WD.FindEncounterJournalIdByName("ALL")
         print("Unknown name for encounterId:"..encounterId)
     end
 
@@ -108,7 +67,7 @@ local function getActiveRulesForEncounter(encounterId)
     }
 
     for i=1,#WD.db.profile.rules do
-        if WD.db.profile.rules[i].isActive == true and (WD.db.profile.rules[i].encounter == encounterName or WD.db.profile.rules[i].encounter == "ALL") then
+        if WD.db.profile.rules[i].isActive == true and WD.db.profile.rules[i].journalId == journalId then
             local roles = WD:GetAllowedRoles(WD.db.profile.rules[i].role)
             local rType = WD.db.profile.rules[i].type
             local arg0 = WD.db.profile.rules[i].arg0

@@ -32,6 +32,20 @@ local function hideModules()
     end
 end
 
+local function reloadGuildRanksMenu(parent)
+    local items3 = {}
+    local gRanks = WD:GetGuildRanks()
+    for k,v in pairs(gRanks) do
+        local item = { name = v.name, func = function()
+            WD.db.profile.minGuildRank = v
+            parent.txt:SetText(WD.db.profile.minGuildRank.name)
+            WD:OnGuildRosterUpdate()
+        end }
+        table.insert(items3, item)
+    end
+    updateDropDownMenu(parent, "GuildRanks", items3)
+end
+
 local function initMainModule(mainF)
     -- check lock button
     mainF.lockButton = createCheckButton(mainF)
@@ -110,22 +124,14 @@ local function initMainModule(mainF)
     mainF.rankSelectorTxt:SetSize(200, 20)
     mainF.rankSelectorTxt:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 0, -5)
     mainF.dropFrame1 = createDropDownMenu(mainF)
-    local items3 = {}
-    local gRanks = WD:GetGuildRanks()
-    for k,v in pairs(gRanks) do
-        local item = { name = v.name, func = function()
-            WD.db.profile.minGuildRank = v
-            mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name)
-            WD:OnGuildRosterUpdate()
-        end }
-        table.insert(items3, item)
-    end
-    updateDropDownMenu(mainF.dropFrame1, "GuildRanks", items3)
+    reloadGuildRanksMenu(mainF.dropFrame1)
     mainF.dropFrame1:SetSize(250, 20)
     mainF.dropFrame1:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 100, -5)
     mainF.dropFrame1:SetScript("OnShow", function()
         if WD.db.profile.minGuildRank then
             mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name)
+        else
+            mainF.dropFrame1.txt:SetText("GuildRanks")
         end
     end)
 
@@ -134,7 +140,7 @@ local function initMainModule(mainF)
         mainF.autotrackButton:SetChecked(WD.db.profile.autoTrack)
         mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
         mainF.dropFrame0.txt:SetText(WD.db.profile.chat)
-        mainF.dropFrame1.txt:SetText(WD.db.profile.minGuildRank.name)
+        reloadGuildRanksMenu(mainF.dropFrame1)
         mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
         mainF.lockButton:SetChecked(WD.db.profile.isLocked)
         mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths)
@@ -199,29 +205,41 @@ function WD:CreateGuiFrame()
     -- x button
     WDGF.xButton = createXButton(WDGF, 0)
 
+    WDGF:RegisterEvent("PLAYER_ENTERING_WORLD")
     WDGF:RegisterEvent("GUILD_ROSTER_UPDATE")
     WDGF:SetScript("OnEvent", function(self, event)
-        local gRanks = WD:GetGuildRanks()
-        if #gRanks == 0 then return end
+        if event == "PLAYER_ENTERING_WORLD" then
+            WD:OnUpdate()
 
-        -- modules frames
-        local x, y = 20, -30
-        local dy = -21
-        local mainF = createModuleFrame("main")
-        createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, x, y)
-        local encF = createModuleFrame("encounters")
-        createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, x, y + dy)
-        local pointsF = createModuleFrame("guild_roster")
-        createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, x, y + 2 * dy)
-        local raidF = createModuleFrame("raid_overview")
-        createModuleButton(raidF, WD_BUTTON_RAID_OVERVIEW_MODULE, x, y + 3 * dy)
-        local lastEncF = createModuleFrame("last_encounter")
-        createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, x, y + 4 * dy)
-        local historyF = createModuleFrame("history")
-        createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, x, y + 5 * dy)
-        hideModules()
-
-        WDGF:UnregisterEvent("GUILD_ROSTER_UPDATE")
+            -- modules frames
+            local x, y = 20, -30
+            local dy = -21
+            local mainF = createModuleFrame("main")
+            createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, x, y)
+            local encF = createModuleFrame("encounters")
+            createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, x, y + dy)
+            local pointsF = createModuleFrame("guild_roster")
+            createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, x, y + 2 * dy)
+            local raidF = createModuleFrame("raid_overview")
+            createModuleButton(raidF, WD_BUTTON_RAID_OVERVIEW_MODULE, x, y + 3 * dy)
+            local lastEncF = createModuleFrame("last_encounter")
+            createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, x, y + 4 * dy)
+            local historyF = createModuleFrame("history")
+            createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, x, y + 5 * dy)
+            hideModules()
+            WDGF:UnregisterEvent("PLAYER_ENTERING_WORLD")
+        elseif event == "GUILD_ROSTER_UPDATE" then
+            local gRanks = WD:GetGuildRanks()
+            if #gRanks ~= 0 then
+                WDGF:UnregisterEvent("GUILD_ROSTER_UPDATE")
+            end
+            WDGF:OnUpdate()
+        end
+    end)
+    WDGF:SetScript("OnShow", function(self)
+        if self:IsEventRegistered("GUILD_ROSTER_UPDATE") then
+            GuildRoster()
+        end
     end)
 
     GuildRoster()

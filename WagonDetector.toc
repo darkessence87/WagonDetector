@@ -1,12 +1,12 @@
 ﻿## Interface: 80100
 ## Title: Wagon Detector
 ## Author: DarkEssence
-## Version: v0.0.25
+## Version: v0.0.26
 ## Notes: Addon for automatic control fines by events in combatlog during encounter
 ## Notes-ruRU: Аддон для автоматического начисления штрафов по событиям в логах сражений
 ## SavedVariables: WD_DB
 ## SavedVariablesPerCharacter: WD_DB_Char
-## OptionalDeps: Ace3
+## Dependencies: Ace3
 
 localization-en.lua
 localization-ru.lua

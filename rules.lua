@@ -3,65 +3,6 @@ local WDRM = nil
 
 local insertQueue = {}
 
-local ruleTypes = {
-    "EV_AURA",
-    "EV_AURA_STACKS",
-    "EV_DISPEL",
-    "EV_CAST_START",
-    "EV_CAST_INTERRUPTED",
-    "EV_CAST_END",
-    "EV_DAMAGETAKEN",
-    "EV_DEATH",
-    "EV_DEATH_UNIT",
-    "EV_POTIONS",
-    "EV_FLASKS",
-    "EV_FOOD",
-    "EV_RUNES"
-}
-
-local roleTypes = {
-    "ANY",
-    "TANK",
-    "HEALER",
-    "MELEE",
-    "RANGED",
-    "DPS",
-    "NOT_TANK"
-}
-
-local function createTierList(fn)
-    local t = {}
-
-    local testItem = { name = "Test", id = 0, journalId = 0 }
-    if fn then testItem.func = function() fn(testItem) end end
-    table.insert(t, testItem)
-
-    local allItem = { name = "ALL", id = -1, journalId = -1 }
-    if fn then allItem.func = function() fn(allItem) end end
-    table.insert(t, allItem)
-
-    for _,tier in pairs(WD.TiersInfo) do
-        local tierItem = {}
-        tierItem.name = tier.name
-        for _,inst in pairs(tier.instances) do
-            if not tierItem.items then tierItem.items = {} end
-            local instItem = {}
-            instItem.name = inst.name
-            for _,enc in pairs(inst.encounters) do
-                if not instItem.items then instItem.items = {} end
-                local encItem = {}
-                encItem.name = enc.name
-                encItem.journalId = enc.journalId
-                if fn then encItem.func = function() fn(enc) end end
-                table.insert(instItem.items, encItem)
-            end
-            table.insert(tierItem.items, instItem)
-        end
-        table.insert(t, tierItem)
-    end
-    return t
-end
-
 local function findDropDownFrameByName(parent, name)
     for i=1,#parent.items do
         if parent.items[i].txt:GetText() == name then
@@ -176,7 +117,11 @@ local function getRuleDescription(rule)
             return string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(rule.arg0))
         end
     elseif rule.type == "EV_AURA_STACKS" then
-        return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkById(rule.arg0))
+        if rule.arg1 > 0 then
+            return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkById(rule.arg0))
+        else
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", getSpellLinkById(rule.arg0))
+        end
     elseif rule.type == "EV_CAST_START" then
         return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkById(rule.arg0))
     elseif rule.type == "EV_CAST_END" then
@@ -530,7 +475,7 @@ local function saveRule()
         if rule.arg1 ~= "apply" and rule.arg1 ~= "remove" then return end
     elseif ruleType == "EV_AURA_STACKS" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = tonumber(f.editBox1:GetText()) or 1
+        rule.arg1 = tonumber(f.editBox1:GetText()) or 0
     elseif ruleType == "EV_CAST_START" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
         rule.arg1 = f.editBox1:GetText()
@@ -596,7 +541,7 @@ local function updateNewRuleMenu()
         if rule == "EV_DAMAGETAKEN" then
             ruleTxt = "amount or any"
         elseif rule == "EV_AURA_STACKS" then
-            ruleTxt = "stacks or 1"
+            ruleTxt = "stacks (0 if any)"
         elseif rule == "EV_CAST_START" or rule == "EV_CAST_END" or rule == "EV_CAST_INTERRUPTED" then
             ruleTxt = "unit name"
         end
@@ -630,13 +575,13 @@ local function initNewRuleWindow()
 
     local xSize = 298
 
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList())
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList())
     r.menus["encounters"]:SetSize(xSize, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
 
     local items1 = {}
-    for i=1,#ruleTypes do
-        local item = { name = ruleTypes[i], func = updateNewRuleMenu }
+    for i=1,#WD.RuleTypes do
+        local item = { name = WD.RuleTypes[i], func = updateNewRuleMenu }
         table.insert(items1, item)
     end
 
@@ -672,8 +617,8 @@ local function initNewRuleWindow()
 
     -- role filter
     local items3 = {}
-    for i=1,#roleTypes do
-        local item = { name = roleTypes[i] }
+    for i=1,#WD.RoleTypes do
+        local item = { name = WD.RoleTypes[i] }
         table.insert(items3, item)
     end
     r.menus["roles"] = createDropDownMenu(r, "ANY", items3)
@@ -735,7 +680,7 @@ local function initNotifyRuleWindow()
         notifyEncounterRules(encounter)
     end
 
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList(notifyRule))
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList(notifyRule))
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -763,7 +708,7 @@ local function initExportEncounterWindow()
         exportEncounter(rules)
     end
 
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList(tryExportEncounter))
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList(tryExportEncounter))
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -915,7 +860,7 @@ local function initShareEncounterWindow()
         shareEncounter(WD.EncounterNames[encounter.journalId], rules)
     end
 
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", createTierList(share))
+    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList(share))
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -1076,4 +1021,37 @@ function WD:GetAllowedRoles(role)
     if role == "DPS" then return {"Melee", "Ranged"} end
     if role == "NOT_TANK" then return {"Healer", "Melee", "Ranged"} end
     return { role }
+end
+
+function WD:CreateTierList(fn)
+    local t = {}
+
+    local testItem = { name = "Test", id = 0, journalId = 0 }
+    if fn then testItem.func = function() fn(testItem) end end
+    table.insert(t, testItem)
+
+    local allItem = { name = "ALL", id = -1, journalId = -1 }
+    if fn then allItem.func = function() fn(allItem) end end
+    table.insert(t, allItem)
+
+    for _,tier in pairs(WD.TiersInfo) do
+        local tierItem = {}
+        tierItem.name = tier.name
+        for _,inst in pairs(tier.instances) do
+            if not tierItem.items then tierItem.items = {} end
+            local instItem = {}
+            instItem.name = inst.name
+            for _,enc in pairs(inst.encounters) do
+                if not instItem.items then instItem.items = {} end
+                local encItem = {}
+                encItem.name = enc.name
+                encItem.journalId = enc.journalId
+                if fn then encItem.func = function() fn(enc) end end
+                table.insert(instItem.items, encItem)
+            end
+            table.insert(tierItem.items, instItem)
+        end
+        table.insert(t, tierItem)
+    end
+    return t
 end

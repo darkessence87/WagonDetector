@@ -436,6 +436,13 @@ function createDropDownMenu(parent, name, items, grandParent)
                 end
             end
         end
+        if parent.hiddenMenus then
+            for _,v in pairs(parent.hiddenMenus) do
+                if v ~= self then
+                    dropDownHide(v)
+                end
+            end
+        end
     end)
     dropFrame:SetScript("OnHide", function() resetDropDownMenu(dropFrame, name) end)
     dropFrame.items = {}
@@ -488,4 +495,64 @@ function addNextColumn(self, parent, index, textOrientation, name)
     else
         parent.column[index].txt:SetAllPoints()
     end
+end
+
+function getRuleTypesItems(fn)
+    local items = {}
+    for i=1,#WD.RuleTypes do
+        local item = { name = WD.RuleTypes[i], func = fn }
+        table.insert(items, item)
+    end
+    return items
+end
+
+function getRoleTypesItems(fn)
+    local items = {}
+    for i=1,#WD.RoleTypes do
+        local item = { name = WD.RoleTypes[i], func = fn }
+        table.insert(items, item)
+    end
+    return items
+end
+
+function createRuleWindow(parent, updateFunction)
+    local r = CreateFrame("Frame", nil, parent)
+    r.hiddenMenus = {}
+
+    local totalWidth = 300
+    local xSize = totalWidth - 2
+
+    -- label
+    r.label = createFontDefault(r, "CENTER", "")
+    r.label:SetSize(xSize, 20)
+    r.label:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
+
+    -- arg0
+    r.hiddenMenus["arg0_edit"] = createEditBox(r)
+    r.hiddenMenus["arg0_edit"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg0_edit"]:SetPoint("TOPLEFT", r.label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg0_edit"]:Hide()
+
+    -- arg1
+    r.hiddenMenus["arg1_edit"] = createEditBox(r)
+    r.hiddenMenus["arg1_edit"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg1_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_edit"]:Hide()
+
+    r.hiddenMenus["arg1_drop1"] = createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
+    r.hiddenMenus["arg1_drop1"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg1_drop1"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg1_drop1"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_drop1"]:Hide()
+
+    r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)
+
+    r:EnableMouse(true)
+    r:SetSize(totalWidth, 3 * 21 + 1)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
+
+    r:Hide()
+
+    return r
 end

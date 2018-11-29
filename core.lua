@@ -286,11 +286,15 @@ function WDMF:OnCombatEvent(...)
         local stacks = tonumber(arg[16])
         if rules[dst_role] and
            rules[dst_role]["EV_AURA_STACKS"] and
-           rules[dst_role]["EV_AURA_STACKS"][spell_id] and
-           rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks]
+           rules[dst_role]["EV_AURA_STACKS"][spell_id]
         then
-            local p = rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks].points
-            addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkById(spell_id)), p)
+            if rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks] then
+                local p = rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks].points
+                addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkById(spell_id)), p)
+            elseif rules[dst_role]["EV_AURA_STACKS"][spell_id][0] then
+                local p = rules[dst_role]["EV_AURA_STACKS"][spell_id][0].points
+                addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", getSpellLinkById(spell_id)), p)
+            end
         end
     end
     -----------------------------------------------------------------------------------------------------------------------

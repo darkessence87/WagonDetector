@@ -1,6 +1,6 @@
 
 WD.minRulesVersion = "v0.0.24"
-WD.version = "v0.0.25"
+WD.version = "v0.0.26"
 WD.TiersInfo = {}
 
 -- [encounterJournalId] = encounterCombatId, encounterName
@@ -30,14 +30,15 @@ local function loadEncounters(instanceId)
     local i = 1
     local encounterName, _, encounterJournalId = EJ_GetEncounterInfoByIndex(i, instanceId)
     while encounterName do
-        encounters[encounterJournalId] = {}
-        encounters[encounterJournalId].journalId = encounterJournalId
+        local enc = {}
+        enc.journalId = encounterJournalId
         if WD.EncountersMapping[encounterJournalId] then
-            encounters[encounterJournalId].combatId = WD.EncountersMapping[encounterJournalId].combatId
+            enc.combatId = WD.EncountersMapping[encounterJournalId].combatId
         else
-            encounters[encounterJournalId].combatId = -1
+            enc.combatId = -1
         end
-        encounters[encounterJournalId].name = encounterName
+        enc.name = encounterName
+        encounters[#encounters+1] = enc
 
         -- cache
         WD.EncounterNames[encounterJournalId] = encounterName
@@ -57,10 +58,11 @@ local function loadInstances(tierId)
     local i = 1
     local instanceId, instanceName = EJ_GetInstanceByIndex(i, true)
     while instanceId do
-        instances[instanceId] = {}
-        instances[instanceId].id = instanceId
-        instances[instanceId].name = instanceName
-        instances[instanceId].encounters = loadEncounters(instanceId)
+        local inst = {}
+        inst.id = instanceId
+        inst.name = instanceName
+        inst.encounters = loadEncounters(instanceId)
+        instances[#instances+1] = inst
 
         i = i + 1
         instanceId, instanceName = EJ_GetInstanceByIndex(i, true)
@@ -107,6 +109,32 @@ WD.RUNE_IDS = {
     [270058] = "/battle-scarred-augmentation",
 }
 
+WD.RuleTypes = {
+    "EV_AURA",
+    "EV_AURA_STACKS",
+    "EV_DISPEL",
+    "EV_CAST_START",
+    "EV_CAST_INTERRUPTED",
+    "EV_CAST_END",
+    "EV_DAMAGETAKEN",
+    "EV_DEATH",
+    "EV_DEATH_UNIT",
+    "EV_POTIONS",
+    "EV_FLASKS",
+    "EV_FOOD",
+    "EV_RUNES"
+}
+
+WD.RoleTypes = {
+    "ANY",
+    "TANK",
+    "HEALER",
+    "MELEE",
+    "RANGED",
+    "DPS",
+    "NOT_TANK"
+}
+
 function WD.LoadTiers()
     for i=1,EJ_GetNumTiers() do
         WD.TiersInfo[i] = loadTier(i)
@@ -132,7 +160,7 @@ function WD.FindEncounterJournalIdByName(name)
 end
 
 function WD.FindEncounterJournalIdByNameMigration(name)
-    for k,v in pairs(WD.EncountersMapping) do
+    for _,v in pairs(WD.EncountersMapping) do
         if v.name == name then
             return v.journalId
         end

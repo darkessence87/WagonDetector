@@ -1,6 +1,6 @@
 
 WD.minRulesVersion = "v0.0.24"
-WD.version = "v0.0.24"
+WD.version = "v0.0.25"
 WD.TiersInfo = {}
 
 -- [encounterJournalId] = encounterCombatId, encounterName

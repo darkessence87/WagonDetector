@@ -24,6 +24,7 @@ WD_PRINT_FAILURE = "%s [FAIL] %s: %s (%d penalty points)"
 WD_NOTIFY_HEADER_RULE = "List of active rules in encounter \"%s\":"
 WD_NOTIFY_RULE = "[%s] %d penalty points for %s"
 WD_REVERT_STR = "REVERT"
+WD_LABEL_TOTAL = "TOTAL"
 
 WD_BUTTON_LOCK_GUI = "Lock config"
 WD_BUTTON_DEFAULT_CHAT = "Default notifications chat"

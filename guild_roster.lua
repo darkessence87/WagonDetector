@@ -120,18 +120,23 @@ local function updateGuildRosterFrame()
 
     -- update class members numbers
     local classMembers = {}
+    local total = 0
     for k,v in pairs(WD.cache.roster) do
         if classMembers[v.class] then
             classMembers[v.class] = classMembers[v.class] + 1
         else
             classMembers[v.class] = 1
         end
+        total = total + 1
     end
     for k,v in pairs(WDGR.classMembers) do
         if classMembers and classMembers[v.class] then
             v.column[7].txt:SetText(classMembers[v.class])
-        else
+        elseif v.class then
             v.column[7].txt:SetText("0")
+        else
+            v.column[7].txt:SetText(total)
+            v.column[7].t:SetColorTexture(.5, .5, .5, 1)
         end
     end
 end
@@ -175,6 +180,22 @@ local function initClassRoster()
         prevFrame = member
         table.insert(WDGR.classMembers, member)
     end
+
+    local member = CreateFrame("Frame", nil, WDGR.headers[d+1])
+    member:SetSize(WDGR.headers[d+1]:GetSize())
+    member.column = {}
+
+    local index = d + 1
+    addNextColumn(WDGR, member, index, "LEFT", WD_LABEL_TOTAL)
+    member.column[index]:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
+    member:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
+    member.column[index]:EnableMouse(false)
+    member.column[index].txt:SetPoint("LEFT", 5, 0)
+    member.column[index].t:SetColorTexture(.5, .5, .5, 1)
+
+    index = index + 1
+    addNextColumn(WDGR, member, index, "CENTER", 0)
+    table.insert(WDGR.classMembers, member)
 end
 
 function WD:InitGuildRosterModule(parent)

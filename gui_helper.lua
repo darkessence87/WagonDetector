@@ -436,6 +436,13 @@ function createDropDownMenu(parent, name, items, grandParent)
                 end
             end
         end
+        if parent.hiddenMenus then
+            for _,v in pairs(parent.hiddenMenus) do
+                if v ~= self then
+                    dropDownHide(v)
+                end
+            end
+        end
     end)
     dropFrame:SetScript("OnHide", function() resetDropDownMenu(dropFrame, name) end)
     dropFrame.items = {}

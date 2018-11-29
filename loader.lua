@@ -48,10 +48,10 @@ end
 
 local function loadDefaultRules(self)
     if #self.db.profile.rules == 0 then
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZPT0QiLHJvbGU9IkFOWSIsYXJnMT0iIixlbmNvdW50ZXI9IkFMTCIscG9pbnRzPTEsaXNBY3RpdmU9dHJ1ZSxhcmcwPSIifQ==")
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZMQVNLUyIscm9sZT0iQU5ZIixhcmcxPSIiLGVuY291bnRlcj0iQUxMIixwb2ludHM9MSxpc0FjdGl2ZT10cnVlLGFyZzA9IiJ9")
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1JVTkVTIixyb2xlPSJBTlkiLGFyZzE9IiIsZW5jb3VudGVyPSJBTEwiLHBvaW50cz0xLGlzQWN0aXZlPXRydWUsYXJnMD0iIn0=")
-        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1BPVElPTlMiLHJvbGU9IkFOWSIsYXJnMT0iIixlbmNvdW50ZXI9IkFMTCIscG9pbnRzPS0xLGlzQWN0aXZlPXRydWUsYXJnMD0iIn0=")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1JVTkVTIixqb3VybmFsSWQ9LTEsZW5jb3VudGVyPSJBTEwiLGlzQWN0aXZlPXRydWUscm9sZT0iQU5ZIix2ZXJzaW9uPSJ2MC4wLjI0IixhcmcxPSIiLHBvaW50cz0xLGFyZzA9IiJ9")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZPT0QiLGpvdXJuYWxJZD0tMSxlbmNvdW50ZXI9IkFMTCIsaXNBY3RpdmU9dHJ1ZSxyb2xlPSJBTlkiLHZlcnNpb249InYwLjAuMjQiLGFyZzE9IiIscG9pbnRzPTEsYXJnMD0iIn0=")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX0ZMQVNLUyIsam91cm5hbElkPS0xLGVuY291bnRlcj0iQUxMIixpc0FjdGl2ZT10cnVlLHJvbGU9IkFOWSIsdmVyc2lvbj0idjAuMC4yNCIsYXJnMT0iIixwb2ludHM9MSxhcmcwPSIifQ==")
+        self:ReceiveRequestedRule("default", "e3R5cGU9IkVWX1BPVElPTlMiLGpvdXJuYWxJZD0tMSxlbmNvdW50ZXI9IkFMTCIsaXNBY3RpdmU9dHJ1ZSxyb2xlPSJBTlkiLHZlcnNpb249InYwLjAuMjQiLGFyZzE9IiIscG9pbnRzPS0xLGFyZzA9IiJ9")
     end
 end
 

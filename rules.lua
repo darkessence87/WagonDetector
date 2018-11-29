@@ -200,6 +200,19 @@ local function getRuleDescription(rule)
     return "Unsupported rule"
 end
 
+local function isValidRule(rule)
+    if rule and rule.type then
+        if not rule.version or rule.version < WD.minRulesVersion then
+            print(string.format(WD_RULE_ERROR_OLD_VERSION, rule.version or "none", WD.minRulesVersion))
+            return false
+        end
+    else
+        print("Could not parse rule")
+        return false
+    end
+    return true
+end
+
 local function parseRule(str)
     function parseValue(s)
         if string.find(s, "\"") then
@@ -216,11 +229,13 @@ local function parseRule(str)
     end
 
     local rule = {}
-    for i in string.gmatch(str, "[%w]+=[%w|\"|_|%-]+") do
+    for i in string.gmatch(str, "[%w]+=[%w\"_%-%.]+") do
         local dashIndex = string.find(i, "%=")
         if dashIndex then
             local k = string.sub(i, 1, dashIndex - 1)
             local v = parseValue(string.sub(i, dashIndex + 1))
+            --print(k)
+            --print(v)
             if k == "type" then
                 rule.type = v
             elseif k == "journalId" then
@@ -233,6 +248,8 @@ local function parseRule(str)
                 rule.points = tonumber(v)
             elseif k == "isActive" then
                 rule.isActive = v
+            elseif k == "version" then
+                rule.version = v
             end
         end
     end
@@ -252,6 +269,7 @@ end
 
 local function exportRule(rule)
     if not rule then return end
+    rule.version = WD.version
     local txt = encode64(table.tostring(rule))
     local r = WDRM.exportWindow
     r.editBox:SetText(txt)
@@ -265,6 +283,7 @@ end
 
 local function exportEncounter(rules)
     if not rules or #rules == 0 then return end
+    for _,v in pairs(rules) do v.version = WD.version end
     local txt = encode64(table.tostring(rules))
     local r = WDRM.exportWindow
     r.editBox:SetText(txt)
@@ -290,6 +309,7 @@ end
 
 local function shareRule(rule)
     if not rule then return end
+    rule.version = WD.version
     local txt = encode64(table.tostring(rule))
     WD:SendAddonMessage("share_rule", txt)
 end
@@ -497,6 +517,7 @@ local function saveRule()
     rule.arg1 = ""
     rule.points = f.editBox2:GetNumber()
     rule.role = f.menus["roles"]:GetText()
+    rule.version = WD.version
 
     if ruleType == "EV_DAMAGETAKEN" then
         rule.arg0 = tonumber(f.editBox0:GetText()) or 0
@@ -799,10 +820,8 @@ local function initPopupLogic()
         OnAccept = function()
             if WDRM.sharedRule then
                 local rule = importRule(WDRM.sharedRule)
-                if rule.type then
+                if isValidRule(rule) then
                     insertRule(rule)
-                else
-                    print("Could not parse rule")
                 end
                 WDRM.sharedRule = nil
             end
@@ -841,10 +860,8 @@ local function initImportEncounterWindow()
         else
             -- try import as single rule
             local rule = importRule(str)
-            if rule.type then
+            if isValidRule(rule) then
                 insertRule(rule)
-            else
-                print("Could not parse rule")
             end
             r:Hide()
         end
@@ -1040,6 +1057,7 @@ end
 function WD:SendSharedEncounter(sender, encounterName)
     for _,v in pairs(WD.db.profile.rules) do
         if v.journalId == encounterName then
+            v.version = WD.version
             local txt = encode64(table.tostring(v))
             WD:SendAddonMessage("receive_rule", txt, sender)
         end
@@ -1048,10 +1066,8 @@ end
 
 function WD:ReceiveRequestedRule(sender, data)
     local rule = importRule(data)
-    if rule.type then
+    if isValidRule(rule) then
         insertRule(rule)
-    else
-        print("Could not parse rule from " .. sender)
     end
 end
 

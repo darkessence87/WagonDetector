@@ -87,3 +87,5 @@ WD_RULE_POTIONS = "used potion"
 WD_RULE_FLASKS = "no flask buff"
 WD_RULE_FOOD = "no food buff"
 WD_RULE_RUNES = "no rune buff"
+
+WD_RULE_ERROR_OLD_VERSION = "Rule's version is too old: %s. Minimal version supported: %s"

@@ -54,6 +54,7 @@ WD_BUTTON_GUILD_ROSTER_MODULE = "Статистика гильдии"
 WD_BUTTON_RAID_OVERVIEW_MODULE = "Обзор рейда"
 WD_BUTTON_LAST_ENCOUNTER_MODULE = "Последний бой"
 WD_BUTTON_HISTORY_MODULE = "История"
+WD_BUTTON_HELP_MODULE = "Помощь"
 
 WD_BUTTON_HISTORY_FILTER = "Фильтры:"
 WD_BUTTON_CLEAR = "Очистить историю"

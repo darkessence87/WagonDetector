@@ -177,6 +177,8 @@ local function createModuleFrame(name)
         WD:InitHistoryModule(m)
     elseif name == "raid_overview" then
         WD:InitRaidOverviewModule(m)
+    elseif name == "help" then
+        WD:InitHelpModule(m)
     end
 
     return m
@@ -225,6 +227,8 @@ function WD:CreateGuiFrame()
             createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, x, y + 5 * dy)
             local historyF = createModuleFrame("history")
             createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, x, y + 6 * dy)
+            local helpF = createModuleFrame("help")
+            createModuleButton(helpF, WD_BUTTON_HELP_MODULE, x, y + 7 * dy)
             hideModules()
             WDGF:UnregisterEvent("PLAYER_ENTERING_WORLD")
         elseif event == "GUILD_ROSTER_UPDATE" then

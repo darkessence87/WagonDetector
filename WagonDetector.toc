@@ -12,8 +12,9 @@ localization-en.lua
 localization-ru.lua
 
 gui_helper.lua
-
 loader.lua
+
+help.lua
 constants.lua
 history.lua
 last_encounter.lua

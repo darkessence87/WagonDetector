@@ -377,14 +377,15 @@ function onClickDropDown(self, item, onClick)
     self.txt:SetText(item.txt:GetText())
     dropDownHide(self)
     if onClick then
-        onClick()
+        onClick(self, item.data)
     end
 end
 
 function updateDropDownMenu(self, name, items, parent)
     self.selected = nil
     self.txt:SetText(name)
-    if items and #self.items == 0 then
+    if #self.items > 0 then table.wipe(self.items) end
+    if items then
         for k,v in pairs(items) do
             if v.items then
                 local item = createDropDownMenu(self, v.name, v.items, parent)
@@ -401,7 +402,7 @@ function updateDropDownMenu(self, name, items, parent)
     end
 
     if #self.items > 1 then
-        local width = self.items[1]:GetWidth()
+        local width = self.items[1]:GetWidth() + 1
         local height = #self.items * self.items[1]:GetHeight()
         self.bg = createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
         self.bg:SetSize(width, height)
@@ -497,29 +498,20 @@ function addNextColumn(self, parent, index, textOrientation, name)
     end
 end
 
-function getRuleTypesItems(fn)
+function convertTypesToItems(t, fn)
     local items = {}
-    for i=1,#WD.RuleTypes do
-        local item = { name = WD.RuleTypes[i], func = fn }
+    for i=1,#t do
+        local item = { name = t[i], func = fn }
         table.insert(items, item)
     end
     return items
 end
 
-function getRoleTypesItems(fn)
-    local items = {}
-    for i=1,#WD.RoleTypes do
-        local item = { name = WD.RoleTypes[i], func = fn }
-        table.insert(items, item)
-    end
-    return items
-end
-
-function createRuleWindow(parent, updateFunction)
+function createRuleWindow(parent)
     local r = CreateFrame("Frame", nil, parent)
     r.hiddenMenus = {}
 
-    local totalWidth = 300
+    local totalWidth = 150
     local xSize = totalWidth - 2
 
     -- label

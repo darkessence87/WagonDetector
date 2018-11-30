@@ -119,10 +119,6 @@ WD.RuleTypes = {
     "EV_DAMAGETAKEN",
     "EV_DEATH",
     "EV_DEATH_UNIT",
-    "EV_POTIONS",
-    "EV_FLASKS",
-    "EV_FOOD",
-    "EV_RUNES"
 }
 
 WD.RoleTypes = {

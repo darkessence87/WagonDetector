@@ -579,13 +579,12 @@ local function initNewRuleWindow()
     r.menus["encounters"]:SetSize(xSize, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
 
-    local items1 = {}
-    for i=1,#WD.RuleTypes do
-        local item = { name = WD.RuleTypes[i], func = updateNewRuleMenu }
-        table.insert(items1, item)
-    end
-
-    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", items1)
+    local items = convertTypesToItems(WD.RuleTypes, updateNewRuleMenu)
+    table.insert(items, { name = "EV_POTIONS", func = updateNewRuleMenu })
+    table.insert(items, { name = "EV_FLASKS", func = updateNewRuleMenu })
+    table.insert(items, { name = "EV_FOOD", func = updateNewRuleMenu })
+    table.insert(items, { name = "EV_RUNES", func = updateNewRuleMenu })
+    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", items)
     r.menus["rule_types"]:SetSize(xSize, 20)
     r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
 
@@ -601,8 +600,7 @@ local function initNewRuleWindow()
     r.editBox1:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
     r.editBox1:Hide()
 
-    local items2 = { {name = "apply"},{name = "remove"} }
-    r.menus["aura_actions"] = createDropDownMenu(r, "Select aura action", items2)
+    r.menus["aura_actions"] = createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
     r.menus["aura_actions"].txt:SetJustifyH("CENTER")
     r.menus["aura_actions"]:SetSize(xSize, 20)
     r.menus["aura_actions"]:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
@@ -616,12 +614,7 @@ local function initNewRuleWindow()
     r.editBox2:Hide()
 
     -- role filter
-    local items3 = {}
-    for i=1,#WD.RoleTypes do
-        local item = { name = WD.RoleTypes[i] }
-        table.insert(items3, item)
-    end
-    r.menus["roles"] = createDropDownMenu(r, "ANY", items3)
+    r.menus["roles"] = createDropDownMenu(r, "ANY", convertTypesToItems(WD.RoleTypes))
     r.menus["roles"].txt:SetJustifyH("CENTER")
     r.menus["roles"]:SetSize(xSize, 20)
     r.menus["roles"]:SetPoint("TOPLEFT", r.editBox2, "BOTTOMLEFT", 0, -1)

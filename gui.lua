@@ -58,12 +58,7 @@ local function initMainModule(mainF)
 
     -- default chat selector
     mainF.dropFrame0 = createDropDownMenu(mainF)
-    local items = {}
-    for i=1,#chatTypes do
-        local item = { name = chatTypes[i], func = function() WD.db.profile.chat = mainF.dropFrame0.txt:GetText() end }
-        table.insert(items, item)
-    end
-    updateDropDownMenu(mainF.dropFrame0, WD_BUTTON_DEFAULT_CHAT, items)
+    updateDropDownMenu(mainF.dropFrame0, WD_BUTTON_DEFAULT_CHAT, convertTypesToItems(chatTypes, function() WD.db.profile.chat = mainF.dropFrame0.txt:GetText() end))
     mainF.dropFrame0:SetSize(350, 20)
     mainF.dropFrame0:SetPoint("TOPLEFT", mainF.lockButton, "BOTTOMLEFT", 0, -5)
     mainF.dropFrame0:SetScript("OnShow", function() mainF.dropFrame0.txt:SetText(WD.db.profile.chat) end)
@@ -221,7 +216,7 @@ function WD:CreateGuiFrame()
             local encF = createModuleFrame("encounters")
             createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, x, y + dy)
             local statRulesF = createModuleFrame("encounters_statistics")
-            createModuleButton(statRulesF, WD_BUTTON_STATISTICS_RULES_MODULE, x, y + 2 * dy)
+            createModuleButton(statRulesF, WD_BUTTON_TRACKING_RULES_MODULE, x, y + 2 * dy)
             local pointsF = createModuleFrame("guild_roster")
             createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, x, y + 3 * dy)
             local raidF = createModuleFrame("raid_overview")

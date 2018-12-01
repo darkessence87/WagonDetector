@@ -106,8 +106,10 @@ end
 
 local function printFuckups()
     for _,v in pairs(WDMF.encounter.fuckers) do
-        if v.points > 0 then
-            local msg = string.format(WD_PRINT_FAILURE, v.timestamp, getShortCharacterName(v.name), v.reason, v.points)
+        if v.points >= 0 then
+            local fuckerName = getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            local msg = string.format(WD_PRINT_FAILURE, v.timestamp, fuckerName, v.reason, v.points)
             sendMessage(msg)
         end
     end
@@ -122,9 +124,10 @@ local function saveFuckups()
     WD:RefreshGuildRosterFrame()
 end
 
-local function addSuccess(timestamp, name, msg, points)
+local function addSuccess(timestamp, name, mark, msg, points)
     if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
         local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
+        if mark > 0 then name = getRaidTargetTextureLink(mark).." "..name end
         local txt = t.." "..name.." [NICE] "..msg
         print("Ignored success: "..txt)
         return
@@ -134,6 +137,7 @@ local function addSuccess(timestamp, name, msg, points)
     niceBro.encounter = WDMF.encounter.name
     niceBro.timestamp = getTimedDiff(WDMF.encounter.startTime, timestamp)
     niceBro.name = getFullCharacterName(name)
+    niceBro.mark = mark
     niceBro.reason = msg
     niceBro.points = points
     niceBro.role = WD:GetRole(niceBro.name)
@@ -148,9 +152,10 @@ local function addSuccess(timestamp, name, msg, points)
     WD:RefreshLastEncounterFrame()
 end
 
-local function addFail(timestamp, name, msg, points)
+local function addFail(timestamp, name, mark, msg, points)
     if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
         local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
+        if mark > 0 then name = getRaidTargetTextureLink(mark).." "..name end
         local txt = t.." "..name.." [FAIL] "..msg
         print("Ignored fuckup: "..txt)
         return
@@ -160,6 +165,7 @@ local function addFail(timestamp, name, msg, points)
     fucker.encounter = WDMF.encounter.name
     fucker.timestamp = getTimedDiff(WDMF.encounter.startTime, timestamp)
     fucker.name = getFullCharacterName(name)
+    fucker.mark = mark
     fucker.reason = msg
     fucker.points = points
     fucker.role = WD:GetRole(fucker.name)
@@ -167,7 +173,9 @@ local function addFail(timestamp, name, msg, points)
 
     if WDMF.encounter.isBlockedByAnother == 0 then
         if WD.db.profile.sendFailImmediately == true then
-            local txt = string.format(WD_PRINT_FAILURE, fucker.timestamp, getShortCharacterName(fucker.name), fucker.reason, fucker.points)
+            local fuckerName = getShortCharacterName(fucker.name)
+            if fucker.mark > 0 then fuckerName = getRaidTargetTextureLink(fucker.mark).." "..fuckerName end
+            local txt = string.format(WD_PRINT_FAILURE, fucker.timestamp, fuckerName, fucker.reason, fucker.points)
             sendMessage(txt)
 
             WD:SavePenaltyPointsToGuildRoster(fucker)
@@ -210,13 +218,13 @@ local function checkConsumables(timestamp, name, unit, rules)
     end
 
     if noflask and noflask == true then
-        addFail(timestamp, name, WD_RULE_FLASKS, rules[role]["EV_FLASKS"].points)
+        addFail(timestamp, name, 0, WD_RULE_FLASKS, rules[role]["EV_FLASKS"].points)
     end
     if nofood and nofood == true then
-        addFail(timestamp, name, WD_RULE_FOOD, rules[role]["EV_FOOD"].points)
+        addFail(timestamp, name, 0, WD_RULE_FOOD, rules[role]["EV_FOOD"].points)
     end
     if norune and norune == true then
-        addFail(timestamp, name, WD_RULE_RUNES, rules[role]["EV_RUNES"].points)
+        addFail(timestamp, name, 0, WD_RULE_RUNES, rules[role]["EV_RUNES"].points)
     end
 end
 
@@ -251,8 +259,9 @@ function WDMF:OnCombatEvent(...)
     if not rules then return end
 
     local src_role, dst_role = "", ""
-    if src_name then src_role = WD:GetRole(src_name) end
-    if dst_name then dst_role = WD:GetRole(dst_name) end
+    local src_rt, dst_rt = 0, 0
+    if src_name then src_role = WD:GetRole(src_name); src_rt = WD:GetRaidTarget(src_raid_flags) end
+    if dst_name then dst_role = WD:GetRole(dst_name); dst_rt = WD:GetRaidTarget(dst_raid_flags) end
 
     --print(event..' : '..getSpellLinkByIdWithTexture(spell_id))
 
@@ -264,7 +273,7 @@ function WDMF:OnCombatEvent(...)
         rules[dst_role]["EV_AURA"][spell_id]["apply"]
     then
         local p = rules[dst_role]["EV_AURA"][spell_id]["apply"].points
-        addFail(timestamp, dst_name, string.format(WD_RULE_APPLY_AURA, getSpellLinkByIdWithTexture(spell_id)), p)
+        addFail(timestamp, dst_name, dst_rt, string.format(WD_RULE_APPLY_AURA, getSpellLinkByIdWithTexture(spell_id)), p)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_REMOVED" then
@@ -274,7 +283,7 @@ function WDMF:OnCombatEvent(...)
            rules[dst_role]["EV_AURA"][spell_id]["remove"]
         then
             local p = rules[dst_role]["EV_AURA"][spell_id]["remove"].points
-            addFail(timestamp, dst_name, string.format(WD_RULE_REMOVE_AURA, getSpellLinkByIdWithTexture(spell_id)), p)
+            addFail(timestamp, dst_name, dst_rt, string.format(WD_RULE_REMOVE_AURA, getSpellLinkByIdWithTexture(spell_id)), p)
         end
 
         -- potions
@@ -283,7 +292,7 @@ function WDMF:OnCombatEvent(...)
         then
             if potionSpellIds[spell_id] then
                 local p = rules[dst_role]["EV_POTIONS"].points
-                addSuccess(timestamp, dst_name, WD_RULE_POTIONS, p)
+                addSuccess(timestamp, dst_name, dst_rt, WD_RULE_POTIONS, p)
             end
         end
     end
@@ -296,10 +305,10 @@ function WDMF:OnCombatEvent(...)
         then
             if rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks] then
                 local p = rules[dst_role]["EV_AURA_STACKS"][spell_id][stacks].points
-                addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkByIdWithTexture(spell_id)), p)
+                addFail(timestamp, dst_name, dst_rt, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkByIdWithTexture(spell_id)), p)
             elseif rules[dst_role]["EV_AURA_STACKS"][spell_id][0] then
                 local p = rules[dst_role]["EV_AURA_STACKS"][spell_id][0].points
-                addFail(timestamp, dst_name, string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", getSpellLinkByIdWithTexture(spell_id)), p)
+                addFail(timestamp, dst_name, dst_rt, string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", getSpellLinkByIdWithTexture(spell_id)), p)
             end
         end
     end
@@ -311,7 +320,7 @@ function WDMF:OnCombatEvent(...)
         rules[src_role]["EV_CAST_START"][spell_id][src_name]
     then
         local p = rules[src_role]["EV_CAST_START"][spell_id][src_name].points
-        addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_START, src_name, getSpellLinkByIdWithTexture(spell_id)), p)
+        addSuccess(timestamp, src_name, src_rt, string.format(WD_RULE_CAST_START, src_name, getSpellLinkByIdWithTexture(spell_id)), p)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" and
@@ -321,7 +330,7 @@ function WDMF:OnCombatEvent(...)
         rules[src_role]["EV_CAST_END"][spell_id][src_name]
     then
         local p = rules[src_role]["EV_CAST_END"][spell_id][src_name].points
-        addSuccess(timestamp, src_name, string.format(WD_RULE_CAST, src_name, getSpellLinkByIdWithTexture(spell_id)), p)
+        addSuccess(timestamp, src_name, src_rt, string.format(WD_RULE_CAST, src_name, getSpellLinkByIdWithTexture(spell_id)), p)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_INTERRUPT" then
@@ -333,7 +342,9 @@ function WDMF:OnCombatEvent(...)
            rules[src_role]["EV_CAST_INTERRUPTED"][target_spell_id][dst_name]
         then
             local p = rules[src_role]["EV_CAST_INTERRUPTED"][target_spell_id][dst_name].points
-            addSuccess(timestamp, src_name, string.format(WD_RULE_CAST_INTERRUPT, dst_name, getSpellLinkByIdWithTexture(target_spell_id)), p)
+            local dst_nameWithMark = dst_name
+            if dst_rt > 0 then dst_nameWithMark = getRaidTargetTextureLink(dst_rt).." "..dst_name end
+            addSuccess(timestamp, src_name, src_rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, getSpellLinkByIdWithTexture(target_spell_id)), p)
         end
     end
     -----------------------------------------------------------------------------------------------------------------------
@@ -343,7 +354,7 @@ function WDMF:OnCombatEvent(...)
            rules[src_role]["EV_DISPEL"][target_spell_id]
         then
             local p = rules[src_role]["EV_DISPEL"][target_spell_id].points
-            addSuccess(timestamp, src_name, string.format(WD_RULE_DISPEL, getSpellLinkByIdWithTexture(target_spell_id)), p)
+            addSuccess(timestamp, src_name, src_rt, string.format(WD_RULE_DISPEL, getSpellLinkByIdWithTexture(target_spell_id)), p)
         end
     end
     -----------------------------------------------------------------------------------------------------------------------
@@ -356,15 +367,15 @@ function WDMF:OnCombatEvent(...)
 
         if overkill > -1 and rules[dst_role]["EV_DEATH"] and rules[dst_role]["EV_DEATH"][spell_id] then
             local p = rules[dst_role]["EV_DEATH"][spell_id].points
-            addFail(timestamp, dst_name, string.format(WD_RULE_DEATH, getSpellLinkByIdWithTexture(spell_id)), p)
+            addFail(timestamp, dst_name, dst_rt, string.format(WD_RULE_DEATH, getSpellLinkByIdWithTexture(spell_id)), p)
         else
             if rules[dst_role]["EV_DAMAGETAKEN"] and rules[dst_role]["EV_DAMAGETAKEN"][spell_id] then
                 local damagetaken_rule = rules[dst_role]["EV_DAMAGETAKEN"][spell_id]
                 local p = damagetaken_rule.points
                 if damagetaken_rule.amount > 0 and total > damagetaken_rule.amount then
-                    addFail(timestamp, dst_name, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, getSpellLinkByIdWithTexture(spell_id)), p)
+                    addFail(timestamp, dst_name, dst_rt, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, getSpellLinkByIdWithTexture(spell_id)), p)
                 elseif damagetaken_rule.amount == 0 and total > 0 then
-                    addFail(timestamp, dst_name, string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkByIdWithTexture(spell_id)), p)
+                    addFail(timestamp, dst_name, dst_rt, string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkByIdWithTexture(spell_id)), p)
                 end
             end
         end
@@ -383,7 +394,9 @@ function WDMF:OnCombatEvent(...)
            rules[dst_role]["EV_DEATH_UNIT"].unit == getShortCharacterName(dst_name)
         then
             local p = rules[dst_role]["EV_DEATH_UNIT"].points
-            addSuccess(timestamp, dst_name, string.format(WD_RULE_DEATH_UNIT, dst_name), p)
+            local dst_nameWithMark = dst_name
+            if dst_rt > 0 then dst_nameWithMark = getRaidTargetTextureLink(dst_rt).." "..dst_name end
+            addSuccess(timestamp, dst_name, dst_rt, string.format(WD_RULE_DEATH_UNIT, dst_nameWithMark), p)
         end
     end
 end

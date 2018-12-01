@@ -58,7 +58,9 @@ function WD:RefreshLastEncounterFrame()
             member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
 
             index = index + 1
-            addNextColumn(WDLE, member, index, "LEFT", getShortCharacterName(v.name))
+            local fuckerName = getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            addNextColumn(WDLE, member, index, "LEFT", fuckerName)
             index = index + 1
             addNextColumn(WDLE, member, index, "CENTER", v.role)
             index = index + 1
@@ -80,7 +82,9 @@ function WD:RefreshLastEncounterFrame()
         else
             local member = WDLE.members[k]
             member.column[1].txt:SetText(v.timestamp)
-            member.column[2].txt:SetText(getShortCharacterName(v.name))
+            local fuckerName = getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            member.column[2].txt:SetText(fuckerName)
             member.column[3].txt:SetText(v.role)
             member.column[4].txt:SetText(v.points)
             member.column[5].txt:SetText(v.reason)

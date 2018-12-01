@@ -133,6 +133,10 @@ function getTextureLinkByPath(path, sz)
     return "|T"..path..":"..(sz or 0).."|t"
 end
 
+function getRaidTargetTextureLink(rt)
+    return getTextureLinkByPath("Interface\\TargetingFrame\\UI-RaidTargetingIcon_"..rt, 20)
+end
+
 function getFullCharacterName(name)
     if string.find(name, "%-") then
         return name;

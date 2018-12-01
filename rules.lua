@@ -113,32 +113,32 @@ end
 local function getRuleDescription(rule)
     if rule.type == "EV_DAMAGETAKEN" then
         if rule.arg1 > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, rule.arg1, getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
         else
-            return string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkByIdWithTexture(rule.arg0))
         end
     elseif rule.type == "EV_DEATH" then
-        return string.format(WD_RULE_DEATH, getSpellLinkById(rule.arg0))
+        return string.format(WD_RULE_DEATH, getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_AURA" then
         if rule.arg1 == "apply" then
-            return string.format(WD_RULE_APPLY_AURA, getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_APPLY_AURA, getSpellLinkByIdWithTexture(rule.arg0))
         else
-            return string.format(WD_RULE_REMOVE_AURA, getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_REMOVE_AURA, getSpellLinkByIdWithTexture(rule.arg0))
         end
     elseif rule.type == "EV_AURA_STACKS" then
         if rule.arg1 > 0 then
-            return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
         else
-            return string.format(WD_RULE_AURA_STACKS_ANY, "", getSpellLinkById(rule.arg0))
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", getSpellLinkByIdWithTexture(rule.arg0))
         end
     elseif rule.type == "EV_CAST_START" then
-        return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkById(rule.arg0))
+        return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_CAST_END" then
-        return string.format(WD_RULE_CAST, rule.arg1, getSpellLinkById(rule.arg0))
+        return string.format(WD_RULE_CAST, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_CAST_INTERRUPTED" then
-        return string.format(WD_RULE_CAST_INTERRUPT, rule.arg1, getSpellLinkById(rule.arg0))
+        return string.format(WD_RULE_CAST_INTERRUPT, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_DISPEL" then
-        return string.format(WD_RULE_DISPEL, getSpellLinkById(rule.arg0))
+        return string.format(WD_RULE_DISPEL, getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_DEATH_UNIT" then
         return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
     elseif rule.type == "EV_POTIONS" then
@@ -338,7 +338,7 @@ local function updateRuleLines()
             addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
             ruleLine.column[index]:SetScript("OnEnter", function(self)
                 local reason = getRuleDescription(v)
-                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h%[.*%]|h")
+                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h ")
                 if spellId then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetHyperlink(getSpellLinkById(spellId))
@@ -390,7 +390,7 @@ local function updateRuleLines()
             ruleLine.column[4].txt:SetText(getRuleDescription(v))
             ruleLine.column[4]:SetScript("OnEnter", function(self)
                 local reason = getRuleDescription(v)
-                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h%[.*%]|h")
+                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h ")
                 if spellId then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetHyperlink(getSpellLinkById(spellId))

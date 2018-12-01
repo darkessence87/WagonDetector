@@ -66,7 +66,7 @@ function WD:RefreshLastEncounterFrame()
             index = index + 1
             addNextColumn(WDLE, member, index, "LEFT", v.reason)
             member.column[index]:SetScript("OnEnter", function(self)
-                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h%[.*%]|h")
+                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h ")
                 if spellId then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetHyperlink(getSpellLinkById(spellId))
@@ -85,7 +85,7 @@ function WD:RefreshLastEncounterFrame()
             member.column[4].txt:SetText(v.points)
             member.column[5].txt:SetText(v.reason)
             member.column[5]:SetScript("OnEnter", function(self)
-                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h%[.*%]|h")
+                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h ")
                 if spellId then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetHyperlink(getSpellLinkById(spellId))

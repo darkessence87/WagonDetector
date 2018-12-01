@@ -123,6 +123,16 @@ function getSpellLinkById(id)
     return "|cff71d5ff|Hspell:"..id.."|h["..name.."]|h|r"
 end
 
+function getSpellLinkByIdWithTexture(id)
+    local name,_,icon = GetSpellInfo(id)
+    if not name then return "Unknown" end
+    return "|cff71d5ff|Hspell:"..id.."|h "..getTextureLinkByPath(icon, 20)..name.."|h|r"
+end
+
+function getTextureLinkByPath(path, sz)
+    return "|T"..path..":"..(sz or 0).."|t"
+end
+
 function getFullCharacterName(name)
     if string.find(name, "%-") then
         return name;

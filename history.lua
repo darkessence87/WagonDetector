@@ -39,7 +39,7 @@ local function exportHistory()
     local history = table.deepcopy(WD.cache.history)
     for k,v in pairs(history) do
         if not v.isReverted or v.isReverted == false then
-            local _, _, spellString = string.find(v.reason, "|Hspell(.+)|h%[.*%]")
+            local _, _, spellString = string.find(v.reason, "|Hspell(.+)|h ")
             if spellString then
                 v.reason = string.gsub(v.reason, "|", "||")
             end
@@ -131,7 +131,7 @@ local function refreshHistoryFrame()
             index = index + 1
             addNextColumn(WDHM, member, index, "LEFT", v.reason)
             member.column[index]:SetScript("OnEnter", function(self)
-                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h%[.*%]|h")
+                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h ")
                 if spellId then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetHyperlink(getSpellLinkById(spellId))
@@ -163,7 +163,7 @@ local function refreshHistoryFrame()
             member.column[5].txt:SetText(v.points)
             member.column[6].txt:SetText(v.reason)
             member.column[6]:SetScript("OnEnter", function(self)
-                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h%[.*%]|h")
+                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h ")
                 if spellId then
                     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                     GameTooltip:SetHyperlink(getSpellLinkById(spellId))

@@ -244,6 +244,8 @@ function WDMF:OnCombatEvent(...)
     local timestamp, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags, spell_id, spell_name, spell_school = ...
 
     local rules = WDMF.encounter.rules
+    if not rules or #rules == 0 then return end
+
     local src_role, dst_role = "", ""
     if src_name then src_role = WD:GetRole(src_name) end
     if dst_name then dst_role = WD:GetRole(dst_name) end
@@ -466,7 +468,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
 end
 
 function WDMF:StopEncounter()
-    if not self.encounter.startTime then return end
+    if not self.encounter.startTime or self.encounter.startTime == 0 then return end
     if self.encounter.stopped == 1 then return end
     self.encounter.endTime = time()
 

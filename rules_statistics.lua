@@ -14,8 +14,8 @@ local qualityTypes = {
 }
 
 local rangeRuleTypes = {
-    "RT_AURA_EXISTS",      -- arg0=aura_spell_id
-    "RT_AURA_NOT_EXISTS",  -- arg0=aura_spell_id
+    "RT_AURA_EXISTS",      -- arg0=aura_id
+    "RT_AURA_NOT_EXISTS",  -- arg0=aura_id
     "RT_UNIT_CASTING",     -- arg0=target_spell_id
     "RT_CUSTOM",           -- arg0=event_start,     arg1=event_result
 }
@@ -29,19 +29,11 @@ local statisticTypes = {
     "ST_SOURCE_INTERRUPTS",    -- arg1=range_rule_type                 collects interrupts done by units in event range related to those units
 }
 
-local function showHiddenEditBox(parent, name, txt)
-    parent.hiddenMenus[name]:EnableMouse(true)
-    parent.hiddenMenus[name]:SetText(txt)
-    parent.hiddenMenus[name]:SetScript("OnEscapePressed", function() parent.hiddenMenus[name]:SetText(txt); parent.hiddenMenus[name]:ClearFocus() end)
-    parent.hiddenMenus[name]:SetScript("OnEditFocusGained", function() parent.hiddenMenus[name]:SetText(""); end)
-    parent.hiddenMenus[name]:Show()
-end
-
 local function showEventConfig(origin, name, rule)
 --[[
-    "EV_AURA"               arg0=aura_spell_id      arg1=apply or remove
-    "EV_AURA_STACKS"        arg0=aura_spell_id      arg1=stacks or 0
-    "EV_DISPEL"             arg0=aura_spell_id
+    "EV_AURA"               arg0=aura_id      arg1=apply or remove
+    "EV_AURA_STACKS"        arg0=aura_id      arg1=stacks or 0
+    "EV_DISPEL"             arg0=aura_id
     "EV_CAST_START"         arg0=spell_id           arg1=unit_name
     "EV_CAST_INTERRUPTED"   arg0=target_spell_id    arg1=target_unit_name
     "EV_CAST_END"           arg0=spell_id           arg1=unit_name
@@ -53,7 +45,7 @@ local function showEventConfig(origin, name, rule)
     local r = parent.hiddenMenus[name]
     for _,v in pairs(r.hiddenMenus) do v:Hide() end
     local arg0_edit = r.hiddenMenus["arg0_edit"]
-    local arg1_drop = r.hiddenMenus["arg1_drop1"]
+    local arg1_drop = r.hiddenMenus["arg1_drop"]
     local arg1_edit = r.hiddenMenus["arg1_edit"]
 
     r.label:SetText(rule)
@@ -116,8 +108,8 @@ local function updateRangeRuleMenu(frame, selected)
     local r = WDRS.menus["new_rule"].hiddenMenus["range_menu"]
     for _,v in pairs(r.hiddenMenus) do v:Hide(); updateEventConfigMenu(v); end
     local arg0_edit = r.hiddenMenus["arg0_edit"]
-    local arg0_drop = r.hiddenMenus["arg0_drop1"]
-    local arg1_drop = r.hiddenMenus["arg1_drop1"]
+    local arg0_drop = r.hiddenMenus["arg0_drop"]
+    local arg1_drop = r.hiddenMenus["arg1_drop"]
 
     local rule = selected.name
     r.label:SetText(rule)
@@ -129,9 +121,9 @@ local function updateRangeRuleMenu(frame, selected)
     elseif rule == "RT_UNIT_CASTING" then
         showHiddenEditBox(r, "arg0_edit", "target spell id")
     elseif rule == "RT_CUSTOM" then
-        updateDropDownMenu(arg0_drop, "Select start event:", convertTypesToItems(WD.RuleTypes, updateEventConfigMenu))
+        updateDropDownMenu(arg0_drop, "Select start event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg0_drop:Show()
-        updateDropDownMenu(arg1_drop, "Select end event:", convertTypesToItems(WD.RuleTypes, updateEventConfigMenu))
+        updateDropDownMenu(arg1_drop, "Select end event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg1_drop:Show()
     end
 
@@ -140,8 +132,8 @@ end
 
 local function updateNewRuleHiddenMenu(frame, selected)
     local parent = WDRS.menus["new_rule"]
-    local arg1_drop = parent.hiddenMenus["arg1_drop1"]
-    local arg2_drop = parent.hiddenMenus["arg2_drop1"]
+    local arg1_drop = parent.hiddenMenus["arg1_drop"]
+    local arg2_drop = parent.hiddenMenus["arg2_drop"]
     local arg1_edit = parent.hiddenMenus["arg1_edit"]
     local arg2_edit = parent.hiddenMenus["arg2_edit"]
     local arg3_edit = parent.hiddenMenus["arg3_edit"]
@@ -185,7 +177,7 @@ local function updateNewRuleHiddenMenu(frame, selected)
         or name == "ST_SOURCE_INTERRUPTS"
     then
         -- arg1
-        updateDropDownMenu(arg1_drop, "Select range:", convertTypesToItems(rangeRuleTypes, updateRangeRuleMenu))
+        updateDropDownMenu(arg1_drop, "Select range:", updateItemsByHoverInfo(convertTypesToItems(rangeRuleTypes, updateRangeRuleMenu), WD.Help.rangesInfo))
         arg1_drop.label:SetText("Range rule type:")
         arg1_drop:Show()
 
@@ -203,9 +195,9 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
     local parent = WDRS.menus["new_rule"]
     local rule = selected.name
     for _,v in pairs(parent.hiddenMenus) do v:Hide() end
-    local arg0_drop = parent.hiddenMenus["arg0_drop1"]
-    local arg1_drop = parent.hiddenMenus["arg1_drop1"]
-    local arg2_drop = parent.hiddenMenus["arg2_drop1"]
+    local arg0_drop = parent.hiddenMenus["arg0_drop"]
+    local arg1_drop = parent.hiddenMenus["arg1_drop"]
+    local arg2_drop = parent.hiddenMenus["arg2_drop"]
     local arg0_edit = parent.hiddenMenus["arg0_edit"]
     local arg1_edit = parent.hiddenMenus["arg1_edit"]
     local arg2_edit = parent.hiddenMenus["arg2_edit"]
@@ -213,20 +205,20 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
 
     if rule == "RL_RANGE_RULE" then
         -- arg0
-        updateDropDownMenu(arg0_drop, "Select range:", convertTypesToItems(rangeRuleTypes, updateRangeRuleMenu))
+        updateDropDownMenu(arg0_drop, "Select range:", updateItemsByHoverInfo(convertTypesToItems(rangeRuleTypes, updateRangeRuleMenu), WD.Help.rangesInfo))
         arg0_drop.label:SetText("Range rule type:")
         arg0_drop:Show()
         -- arg1
-        updateDropDownMenu(arg1_drop, "Select result event:", convertTypesToItems(WD.RuleTypes, updateEventConfigMenu))
+        updateDropDownMenu(arg1_drop, "Select result event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
     elseif rule == "RL_DEPENDENCY" then
         -- arg0
-        updateDropDownMenu(arg0_drop, "Select reason event:", convertTypesToItems(WD.RuleTypes, updateEventConfigMenu))
+        updateDropDownMenu(arg0_drop, "Select reason event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg0_drop.label:SetText("Reason event:")
         arg0_drop:Show()
         -- arg1
-        updateDropDownMenu(arg1_drop, "Select result event:", convertTypesToItems(WD.RuleTypes, updateEventConfigMenu))
+        updateDropDownMenu(arg1_drop, "Select result event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
         -- arg2
@@ -234,7 +226,7 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
         showHiddenEditBox(parent, "arg2_edit", "1000")
     elseif rule == "RL_STATISTICS" then
         -- arg0
-        updateDropDownMenu(arg0_drop, "Select statistics:", convertTypesToItems(statisticTypes, updateNewRuleHiddenMenu))
+        updateDropDownMenu(arg0_drop, "Select statistics:", updateItemsByHoverInfo(convertTypesToItems(statisticTypes, updateNewRuleHiddenMenu), WD.Help.statisticInfo))
         arg0_drop.label:SetText("Statistics mode:")
         arg0_drop:Show()
     elseif rule == "RL_QUALITY" then
@@ -285,11 +277,11 @@ local function initRangeRuleMenu()
     r.label:SetPoint("TOPRIGHT", r, "TOPRIGHT", 1, -1)
 
     -- arg0: dropdown or editbox
-    r.hiddenMenus["arg0_drop1"] = createDropDownMenu(r)
-    r.hiddenMenus["arg0_drop1"].txt:SetJustifyH("CENTER")
-    r.hiddenMenus["arg0_drop1"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg0_drop1"]:SetPoint("TOPRIGHT", r.label, "BOTTOMRIGHT", 0, -1)
-    r.hiddenMenus["arg0_drop1"]:Hide()
+    r.hiddenMenus["arg0_drop"] = createDropDownMenu(r)
+    r.hiddenMenus["arg0_drop"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg0_drop"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg0_drop"]:SetPoint("TOPRIGHT", r.label, "BOTTOMRIGHT", 0, -1)
+    r.hiddenMenus["arg0_drop"]:Hide()
 
     r.hiddenMenus["arg0_edit"] = createEditBox(r)
     r.hiddenMenus["arg0_edit"]:SetSize(xSize, 20)
@@ -297,11 +289,11 @@ local function initRangeRuleMenu()
     r.hiddenMenus["arg0_edit"]:Hide()
 
     -- arg1: dropdown
-    r.hiddenMenus["arg1_drop1"] = createDropDownMenu(r)
-    r.hiddenMenus["arg1_drop1"].txt:SetJustifyH("CENTER")
-    r.hiddenMenus["arg1_drop1"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg1_drop1"]:SetPoint("TOPRIGHT", r.hiddenMenus["arg0_drop1"], "BOTTOMRIGHT", 0, -1)
-    r.hiddenMenus["arg1_drop1"]:Hide()
+    r.hiddenMenus["arg1_drop"] = createDropDownMenu(r)
+    r.hiddenMenus["arg1_drop"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg1_drop"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg1_drop"]:SetPoint("TOPRIGHT", r.hiddenMenus["arg0_drop"], "BOTTOMRIGHT", 0, -1)
+    r.hiddenMenus["arg1_drop"]:Hide()
 
     r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)
 
@@ -335,7 +327,7 @@ local function initNewRuleWindow()
     r.menus["encounters"].label:SetSize(x - 5, 20)
     r.menus["encounters"].label:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
     -- tracking rules menu
-    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", convertTypesToItems(trackingRuleTypes, updateNewRuleMenuByTrackingRules))
+    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", updateItemsByHoverInfo(convertTypesToItems(trackingRuleTypes, updateNewRuleMenuByTrackingRules), WD.Help.rulesInfo))
     r.menus["rule_types"]:SetSize(xSize, 20)
     r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
     r.menus["rule_types"].label = createFontDefault(r.menus["rule_types"], "RIGHT", "Rule:")
@@ -343,14 +335,14 @@ local function initNewRuleWindow()
     r.menus["rule_types"].label:SetPoint("TOPLEFT", r.menus["encounters"].label, "BOTTOMLEFT", 0, -1)
 
     -- arg0: dropdown or editbox
-    r.hiddenMenus["arg0_drop1"] = createDropDownMenu(r)
-    r.hiddenMenus["arg0_drop1"].txt:SetJustifyH("CENTER")
-    r.hiddenMenus["arg0_drop1"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg0_drop1"]:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg0_drop1"].label = createFontDefault(r.hiddenMenus["arg0_drop1"], "RIGHT", "Statistics type:")
-    r.hiddenMenus["arg0_drop1"].label:SetSize(x - 5, 20)
-    r.hiddenMenus["arg0_drop1"].label:SetPoint("TOPLEFT", r.menus["rule_types"].label, "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg0_drop1"]:Hide()
+    r.hiddenMenus["arg0_drop"] = createDropDownMenu(r)
+    r.hiddenMenus["arg0_drop"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg0_drop"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg0_drop"]:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg0_drop"].label = createFontDefault(r.hiddenMenus["arg0_drop"], "RIGHT", "Statistics type:")
+    r.hiddenMenus["arg0_drop"].label:SetSize(x - 5, 20)
+    r.hiddenMenus["arg0_drop"].label:SetPoint("TOPLEFT", r.menus["rule_types"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg0_drop"]:Hide()
 
     r.hiddenMenus["arg0_edit"] = createEditBox(r)
     r.hiddenMenus["arg0_edit"]:SetSize(xSize, 20)
@@ -361,48 +353,48 @@ local function initNewRuleWindow()
     r.hiddenMenus["arg0_edit"]:Hide()
 
     -- arg1: dropdown or editbox
-    r.hiddenMenus["arg1_drop1"] = createDropDownMenu(r)
-    r.hiddenMenus["arg1_drop1"].txt:SetJustifyH("CENTER")
-    r.hiddenMenus["arg1_drop1"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg1_drop1"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop1"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg1_drop1"].label = createFontDefault(r.hiddenMenus["arg1_drop1"], "RIGHT", "")
-    r.hiddenMenus["arg1_drop1"].label:SetSize(x - 5, 20)
-    r.hiddenMenus["arg1_drop1"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop1"].label, "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg1_drop1"]:Hide()
+    r.hiddenMenus["arg1_drop"] = createDropDownMenu(r)
+    r.hiddenMenus["arg1_drop"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg1_drop"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg1_drop"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_drop"].label = createFontDefault(r.hiddenMenus["arg1_drop"], "RIGHT", "")
+    r.hiddenMenus["arg1_drop"].label:SetSize(x - 5, 20)
+    r.hiddenMenus["arg1_drop"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_drop"]:Hide()
 
     r.hiddenMenus["arg1_edit"] = createEditBox(r)
     r.hiddenMenus["arg1_edit"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg1_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop1"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"], "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg1_edit"].label = createFontDefault(r.hiddenMenus["arg1_edit"], "RIGHT", "quality percent:")
     r.hiddenMenus["arg1_edit"].label:SetSize(x - 5, 20)
-    r.hiddenMenus["arg1_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop1"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg1_edit"]:Hide()
 
     -- arg2: dropdown or editbox
-    r.hiddenMenus["arg2_drop1"] = createDropDownMenu(r)
-    r.hiddenMenus["arg2_drop1"].txt:SetJustifyH("CENTER")
-    r.hiddenMenus["arg2_drop1"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg2_drop1"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop1"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg2_drop1"].label = createFontDefault(r.hiddenMenus["arg2_drop1"], "RIGHT", "Stop event:")
-    r.hiddenMenus["arg2_drop1"].label:SetSize(x - 5, 20)
-    r.hiddenMenus["arg2_drop1"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop1"].label, "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg2_drop1"]:Hide()
+    r.hiddenMenus["arg2_drop"] = createDropDownMenu(r)
+    r.hiddenMenus["arg2_drop"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg2_drop"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg2_drop"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg2_drop"].label = createFontDefault(r.hiddenMenus["arg2_drop"], "RIGHT", "Stop event:")
+    r.hiddenMenus["arg2_drop"].label:SetSize(x - 5, 20)
+    r.hiddenMenus["arg2_drop"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg2_drop"]:Hide()
 
     r.hiddenMenus["arg2_edit"] = createEditBox(r)
     r.hiddenMenus["arg2_edit"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg2_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop1"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg2_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"], "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg2_edit"].label = createFontDefault(r.hiddenMenus["arg2_edit"], "RIGHT", "time to reset (in msec):")
     r.hiddenMenus["arg2_edit"].label:SetSize(x - 5, 20)
-    r.hiddenMenus["arg2_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop1"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg2_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg2_edit"]:Hide()
 
     -- arg3: editbox
     r.hiddenMenus["arg3_edit"] = createEditBox(r)
     r.hiddenMenus["arg3_edit"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg3_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg2_drop1"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg3_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg2_drop"], "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg3_edit"].label = createFontDefault(r.hiddenMenus["arg3_edit"], "RIGHT", "")
     r.hiddenMenus["arg3_edit"].label:SetSize(x - 5, 20)
-    r.hiddenMenus["arg3_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg2_drop1"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg3_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg2_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg3_edit"]:Hide()
 
     r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)

@@ -17,88 +17,97 @@ local function findDropDownFrameByName(parent, name)
     return nil
 end
 
-local function editRuleLine(ruleLine)
-    local newRuleFrame = WDRM.menus["new_rule"]
-    if not ruleLine then return end
+local function editRuleLine(data)
+    if not data then return end
+    local r = WDRM.menus["new_rule"]
+    if r:IsVisible() then r:Hide() return end
 
-    if newRuleFrame:IsVisible() then newRuleFrame:Hide() return end
-    newRuleFrame:Show()
+    for _,v in pairs(r.hiddenMenus) do v:Hide() end
+    local arg0_edit = r.hiddenMenus["arg0_edit"]
+    local arg1_drop = r.hiddenMenus["arg1_drop"]
+    local arg1_edit = r.hiddenMenus["arg1_edit"]
+    local arg2_edit = r.hiddenMenus["arg2_edit"]
+
+    local rule = data.rule
 
     -- encounter
-    local encounterName = WD.EncounterNames[ruleLine.rule.journalId]
-    local frame = findDropDownFrameByName(newRuleFrame.menus["encounters"], encounterName)
+    local encounterName = WD.EncounterNames[rule.journalId]
+    local frame = findDropDownFrameByName(r.menus["encounters"], encounterName)
     if frame then
-        newRuleFrame.menus["encounters"].selected = frame
-        newRuleFrame.menus["encounters"]:SetText(encounterName)
-    end
-
-    -- rule
-    for i=1,#newRuleFrame.menus["rule_types"].items do
-        if newRuleFrame.menus["rule_types"].items[i].txt:GetText() == ruleLine.rule.type then
-            newRuleFrame.menus["rule_types"].selected = newRuleFrame.menus["rule_types"].items[i]
-            newRuleFrame.menus["rule_types"]:SetText(ruleLine.rule.type)
-            break
-        end
+        r.menus["encounters"].selected = frame
+        r.menus["encounters"]:SetText(encounterName)
     end
 
     -- role
-    for i=1,#newRuleFrame.menus["roles"].items do
-        if newRuleFrame.menus["roles"].items[i].txt:GetText() == ruleLine.rule.role then
-            newRuleFrame.menus["roles"].selected = newRuleFrame.menus["roles"].items[i]
-            newRuleFrame.menus["roles"]:SetText(ruleLine.rule.role)
+    for i=1,#r.menus["roles"].items do
+        if r.menus["roles"].items[i].txt:GetText() == rule.role then
+            r.menus["roles"].selected = r.menus["roles"].items[i]
+            r.menus["roles"]:SetText(rule.role)
             break
         end
     end
-    newRuleFrame.menus["roles"]:Show()
 
-    -- arg0
-    if ruleLine.rule.type ~= "EV_POTIONS" and ruleLine.rule.type ~= "EV_FLASKS" and ruleLine.rule.type ~= "EV_FOOD" and ruleLine.rule.type ~= "EV_RUNES" then
-        local txt = ruleLine.rule.arg0
-        newRuleFrame.editBox0:SetText(txt)
-        newRuleFrame.editBox0:SetScript("OnEscapePressed", function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
-        newRuleFrame.editBox0:SetScript("OnEditFocusGained", function() newRuleFrame.editBox0:SetText(""); end)
-        newRuleFrame.editBox0:Show()
-    else
-        newRuleFrame.editBox0:Hide()
-    end
-
-    -- arg1
-    if ruleLine.rule.type == "EV_AURA" then
-        for i=1,#newRuleFrame.menus["aura_actions"].items do
-            if newRuleFrame.menus["aura_actions"].items[i].txt:GetText() == ruleLine.rule.arg1 then
-                newRuleFrame.menus["aura_actions"].selected = newRuleFrame.menus["aura_actions"].items[i]
-                newRuleFrame.menus["aura_actions"]:SetText(ruleLine.rule.arg1)
-                break
-            end
+    -- rule
+    for i=1,#r.menus["rule_types"].items do
+        if r.menus["rule_types"].items[i].txt:GetText() == rule.type then
+            r.menus["rule_types"].selected = r.menus["rule_types"].items[i]
+            r.menus["rule_types"]:SetText(rule.type)
+            break
         end
-        newRuleFrame.menus["aura_actions"]:Show()
-        newRuleFrame.editBox1:Hide()
-    elseif ruleLine.rule.type == "EV_DEATH"
-        or ruleLine.rule.type == "EV_DEATH_UNIT"
-        or ruleLine.rule.type == "EV_DISPEL"
-        or ruleLine.rule.type == "EV_POTIONS"
-        or ruleLine.rule.type == "EV_FLASKS"
-        or ruleLine.rule.type == "EV_FOOD"
-        or ruleLine.rule.type == "EV_RUNES"
-    then
-        newRuleFrame.editBox1:Hide()
-        newRuleFrame.menus["aura_actions"]:Hide()
-    else
-        local ruleTxt = ruleLine.rule.arg1
-        newRuleFrame.editBox1:SetText(ruleTxt)
-        newRuleFrame.editBox1:SetScript("OnEscapePressed", function() newRuleFrame.editBox1:SetText(ruleTxt); newRuleFrame.editBox1:ClearFocus() end)
-        newRuleFrame.editBox1:SetScript("OnEditFocusGained", function() newRuleFrame.editBox1:SetText(""); end)
-        newRuleFrame.editBox1:Show()
-        newRuleFrame.editBox1:ClearFocus()
-        newRuleFrame.menus["aura_actions"]:Hide()
     end
 
-    -- points
-    local points = ruleLine.rule.points
-    newRuleFrame.editBox2:SetText(points)
-    newRuleFrame.editBox2:SetScript("OnEscapePressed", function() newRuleFrame.editBox2:SetText(points); newRuleFrame.editBox2:ClearFocus() end)
-    newRuleFrame.editBox2:SetScript("OnEditFocusGained", function() newRuleFrame.editBox2:SetText(""); end)
-    newRuleFrame.editBox2:Show()
+    if rule.type == "EV_AURA" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Aura id:")
+
+        updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        local frame = findDropDownFrameByName(arg1_drop, rule.arg1)
+        if frame then
+            arg1_drop.selected = frame
+            arg1_drop:SetText(rule.arg1)
+        end
+        arg1_drop.label:SetText("Action:")
+        arg1_drop:Show()
+    elseif rule.type == "EV_AURA_STACKS" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Aura id:")
+        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        arg1_edit.label:SetText("Stacks:")
+    elseif rule.type == "EV_DISPEL" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Aura id:")
+    elseif rule.type == "EV_CAST_START" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Spell id:")
+        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        arg1_edit.label:SetText("Caster name:")
+    elseif rule.type == "EV_CAST_INTERRUPTED" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Target spell id:")
+        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        arg1_edit.label:SetText("Target name:")
+    elseif rule.type == "EV_CAST_END" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Spell id:")
+        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        arg1_edit.label:SetText("Caster name:")
+    elseif rule.type == "EV_DAMAGETAKEN" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Spell id:")
+        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        arg1_edit.label:SetText("Amount:")
+    elseif rule.type == "EV_DEATH" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Spell id:")
+    elseif rule.type == "EV_DEATH_UNIT" then
+        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        arg0_edit.label:SetText("Unit name:")
+    end
+
+    showHiddenEditBox(r, "arg2_edit", rule.points)
+    arg2_edit.label:SetText("Points:")
+
+    r:Show()
 end
 
 local function getRuleDescription(rule)
@@ -449,46 +458,144 @@ local function insertEncounter(rules)
     updateRuleLines()
 end
 
+local function isRuleSavable()
+    local parent = WDRM.menus["new_rule"]
+    if not parent.menus["encounters"].selected then
+        print("Please select encounter")
+        return false
+    end
+    if not parent.menus["rule_types"].selected then
+        print("Please select rule type")
+        return false
+    end
+
+    local arg0_edit = parent.hiddenMenus["arg0_edit"]
+    local arg1_drop = parent.hiddenMenus["arg1_drop"]
+    local arg1_edit = parent.hiddenMenus["arg1_edit"]
+
+    local arg0 = arg0_edit:GetText()
+    local arg1 = arg1_edit:GetText()
+
+    local ruleType = parent.menus["rule_types"].selected.data.name
+    if ruleType == "EV_DAMAGETAKEN" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown spell id")
+            return false
+        end
+        if tonumber(arg1) < 0 then
+            print("Incorrect amount, must be >= 0")
+            return false
+        end
+    elseif ruleType == "EV_DEATH" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown spell id")
+            return false
+        end
+    elseif ruleType == "EV_AURA" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown aura id")
+            return false
+        end
+        if not arg1_drop.selected then
+            print("Please select action")
+            return false
+        end
+    elseif ruleType == "EV_AURA_STACKS" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown aura id")
+            return false
+        end
+    elseif ruleType == "EV_CAST_START" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown spell id")
+            return false
+        end
+        if arg1:len() == 0 then
+            print("Incorrect caster name")
+            return false
+        end
+    elseif ruleType == "EV_CAST_END" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown spell id")
+            return false
+        end
+        if arg1:len() == 0 then
+            print("Incorrect caster name")
+            return false
+        end
+    elseif ruleType == "EV_CAST_INTERRUPTED" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown target spell id")
+            return false
+        end
+        if arg1:len() == 0 then
+            print("Incorrect target name")
+            return false
+        end
+    elseif ruleType == "EV_DEATH_UNIT" then
+        if arg0:len() == 0 then
+            print("Incorrect unit name")
+            return false
+        end
+    elseif ruleType == "EV_DISPEL" then
+        if not GetSpellInfo(arg0) then
+            print("Unknown aura id")
+            return false
+        end
+    elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" then
+        -- nothing to do here
+    else
+        print("Unsupported rule type:"..ruleType)
+        return false
+    end
+
+    return true
+end
+
 local function saveRule()
-    local f = WDRM.menus["new_rule"]
-    if not f.menus["encounters"].selected or not f.menus["rule_types"].selected then return end
-    local journalId = f.menus["encounters"].selected.data.journalId
-    local ruleType = f.menus["rule_types"].selected.txt:GetText()
+    local parent = WDRM.menus["new_rule"]
+    local journalId = parent.menus["encounters"].selected.data.journalId
+    local ruleType = parent.menus["rule_types"].selected.txt:GetText()
+    local arg0_edit = parent.hiddenMenus["arg0_edit"]
+    local arg1_drop = parent.hiddenMenus["arg1_drop"]
+    local arg1_edit = parent.hiddenMenus["arg1_edit"]
+    local arg0 = arg0_edit:GetText()
+    local arg1 = arg1_edit:GetText()
 
     local rule = {}
     rule.journalId = journalId
     rule.type = ruleType
     rule.arg0 = ""
     rule.arg1 = ""
-    rule.points = f.editBox2:GetNumber()
-    rule.role = f.menus["roles"]:GetText()
+    rule.points = parent.hiddenMenus["arg2_edit"]:GetNumber()
+    rule.role = parent.menus["roles"]:GetText()
     rule.version = WD.version
 
     if ruleType == "EV_DAMAGETAKEN" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = tonumber(f.editBox1:GetText()) or 0
+        rule.arg0 = tonumber(arg0) or 0
+        rule.arg1 = tonumber(arg1) or 0
     elseif ruleType == "EV_DEATH" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
+        rule.arg0 = tonumber(arg0) or 0
     elseif ruleType == "EV_AURA" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = f.menus["aura_actions"]:GetText()
+        rule.arg0 = tonumber(arg0) or 0
+        rule.arg1 = arg1_drop:GetText()
         if rule.arg1 ~= "apply" and rule.arg1 ~= "remove" then return end
     elseif ruleType == "EV_AURA_STACKS" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = tonumber(f.editBox1:GetText()) or 0
+        rule.arg0 = tonumber(arg0) or 0
+        rule.arg1 = tonumber(arg1) or 0
     elseif ruleType == "EV_CAST_START" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = f.editBox1:GetText()
+        rule.arg0 = tonumber(arg0) or 0
+        rule.arg1 = arg1
     elseif ruleType == "EV_CAST_END" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = f.editBox1:GetText()
+        rule.arg0 = tonumber(arg0) or 0
+        rule.arg1 = arg1
     elseif ruleType == "EV_CAST_INTERRUPTED" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
-        rule.arg1 = f.editBox1:GetText()
+        rule.arg0 = tonumber(arg0) or 0
+        rule.arg1 = arg1
     elseif ruleType == "EV_DEATH_UNIT" then
-        rule.arg0 = f.editBox0:GetText()
+        rule.arg0 = arg0
     elseif ruleType == "EV_DISPEL" then
-        rule.arg0 = tonumber(f.editBox0:GetText()) or 0
+        rule.arg0 = tonumber(arg0) or 0
     elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" then
         -- nothing to do here
     else
@@ -499,150 +606,177 @@ local function saveRule()
     insertRule(rule)
 end
 
-local function updateNewRuleMenu()
-    local newRuleFrame = WDRM.menus["new_rule"]
-    if not newRuleFrame.menus["rule_types"].selected then return end
+local function updateNewRuleMenu(frame, selected)
+--[[
+    "EV_AURA"               arg0=aura_spell_id      arg1=apply or remove
+    "EV_AURA_STACKS"        arg0=aura_spell_id      arg1=stacks or 0
+    "EV_DISPEL"             arg0=aura_spell_id
+    "EV_CAST_START"         arg0=spell_id           arg1=unit_name
+    "EV_CAST_INTERRUPTED"   arg0=target_spell_id    arg1=target_unit_name
+    "EV_CAST_END"           arg0=spell_id           arg1=unit_name
+    "EV_DAMAGETAKEN"        arg0=spell_id           arg1=amount or 0
+    "EV_DEATH"              arg0=spell_id
+    "EV_DEATH_UNIT"         arg0=unit_name
+    "EV_POTIONS"
+    "EV_FLASKS"
+    "EV_FOOD"
+    "EV_RUNES"
+]]
+    local r = WDRM.menus["new_rule"]
+    local rule = selected.name
+    for _,v in pairs(r.hiddenMenus) do v:Hide() end
+    local arg0_edit = r.hiddenMenus["arg0_edit"]
+    local arg1_drop = r.hiddenMenus["arg1_drop"]
+    local arg1_edit = r.hiddenMenus["arg1_edit"]
+    local arg2_edit = r.hiddenMenus["arg2_edit"]
 
-    local rule = newRuleFrame.menus["rule_types"].selected.txt:GetText()
+    local rule = selected.name
 
-    -- arg0 name (based on rule type)
-    if rule ~= "EV_POTIONS" and rule ~= "EV_FLASKS" and rule ~= "EV_FOOD" and rule ~= "EV_RUNES" then
-        local txt = ""
-        if rule == "EV_DEATH_UNIT" then
-            txt = "unit name"
-        else
-            txt = "spellid"
-        end
-
-        newRuleFrame.editBox0:SetText(txt)
-        newRuleFrame.editBox0:SetScript("OnEscapePressed", function() newRuleFrame.editBox0:SetText(txt); newRuleFrame.editBox0:ClearFocus() end)
-        newRuleFrame.editBox0:SetScript("OnEditFocusGained", function() newRuleFrame.editBox0:SetText(""); end)
-        newRuleFrame.editBox0:Show()
-    else
-        newRuleFrame.editBox0:Hide()
-    end
-
-    -- arg1 name (based on rule type)
     if rule == "EV_AURA" then
-        newRuleFrame.editBox1:Hide()
-        newRuleFrame.menus["aura_actions"]:Show()
-    elseif rule == "EV_DEATH"
-        or rule == "EV_DEATH_UNIT"
-        or rule == "EV_DISPEL"
-        or rule == "EV_POTIONS"
-        or rule == "EV_FLASKS"
-        or rule == "EV_FOOD"
-        or rule == "EV_RUNES"
-    then
-        newRuleFrame.editBox1:Hide()
-        newRuleFrame.menus["aura_actions"]:Hide()
-    else
-        local ruleTxt = ""
-        if rule == "EV_DAMAGETAKEN" then
-            ruleTxt = "amount or any"
-        elseif rule == "EV_AURA_STACKS" then
-            ruleTxt = "stacks (0 if any)"
-        elseif rule == "EV_CAST_START" or rule == "EV_CAST_END" or rule == "EV_CAST_INTERRUPTED" then
-            ruleTxt = "unit name"
-        end
-        newRuleFrame.editBox1:SetText(ruleTxt)
-        newRuleFrame.editBox1:SetScript("OnEscapePressed", function() newRuleFrame.editBox1:SetText(ruleTxt); newRuleFrame.editBox1:ClearFocus() end)
-        newRuleFrame.editBox1:SetScript("OnEditFocusGained", function() newRuleFrame.editBox1:SetText(""); end)
-        newRuleFrame.editBox1:Show()
-        newRuleFrame.editBox1:ClearFocus()
-        newRuleFrame.menus["aura_actions"]:Hide()
+        showHiddenEditBox(r, "arg0_edit", "aura id")
+        arg0_edit.label:SetText("Aura id:")
+        updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        arg1_drop.label:SetText("Action:")
+        arg1_drop:Show()
+    elseif rule == "EV_AURA_STACKS" then
+        showHiddenEditBox(r, "arg0_edit", "aura id")
+        arg0_edit.label:SetText("Aura id:")
+        showHiddenEditBox(r, "arg1_edit", "stacks or 0 (if any)")
+        arg1_edit.label:SetText("Stacks:")
+    elseif rule == "EV_DISPEL" then
+        showHiddenEditBox(r, "arg0_edit", "aura id")
+        arg0_edit.label:SetText("Aura id:")
+    elseif rule == "EV_CAST_START" then
+        showHiddenEditBox(r, "arg0_edit", "spell id")
+        arg0_edit.label:SetText("Spell id:")
+        showHiddenEditBox(r, "arg1_edit", "caster name")
+        arg1_edit.label:SetText("Caster name:")
+    elseif rule == "EV_CAST_INTERRUPTED" then
+        showHiddenEditBox(r, "arg0_edit", "target spell id")
+        arg0_edit.label:SetText("Target spell id:")
+        showHiddenEditBox(r, "arg1_edit", "target name")
+        arg1_edit.label:SetText("Target name:")
+    elseif rule == "EV_CAST_END" then
+        showHiddenEditBox(r, "arg0_edit", "spell id")
+        arg0_edit.label:SetText("Spell id:")
+        showHiddenEditBox(r, "arg1_edit", "caster name")
+        arg1_edit.label:SetText("Caster name:")
+    elseif rule == "EV_DAMAGETAKEN" then
+        showHiddenEditBox(r, "arg0_edit", "spell id")
+        arg0_edit.label:SetText("Spell id:")
+        showHiddenEditBox(r, "arg1_edit", "amount or 0")
+        arg1_edit.label:SetText("Amount:")
+    elseif rule == "EV_DEATH" then
+        showHiddenEditBox(r, "arg0_edit", "spell id")
+        arg0_edit.label:SetText("Spell id:")
+    elseif rule == "EV_DEATH_UNIT" then
+        showHiddenEditBox(r, "arg0_edit", "unit name")
+        arg0_edit.label:SetText("Unit name:")
     end
 
-    -- arg2 points
-    newRuleFrame.editBox2:SetText("points")
-    newRuleFrame.editBox2:SetScript("OnEscapePressed", function() newRuleFrame.editBox2:SetText("points"); newRuleFrame.editBox2:ClearFocus() end)
-    newRuleFrame.editBox2:SetScript("OnEditFocusGained", function() newRuleFrame.editBox2:SetText(""); end)
-    newRuleFrame.editBox2:Show()
-
-    -- role
-    newRuleFrame.menus["roles"]:Show()
+    showHiddenEditBox(r, "arg2_edit", 0)
+    arg2_edit.label:SetText("Points:")
 end
 
 local function initNewRuleWindow()
     WDRM.menus["new_rule"] = CreateFrame("Frame", nil, WDRM)
     local r = WDRM.menus["new_rule"]
     r.menus = {}
-    r:EnableMouse(true)
-    r:SetPoint("BOTTOMLEFT", WDRM.buttons["add_rule"], "TOPLEFT", -1, 6)
-    r:SetSize(300, 151)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    r.bg:SetAllPoints()
+    r.hiddenMenus = {}
+    r.buttons = {}
 
-    local xSize = 298
+    local totalWidth = 325
+    local xSize = 200
+    local x = totalWidth - xSize
 
+    -- encounters menu
     r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList())
     r.menus["encounters"]:SetSize(xSize, 20)
-    r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
-
+    r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", x, -1)
+    r.menus["encounters"].label = createFontDefault(r.menus["encounters"], "RIGHT", "Encounter:")
+    r.menus["encounters"].label:SetSize(x - 5, 20)
+    r.menus["encounters"].label:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
+    -- roles filter
+    r.menus["roles"] = createDropDownMenu(r, "ANY", convertTypesToItems(WD.RoleTypes))
+    r.menus["roles"].txt:SetJustifyH("CENTER")
+    r.menus["roles"]:SetSize(xSize, 20)
+    r.menus["roles"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
+    r.menus["roles"].label = createFontDefault(r.menus["roles"], "RIGHT", "Role:")
+    r.menus["roles"].label:SetSize(x - 5, 20)
+    r.menus["roles"].label:SetPoint("TOPLEFT", r.menus["encounters"].label, "BOTTOMLEFT", 0, -1)
+    -- events menu
     local items = convertTypesToItems(WD.RuleTypes, updateNewRuleMenu)
     table.insert(items, { name = "EV_POTIONS", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_FLASKS", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_FOOD", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_RUNES", func = updateNewRuleMenu })
-    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", items)
+    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", updateItemsByHoverInfo(items, WD.Help.eventsInfo))
     r.menus["rule_types"]:SetSize(xSize, 20)
-    r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
+    r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["roles"], "BOTTOMLEFT", 0, -1)
+    r.menus["rule_types"].label = createFontDefault(r.menus["rule_types"], "RIGHT", "Rule:")
+    r.menus["rule_types"].label:SetSize(x - 5, 20)
+    r.menus["rule_types"].label:SetPoint("TOPLEFT", r.menus["roles"].label, "BOTTOMLEFT", 0, -1)
 
-    -- editbox arg0
-    r.editBox0 = createEditBox(r)
-    r.editBox0:SetSize(xSize, 20)
-    r.editBox0:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
-    r.editBox0:Hide()
+    -- arg0: editbox
+    r.hiddenMenus["arg0_edit"] = createEditBox(r)
+    r.hiddenMenus["arg0_edit"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg0_edit"]:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg0_edit"].label = createFontDefault(r.hiddenMenus["arg0_edit"], "RIGHT", "")
+    r.hiddenMenus["arg0_edit"].label:SetSize(x - 5, 20)
+    r.hiddenMenus["arg0_edit"].label:SetPoint("TOPLEFT", r.menus["rule_types"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg0_edit"]:Hide()
 
-    -- editbox or dropdownmenu arg1
-    r.editBox1 = createEditBox(r)
-    r.editBox1:SetSize(xSize, 20)
-    r.editBox1:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
-    r.editBox1:Hide()
+    -- arg1: dropdown or editbox
+    r.hiddenMenus["arg1_drop"] = createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
+    r.hiddenMenus["arg1_drop"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg1_drop"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg1_drop"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_drop"].label = createFontDefault(r.hiddenMenus["arg1_drop"], "RIGHT", "")
+    r.hiddenMenus["arg1_drop"].label:SetSize(x - 5, 20)
+    r.hiddenMenus["arg1_drop"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_drop"]:Hide()
 
-    r.menus["aura_actions"] = createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
-    r.menus["aura_actions"].txt:SetJustifyH("CENTER")
-    r.menus["aura_actions"]:SetSize(xSize, 20)
-    r.menus["aura_actions"]:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -1)
-    r.menus["aura_actions"]:Hide()
+    r.hiddenMenus["arg1_edit"] = createEditBox(r)
+    r.hiddenMenus["arg1_edit"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg1_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_edit"].label = createFontDefault(r.hiddenMenus["arg1_edit"], "RIGHT", "")
+    r.hiddenMenus["arg1_edit"].label:SetSize(x - 5, 20)
+    r.hiddenMenus["arg1_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_edit"]:Hide()
 
-    -- editbox arg2
-    r.editBox2 = createEditBox(r)
-    r.editBox2:SetNumeric()
-    r.editBox2:SetSize(xSize, 20)
-    r.editBox2:SetPoint("TOPLEFT", r.editBox0, "BOTTOMLEFT", 0, -22)
-    r.editBox2:Hide()
+    -- arg2: editbox
+    r.hiddenMenus["arg2_edit"] = createEditBox(r)
+    r.hiddenMenus["arg2_edit"]:SetNumeric()
+    r.hiddenMenus["arg2_edit"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg2_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg2_edit"].label = createFontDefault(r.hiddenMenus["arg2_edit"], "RIGHT", "")
+    r.hiddenMenus["arg2_edit"].label:SetSize(x - 5, 20)
+    r.hiddenMenus["arg2_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"].label, "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg2_edit"]:Hide()
 
-    -- role filter
-    r.menus["roles"] = createDropDownMenu(r, "ANY", convertTypesToItems(WD.RoleTypes))
-    r.menus["roles"].txt:SetJustifyH("CENTER")
-    r.menus["roles"]:SetSize(xSize, 20)
-    r.menus["roles"]:SetPoint("TOPLEFT", r.editBox2, "BOTTOMLEFT", 0, -1)
-    r.menus["roles"]:Hide()
+    r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)
 
-    r:SetScript("OnHide", function()
-        r.editBox0:Hide()
-        r.editBox1:Hide()
-        r.editBox2:Hide()
-        r.menus["aura_actions"]:Hide()
-        r.menus["roles"]:Hide()
-    end)
+    r.buttons["save"] = createButton(r)
+    r.buttons["save"]:SetPoint("TOPLEFT", r.hiddenMenus["arg2_edit"], "BOTTOMLEFT", 1, -2)
+    r.buttons["save"]:SetSize(xSize / 2 - 1, 20)
+    r.buttons["save"]:SetScript("OnClick", function() if isRuleSavable() then saveRule(); r:Hide() end end)
+    r.buttons["save"].t:SetColorTexture(.2, .4, .2, 1)
+    r.buttons["save"].txt = createFont(r.buttons["save"], "CENTER", "Save")
+    r.buttons["save"].txt:SetAllPoints()
 
-    r.saveButton = createButton(r)
-    r.saveButton:SetPoint("TOPLEFT", r.menus["roles"], "BOTTOMLEFT", 1, -2)
-    r.saveButton:SetSize(xSize / 2 - 1, 20)
-    r.saveButton:SetScript("OnClick", function() saveRule(); r:Hide() end)
-    r.saveButton.t:SetColorTexture(.2, .4, .2, 1)
-    r.saveButton.txt = createFont(r.saveButton, "CENTER", "Save")
-    r.saveButton.txt:SetAllPoints()
+    r.buttons["cancel"] = createButton(r)
+    r.buttons["cancel"]:SetPoint("TOPLEFT", r.buttons["save"], "TOPRIGHT", 1, 0)
+    r.buttons["cancel"]:SetSize(xSize / 2 - 2, 20)
+    r.buttons["cancel"]:SetScript("OnClick", function() r:Hide() end)
+    r.buttons["cancel"].t:SetColorTexture(.4, .2, .2, 1)
+    r.buttons["cancel"].txt = createFont(r.buttons["cancel"], "CENTER", "Cancel")
+    r.buttons["cancel"].txt:SetAllPoints()
 
-    r.cancelButton = createButton(r)
-    r.cancelButton:SetPoint("TOPLEFT", r.saveButton, "TOPRIGHT", 1, 0)
-    r.cancelButton:SetSize(xSize / 2 - 2, 20)
-    r.cancelButton:SetScript("OnClick", function() r:Hide() end)
-    r.cancelButton.t:SetColorTexture(.4, .2, .2, 1)
-    r.cancelButton.txt = createFont(r.cancelButton, "CENTER", "Cancel")
-    r.cancelButton.txt:SetAllPoints()
+    r:EnableMouse(true)
+    r:SetPoint("CENTER", WDRM, -80, 150)
+    r:SetSize(totalWidth, 7 * 21 + 3)
+    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg:SetAllPoints()
 
     r:Hide()
 end

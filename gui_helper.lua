@@ -62,6 +62,18 @@ function table.tostring(tbl)
     return "{" .. table.concat(result, ",") .. "}"
 end
 
+function table.tohtml(x)
+    if type(x) ~= "table" then return "unsupported type" end
+
+    local s = "<p>"
+    for k,v in pairs(x) do
+        s = s .. "|cffffff00" .. k .. "|r - " .. v .. "<br/>"
+    end
+    s = s .. "</p>"
+
+    return s
+end
+
 local b="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 function encode64(data)
     return ((data:gsub('.', function(x)
@@ -89,6 +101,11 @@ function decode64(data)
         for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
         return string.char(c)
     end))
+end
+
+function isNonZero(text)
+    if not tonumber(text) or tonumber(text) == 0 then return false end
+    return true
 end
 
 function sendMessage(msg)
@@ -396,6 +413,14 @@ function updateDropDownMenu(self, name, items, parent)
                 local item = createListItemButton(self, v.name, k - 1)
                 item.data = v
                 item:SetScript("OnClick", function() onClickDropDown(parent or self, item, v.func) end)
+                if v.hover then
+                    item:SetScript("OnEnter", function(self)
+                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                        GameTooltip:SetText(v.hover, nil, nil, nil, nil, true)
+                        GameTooltip:Show()
+                    end)
+                    item:SetScript("OnLeave", function() GameTooltip_Hide() end)
+                end
                 table.insert(self.items, item)
             end
         end
@@ -507,6 +532,15 @@ function convertTypesToItems(t, fn)
     return items
 end
 
+function updateItemsByHoverInfo(items, info)
+    for _,v in pairs(items) do
+        if v.name and info[v.name] then
+            v.hover = info[v.name]
+        end
+    end
+    return items
+end
+
 function createRuleWindow(parent)
     local r = CreateFrame("Frame", nil, parent)
     r.hiddenMenus = {}
@@ -547,4 +581,12 @@ function createRuleWindow(parent)
     r:Hide()
 
     return r
+end
+
+function showHiddenEditBox(parent, name, txt)
+    parent.hiddenMenus[name]:EnableMouse(true)
+    parent.hiddenMenus[name]:SetText(txt)
+    parent.hiddenMenus[name]:SetScript("OnEscapePressed", function() parent.hiddenMenus[name]:SetText(txt); parent.hiddenMenus[name]:ClearFocus() end)
+    parent.hiddenMenus[name]:SetScript("OnEditFocusGained", function() parent.hiddenMenus[name]:SetText(""); end)
+    parent.hiddenMenus[name]:Show()
 end

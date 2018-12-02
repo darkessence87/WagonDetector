@@ -138,6 +138,7 @@ function getRaidTargetTextureLink(rt)
 end
 
 function getFullCharacterName(name)
+    if not name then return nil end
     if string.find(name, "%-") then
         return name;
     else

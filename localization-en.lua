@@ -21,6 +21,7 @@ WD_HELP = "Available commands:\
 
 WD_PRINT_SUCCESS = "%s [NICE] %s: %s (%d penalty points)"
 WD_PRINT_FAILURE = "%s [FAIL] %s: %s (%d penalty points)"
+WD_PRINT_INFO = "%s [INFO] %s: %s"
 WD_NOTIFY_HEADER_RULE = "List of active rules in encounter \"%s\":"
 WD_NOTIFY_RULE = "[%s] %d penalty points for %s"
 WD_REVERT_STR = "REVERT"

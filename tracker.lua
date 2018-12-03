@@ -2,6 +2,8 @@
 local WDMF = WD.mainFrame
 WD.cache.tracker = {}
 
+local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
+
 local potionSpellIds = {
     [279151] = "/battle-potion-of-intellect",
     [279152] = "/battle-potion-of-agility",
@@ -12,7 +14,7 @@ local potionSpellIds = {
     [279154] = "/battle-potion-of-stamina",
 }
 
-local function createNpc(guid, name)
+local function createNpc(guid, name, unit_type)
     if not name or not guid or guid == "" then return nil end
     local p = WD.cache.tracker[name]
     if not p then
@@ -21,9 +23,10 @@ local function createNpc(guid, name)
         v.unit = ""
         v.class = 0
         v.guid = guid
-        v.type = "creature"
+        v.type = unit_type or "creature"
         v.auras = {}
         v.casts = {}
+        v.casts.current_spell_id = 0
         WD.cache.tracker[v.name] = {}
         local t = WD.cache.tracker[v.name]
         t[guid] = v
@@ -43,9 +46,10 @@ local function createNpc(guid, name)
         v.unit = ""
         v.class = 0
         v.guid = guid
-        v.type = "creature"
+        v.type = unit_type or "creature"
         v.auras = {}
         v.casts = {}
+        v.casts.current_spell_id = 0
         p[guid] = v
         return v
     end
@@ -84,6 +88,11 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
     return src, dst
 end
 
+local function findEntity(guid, name)
+    if not WD.cache.tracker[name] or not WD.cache.tracker[name][guid] then return nil end
+    return WD.cache.tracker[name][guid]
+end
+
 local function hasAura(unit, auraId)
     if unit.auras[auraId] then return true end
     return nil
@@ -118,9 +127,11 @@ local function interruptCast(unit, timestamp, target_spell_id, interrupter)
         else
             unit.casts[target_spell_id] = {}
         end
+        local diff = (timestamp - unit.casts.current_timestamp) * 1000
         unit.casts[target_spell_id].count = i
         unit.casts[target_spell_id][i] = {}
-        unit.casts[target_spell_id][i].percent = float_round_to((timestamp - unit.casts.current_timestamp)*1000 / unit.casts.current_cast_time, 2) * 100
+        unit.casts[target_spell_id][i].timediff = diff
+        unit.casts[target_spell_id][i].percent = float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
         unit.casts[target_spell_id][i].interrupter = interrupter.name
     end
@@ -138,7 +149,6 @@ local function finishCast(unit, timestamp, spell_id, result)
         end
         unit.casts[spell_id].count = i
         unit.casts[spell_id][i] = {}
-        unit.casts[spell_id][i].percent = float_round_to((timestamp - unit.casts.current_timestamp)*1000 / unit.casts.current_cast_time, 2) * 100
         unit.casts[spell_id][i].status = result
     end
     unit.casts.current_spell_id = 0
@@ -206,7 +216,7 @@ function WDMF:ProcessCasts(src, dst, ...)
     if event ~= "SPELL_CAST_START" and event ~= "SPELL_CAST_SUCCESS" and event ~= "SPELL_MISS" and event ~= "SPELL_CAST_FAILED" and event ~= "SPELL_INTERRUPT" then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_START" then
-        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
         if src then
             startCast(src, timestamp, spell_id)
 
@@ -222,7 +232,7 @@ function WDMF:ProcessCasts(src, dst, ...)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
-        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
         if src then
             finishCast(src, timestamp, spell_id, "SUCCESS")
 
@@ -253,7 +263,7 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_INTERRUPT" then
         local target_spell_id = tonumber(arg[15])
-        print(event..' : interrupted '..getSpellLinkByIdWithTexture(target_spell_id)..' target:'..dst.name..' by '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : interrupted '..getSpellLinkByIdWithTexture(target_spell_id)..' target:'..dst.name..' by '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
         if src then
             if rules[src.role] and
                rules[src.role]["EV_CAST_INTERRUPTED"] and
@@ -273,11 +283,47 @@ function WDMF:ProcessCasts(src, dst, ...)
     end
 end
 
+function WDMF:ProcessSummons(src, ...)
+    local arg = {...}
+    local timestamp, event, src_name, dst_guid, dst_name, spell_id = arg[1], arg[2], arg[5], arg[8], arg[9], tonumber(arg[12])
+    if event ~= "SPELL_SUMMON" then return end
+    if not dst_name then return end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_SUMMON" then
+        -- find parent by name
+        if src.type ~= "player" then return end
+        local parent = findEntity(src.guid, getFullCharacterName(src_name))
+        if not parent then return end
+
+        if parent.pet_guid then
+            WD.cache.tracker[parent.pet_name] = nil
+        end
+
+        local unit = ""
+        if parent.unit:match("raid") then
+            local i = tonumber(string.match(parent.unit, "%d+"))
+            unit = "raidpet"..i
+        elseif parent.unit == "player" then
+            unit = "pet"
+        else
+            return
+        end
+
+        local v = createNpc(dst_guid, dst_name, unit)
+        v.type = "pet"
+        v.parent_guid = parent.guid
+        v.parent_name = parent.name
+        self.encounter.players[#self.encounter.players+1] = v
+
+        if not parent.pets then parent.pets = {} end
+        parent.pets[#parent.pets+1] = { guid = v.guid, name = v.name }
+    end
+end
+
 function WDMF:Tracker_OnStartEncounter(raiders)
     table.wipe(WD.cache.tracker)
 
     for k,v in pairs(raiders) do
-        v.type = "player"
         v.auras = {}
         v.casts = {}
         v.casts.current_spell_id = 0
@@ -295,8 +341,13 @@ function WDMF:Tracker_OnEvent(...)
     local arg = {...}
     local timestamp, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags, spell_id = ...
 
+    --if src_name then print(event..' : src '..src_name) end
+    --if dst_name then print(event..' : dst '..dst_name) end
     local src, dst = getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
+
     if not src and src_name then return end
+    self:ProcessSummons(src, ...)
+
     if not dst and dst_name then return end
 
     self:ProcessAuras(src, dst, ...)

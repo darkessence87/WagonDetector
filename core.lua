@@ -281,6 +281,36 @@ function WDMF:OnEvent(event, ...)
     end
 end
 
+function WDMF:CreateRaidMember(unit)
+    local name, realm = UnitName(unit)
+    if not name then return end
+    if not realm or realm == "" then
+        realm = currentRealmName
+    end
+    local _,class = UnitClass(unit)
+
+    local p = {}
+    p.name = name.."-"..realm
+    p.unit = unit
+    p.class = class
+    p.guid = UnitGUID(p.unit)
+
+    if UnitIsVisible(p.unit) then
+        if WD.cache.raidroster[p.name] then
+            p.specId = WD.cache.raidroster[p.name].specId
+        elseif not p.unit:match("pet") and p.unit ~= "player" then
+            NotifyInspect(p.unit)
+        end
+        self.encounter.players[#self.encounter.players+1] = p
+        if not p.unit:match("pet") then
+            p.type = "player"
+            self:CheckConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
+        else
+            p.type = "pet"
+        end
+    end
+end
+
 function WDMF:StartEncounter(encounterID, encounterName)
     local pullId = 1
     if WD.db.profile.encounters[encounterName] then pullId = WD.db.profile.encounters[encounterName] + 1 end
@@ -296,28 +326,8 @@ function WDMF:StartEncounter(encounterID, encounterName)
         self.encounter.players = {}
 
         for i=1, GetNumGroupMembers() do
-            local unit = "raid"..i
-            local name, realm = UnitName(unit)
-            if not realm or realm == "" then
-                realm = currentRealmName
-            end
-            local _,class = UnitClass(unit)
-
-            local p = {}
-            p.name = name.."-"..realm
-            p.unit = unit
-            p.class = class
-            p.guid = UnitGUID(p.unit)
-
-            if UnitIsVisible(p.unit) then
-                if WD.cache.raidroster[p.name] then
-                    p.specId = WD.cache.raidroster[p.name].specId
-                else
-                    NotifyInspect(p.unit)
-                end
-                self.encounter.players[#self.encounter.players+1] = p
-                self:CheckConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
-            end
+            self:CreateRaidMember("raid"..i)
+            self:CreateRaidMember("raidpet"..i)
         end
     elseif encounterName == "Test" then
         sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
@@ -329,20 +339,8 @@ function WDMF:StartEncounter(encounterID, encounterName)
         self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
         self.encounter.players = {}
 
-        local _,class = UnitClass("player")
-
-        local p = {}
-        p.name = playerName
-        p.unit = "player"
-        p.class = class
-        p.guid = UnitGUID(p.unit)
-        if WD.cache.raidroster[p.name] then
-            p.specId = WD.cache.raidroster[p.name].specId
-        end
-
-        self.encounter.players[#self.encounter.players+1] = p
-
-        self:CheckConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
+        self:CreateRaidMember("player")
+        self:CreateRaidMember("pet")
     end
 
     if self.encounter.players then

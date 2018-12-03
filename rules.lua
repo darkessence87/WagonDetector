@@ -705,7 +705,7 @@ local function initNewRuleWindow()
     r.menus["roles"].label:SetSize(x - 5, 20)
     r.menus["roles"].label:SetPoint("TOPLEFT", r.menus["encounters"].label, "BOTTOMLEFT", 0, -1)
     -- events menu
-    local items = convertTypesToItems(WD.RuleTypes, updateNewRuleMenu)
+    local items = convertTypesToItems(WD.EventTypes, updateNewRuleMenu)
     table.insert(items, { name = "EV_POTIONS", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_FLASKS", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_FOOD", func = updateNewRuleMenu })

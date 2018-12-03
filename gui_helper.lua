@@ -1,6 +1,11 @@
 
 local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
 
+function float_round_to(v, n)
+    local mult = 10^n
+    return math.floor(v * mult + 0.5) / mult
+end
+
 function table.wipe(t)
     for k in pairs(t) do
         t[k] = nil

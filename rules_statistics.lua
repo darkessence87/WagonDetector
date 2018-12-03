@@ -121,9 +121,9 @@ local function updateRangeRuleMenu(frame, selected)
     elseif rule == "RT_UNIT_CASTING" then
         showHiddenEditBox(r, "arg0_edit", "target spell id")
     elseif rule == "RT_CUSTOM" then
-        updateDropDownMenu(arg0_drop, "Select start event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        updateDropDownMenu(arg0_drop, "Select start event:", updateItemsByHoverInfo(convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg0_drop:Show()
-        updateDropDownMenu(arg1_drop, "Select end event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        updateDropDownMenu(arg1_drop, "Select end event:", updateItemsByHoverInfo(convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg1_drop:Show()
     end
 
@@ -209,16 +209,16 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
         arg0_drop.label:SetText("Range rule type:")
         arg0_drop:Show()
         -- arg1
-        updateDropDownMenu(arg1_drop, "Select result event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        updateDropDownMenu(arg1_drop, "Select result event:", updateItemsByHoverInfo(convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
     elseif rule == "RL_DEPENDENCY" then
         -- arg0
-        updateDropDownMenu(arg0_drop, "Select reason event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        updateDropDownMenu(arg0_drop, "Select reason event:", updateItemsByHoverInfo(convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg0_drop.label:SetText("Reason event:")
         arg0_drop:Show()
         -- arg1
-        updateDropDownMenu(arg1_drop, "Select result event:", updateItemsByHoverInfo(convertTypesToItems(WD.RuleTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        updateDropDownMenu(arg1_drop, "Select result event:", updateItemsByHoverInfo(convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
         -- arg2

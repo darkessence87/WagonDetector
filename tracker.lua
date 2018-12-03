@@ -94,144 +94,61 @@ local function hasNotAura(unit, auraId)
     return nil
 end
 
-local function isCasting(unit, spellId)
-    if unit.casts[spellId] and unit.casts[spellId].state == "STARTED" then return true end
+local function isCasting(unit, spell_id)
+    if unit.casts.current_spell_id == spell_id then return true end
     return nil
 end
 
-function WDMF:ProcessCasts(src, dst, ...)
+local function startCast(unit, timestamp, spell_id)
+    unit.casts.current_spell_id = spell_id
+    local haste = 1
+    if unit.guid ~= UnitGUID("player") then
+        haste = haste + UnitSpellHaste("player") / 100.0
+    end
+    unit.casts.current_cast_time = haste * select(4, GetSpellInfo(spell_id))
+    unit.casts.current_timestamp = timestamp
+end
+
+local function interruptCast(unit, timestamp, target_spell_id, interrupter)
+    if unit.casts.current_spell_id == 0 then return end
+    if unit.casts.current_spell_id == target_spell_id then
+        local i = 1
+        if unit.casts[target_spell_id] then
+            i = unit.casts[target_spell_id].count + 1
+        else
+            unit.casts[target_spell_id] = {}
+        end
+        unit.casts[target_spell_id].count = i
+        unit.casts[target_spell_id][i] = {}
+        unit.casts[target_spell_id][i].percent = float_round_to((timestamp - unit.casts.current_timestamp)*1000 / unit.casts.current_cast_time, 2) * 100
+        unit.casts[target_spell_id][i].status = "INTERRUPTED"
+        unit.casts[target_spell_id][i].interrupter = interrupter.name
+    end
+    unit.casts.current_spell_id = 0
+end
+
+local function finishCast(unit, timestamp, spell_id, result)
+    if unit.casts.current_spell_id == 0 then return end
+    if unit.casts.current_spell_id == spell_id then
+        local i = 1
+        if unit.casts[spell_id] then
+            i = unit.casts[spell_id].count + 1
+        else
+            unit.casts[spell_id] = {}
+        end
+        unit.casts[spell_id].count = i
+        unit.casts[spell_id][i] = {}
+        unit.casts[spell_id][i].percent = float_round_to((timestamp - unit.casts.current_timestamp)*1000 / unit.casts.current_cast_time, 2) * 100
+        unit.casts[spell_id][i].status = result
+    end
+    unit.casts.current_spell_id = 0
+end
+
+function WDMF:ProcessAuras(src, dst, ...)
     local rules = self.encounter.rules
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
-    if event ~= "SPELL_CAST_START" and event ~= "SPELL_CAST_SUCCESS" and event ~= "SPELL_MISS" and event ~= "SPELL_CAST_FAILED" then return end
-    -----------------------------------------------------------------------------------------------------------------------
-    if event == "SPELL_CAST_START" then
-        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            local i = 1
-            if src.casts[spell_id] then
-                i = src.casts[spell_id].count + 1
-            else
-                src.casts[spell_id] = {}
-            end
-            src.casts[spell_id].count = i
-            src.casts[spell_id][i] = {}
-            src.casts[spell_id][i].status = "STARTED"
-
-            if rules[src.role] and
-               rules[src.role]["EV_CAST_START"] and
-               rules[src.role]["EV_CAST_START"][spell_id] and
-               rules[src.role]["EV_CAST_START"][spell_id][src_name]
-            then
-                local p = rules[src.role]["EV_CAST_START"][spell_id][src_name].points
-                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, src.name, getSpellLinkByIdWithTexture(spell_id)), p)
-            end
-        end
-    end
-    -----------------------------------------------------------------------------------------------------------------------
-    if event == "SPELL_CAST_SUCCESS" then
-        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            if src.casts[spell_id] then
-                local i = src.casts[spell_id].count
-                src.casts[spell_id][i].status = "SUCCESS"
-            end
-
-            if rules[src.role] and
-               rules[src.role]["EV_CAST_END"] and
-               rules[src.role]["EV_CAST_END"][spell_id] and
-               rules[src.role]["EV_CAST_END"][spell_id][src_name]
-            then
-                local p = rules[src.role]["EV_CAST_END"][spell_id][src_name].points
-                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, src.name, getSpellLinkByIdWithTexture(spell_id)), p)
-            end
-        end
-    end
-    -----------------------------------------------------------------------------------------------------------------------
-    if event == "SPELL_MISS" then
-        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            if src.casts[spell_id] then
-                local i = src.casts[spell_id].count
-                if src.casts[spell_id][i].status == "STARTED" then
-                    src.casts[spell_id][i].status = "MISSED"
-                end
-            else
-                print('unknown cast missed:'..spell_id.." caster: "..src.name.." "..src.guid)
-            end
-        end
-    end
-    -----------------------------------------------------------------------------------------------------------------------
-    if event == "SPELL_CAST_FAILED" then
-        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            if src.casts[spell_id] then
-                local i = src.casts[spell_id].count
-                if src.casts[spell_id][i].status == "STARTED" then
-                    src.casts[spell_id][i].status = "FAILED"
-                end
-            end
-        end
-    end
-    -----------------------------------------------------------------------------------------------------------------------
-    if event == "SPELL_INTERRUPT" then
-        local target_spell_id = tonumber(arg[15])
-        print(event..' : interrupted '..getSpellLinkByIdWithTexture(target_spell_id)..' target:'..dst.name..' by '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            if rules[src.role] and
-               rules[src.role]["EV_CAST_INTERRUPTED"] and
-               rules[src.role]["EV_CAST_INTERRUPTED"][target_spell_id] and
-               rules[src.role]["EV_CAST_INTERRUPTED"][target_spell_id][dst_name]
-            then
-                local p = rules[src.role]["EV_CAST_INTERRUPTED"][target_spell_id][dst_name].points
-                local dst_nameWithMark = dst.name
-                if dst.rt > 0 then dst_nameWithMark = getRaidTargetTextureLink(dst.rt).." "..dst.name end
-                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, getSpellLinkByIdWithTexture(target_spell_id)), p)
-            end
-        end
-
-        if dst then
-            if dst.casts[target_spell_id] then
-                local i = dst.casts[target_spell_id].count
-                if dst.casts[target_spell_id][i].status == "STARTED" then
-                    dst.casts[target_spell_id][i].status = "INTERRUPTED"
-                    dst.casts[target_spell_id][i].interrupter = src.name
-                end
-            else
-                print('unknown cast interrupted:'..target_spell_id.." caster: "..dst.name.." "..dst.guid)
-            end
-        end
-    end
-end
-
-function WDMF:Tracker_OnStartEncounter(raiders)
-    table.wipe(WD.cache.tracker)
-
-    for k,v in pairs(raiders) do
-        v.type = "player"
-        v.auras = {}
-        v.casts = {}
-        WD.cache.tracker[v.name] = {}
-        local t = WD.cache.tracker[v.name]
-        t[v.guid] = v
-    end
-end
-
-function WDMF:Tracker_OnStopEncounter()
-end
-
-function WDMF:Tracker_OnEvent(...)
-    local rules = self.encounter.rules
-    local arg = {...}
-    local timestamp, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags, spell_id = ...
-
-    local src, dst = getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
-    if not src and src_name then return end
-    if not dst and dst_name then return end
-
-
-    self:ProcessCasts(src, dst, ...)
-
+    if event ~= "SPELL_AURA_APPLIED" and event ~= "SPELL_AURA_REMOVED" then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_APPLIED" then
         if src then
@@ -280,6 +197,111 @@ function WDMF:Tracker_OnEvent(...)
             end
         end
     end
+end
+
+function WDMF:ProcessCasts(src, dst, ...)
+    local rules = self.encounter.rules
+    local arg = {...}
+    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    if event ~= "SPELL_CAST_START" and event ~= "SPELL_CAST_SUCCESS" and event ~= "SPELL_MISS" and event ~= "SPELL_CAST_FAILED" and event ~= "SPELL_INTERRUPT" then return end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_CAST_START" then
+        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        if src then
+            startCast(src, timestamp, spell_id)
+
+            if rules[src.role] and
+               rules[src.role]["EV_CAST_START"] and
+               rules[src.role]["EV_CAST_START"][spell_id] and
+               rules[src.role]["EV_CAST_START"][spell_id][src_name]
+            then
+                local p = rules[src.role]["EV_CAST_START"][spell_id][src_name].points
+                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, src.name, getSpellLinkByIdWithTexture(spell_id)), p)
+            end
+        end
+    end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_CAST_SUCCESS" then
+        print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        if src then
+            finishCast(src, timestamp, spell_id, "SUCCESS")
+
+            if rules[src.role] and
+               rules[src.role]["EV_CAST_END"] and
+               rules[src.role]["EV_CAST_END"][spell_id] and
+               rules[src.role]["EV_CAST_END"][spell_id][src_name]
+            then
+                local p = rules[src.role]["EV_CAST_END"][spell_id][src_name].points
+                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, src.name, getSpellLinkByIdWithTexture(spell_id)), p)
+            end
+        end
+    end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_MISS" then
+        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        if src then
+            finishCast(src, timestamp, spell_id, "MISSED")
+        end
+    end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_CAST_FAILED" then
+        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        if src then
+            finishCast(src, timestamp, spell_id, "FAILED")
+        end
+    end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_INTERRUPT" then
+        local target_spell_id = tonumber(arg[15])
+        print(event..' : interrupted '..getSpellLinkByIdWithTexture(target_spell_id)..' target:'..dst.name..' by '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        if src then
+            if rules[src.role] and
+               rules[src.role]["EV_CAST_INTERRUPTED"] and
+               rules[src.role]["EV_CAST_INTERRUPTED"][target_spell_id] and
+               rules[src.role]["EV_CAST_INTERRUPTED"][target_spell_id][dst_name]
+            then
+                local p = rules[src.role]["EV_CAST_INTERRUPTED"][target_spell_id][dst_name].points
+                local dst_nameWithMark = dst.name
+                if dst.rt > 0 then dst_nameWithMark = getRaidTargetTextureLink(dst.rt).." "..dst.name end
+                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, getSpellLinkByIdWithTexture(target_spell_id)), p)
+            end
+        end
+
+        if dst then
+            interruptCast(dst, timestamp, target_spell_id, src)
+        end
+    end
+end
+
+function WDMF:Tracker_OnStartEncounter(raiders)
+    table.wipe(WD.cache.tracker)
+
+    for k,v in pairs(raiders) do
+        v.type = "player"
+        v.auras = {}
+        v.casts = {}
+        v.casts.current_spell_id = 0
+        WD.cache.tracker[v.name] = {}
+        local t = WD.cache.tracker[v.name]
+        t[v.guid] = v
+    end
+end
+
+function WDMF:Tracker_OnStopEncounter()
+end
+
+function WDMF:Tracker_OnEvent(...)
+    local rules = self.encounter.rules
+    local arg = {...}
+    local timestamp, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags, spell_id = ...
+
+    local src, dst = getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
+    if not src and src_name then return end
+    if not dst and dst_name then return end
+
+    self:ProcessAuras(src, dst, ...)
+    self:ProcessCasts(src, dst, ...)
+
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_APPLIED_DOSE" then
         if dst and

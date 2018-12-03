@@ -6,8 +6,7 @@ WD.cache.roster = {}
 WD.cache.rosterkeys = {}
 
 function calculateCoef(points, pulls)
-    local mult = 10^2
-    return math.floor((points * 1.0 / pulls) * mult + 0.5) / mult
+    return float_round_to(points * 1.0 / pulls, 2)
 end
 
 local function parseOfficerNote(note)

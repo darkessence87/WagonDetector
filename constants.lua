@@ -109,7 +109,7 @@ WD.RUNE_IDS = {
     [270058] = "/battle-scarred-augmentation",
 }
 
-WD.RuleTypes = {
+WD.EventTypes = {
     "EV_AURA",
     "EV_AURA_STACKS",
     "EV_DISPEL",

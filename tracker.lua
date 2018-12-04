@@ -4,6 +4,92 @@ WD.cache.tracker = {}
 
 local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
 
+local rootSpellIds = {
+       [339] = "Druid - entangling-roots",
+    [102359] = "Druid - talent mass-entanglement",
+    [117526] = "Hunter - binding-shot",
+     [33395] = "Mage - freeze",
+       [122] = "Mage - frost-nova",
+    [157997] = "Mage - talent ice-nova",
+}
+
+local controlSpellIds = {
+    [179057] = "DH - chaos-nova",
+    [217832] = "DH - prison",
+    [211881] = "DH - talent fel-eruption",
+    [207167] = "DK - talent blinding-sleet",
+     [91800] = "DK - pet gnaw",
+     [91797] = "DK - pet monstrous-blow",
+    [212337] = "DK - pet powerful-smash",
+    [212332] = "DK - pet smash",
+      [2637] = "Druid - hibernate",
+        [99] = "Druid - incapacitating-roar",
+      [5211] = "Druid - mighty-bash",
+    [236748] = "Druid - talent intimidating-roar",
+    [187650] = "Hunter - trap",
+     [31661] = "Mage - dragon breath",
+       [118] = "Mage - poly",
+     [28271] = "Mage - poly",
+     [28272] = "Mage - poly",
+     [61305] = "Mage - poly",
+     [61721] = "Mage - poly",
+     [61780] = "Mage - poly",
+    [126819] = "Mage - poly",
+    [161353] = "Mage - poly",
+    [161354] = "Mage - poly",
+    [161355] = "Mage - poly",
+    [161372] = "Mage - poly",
+    [277787] = "Mage - poly",
+    [277792] = "Mage - poly",
+    [119381] = "Monk - leg-sweep",
+    [115078] = "Monk - paralysis",
+     [31935] = "Paladin - avengers-shield",
+       [853] = "Paladin - hammer-of-justice",
+     [20066] = "Paladin - talent",
+    [115750] = "Paladin - talent",
+       [605] = "Priest - mind control",
+      [8122] = "Priest - psychic-scream",
+      [9484] = "Priest - shackles",
+     [15487] = "Priest - silence",
+     [64044] = "Priest - talent psychic-horror",
+    [199804] = "Rogue - between-the-eyes",
+      [2094] = "Rogue - blind",
+      [1833] = "Rogue - cheap-shot",
+      [1776] = "Rogue - gouge",
+       [408] = "Rogue - kidney-shot",
+     [51514] = "Shaman - hex",
+    [210873] = "Shaman - hex",
+    [211004] = "Shaman - hex",
+    [211010] = "Shaman - hex",
+    [211015] = "Shaman - hex",
+    [269352] = "Shaman - hex",
+    [277778] = "Shaman - hex",
+    [277784] = "Shaman - hex",
+    [118345] = "Shaman - pet pulverize",
+    [197214] = "Shaman - talent sundering",
+       [710] = "Warlock - banish",
+    [171017] = "Warlock - pet meteor-strike",
+    [171018] = "Warlock - pet meteor-strike",
+      [6358] = "Warlock - pet seduction",
+      [6789] = "Warlock - talent mortal-coil",
+     [30283] = "Warlock - shadowfury",
+      [5246] = "Warrior - intimidating-shout",
+    [107079] = "Racial Pandaren - quaking-palm",
+     [20549] = "Racial Tauren - war-stomp",
+}
+
+local knockbackSpellIds = {
+    [198813] = "DH - triggerred by 198793",
+     [49576] = "DK - grip",
+     [61391] = "Druid - Aura",                              --tested
+    [186387] = "Hunter - bursting-shot",
+    [157980] = "Mage - talent supernova",
+    [152175] = "Monk - TODO check whirling-dragon-punch",
+    [204263] = "Priest - talent shining-force",
+     [51490] = "Shaman - thunderstorm",
+      [6360] = "Warlock-pet Aura",
+}
+
 local potionSpellIds = {
     [279151] = "/battle-potion-of-intellect",
     [279152] = "/battle-potion-of-agility",
@@ -15,7 +101,7 @@ local potionSpellIds = {
 }
 
 local function createNpc(guid, name, unit_type)
-    if not name or not guid or guid == "" then return nil end
+    if not name or name == UNKNOWNOBJECT or not guid or guid == "" then return nil end
     local p = WD.cache.tracker[name]
     if not p then
         local v = {}
@@ -98,6 +184,13 @@ local function hasAura(unit, auraId)
     return nil
 end
 
+local function hasAnyAura(unit, auras)
+    for k,v in pairs(auras) do
+        if hasAura(unit, k) then return true end
+    end
+    return nil
+end
+
 local function hasNotAura(unit, auraId)
     if not unit.auras[auraId] then return true end
     return nil
@@ -118,9 +211,16 @@ local function startCast(unit, timestamp, spell_id)
     unit.casts.current_timestamp = timestamp
 end
 
-local function interruptCast(unit, timestamp, target_spell_id, interrupter)
+local function interruptCast(unit, timestamp, source_spell_id, target_spell_id, interrupter)
     if unit.casts.current_spell_id == 0 then return end
     if unit.casts.current_spell_id == target_spell_id then
+        if interrupter.type == "pet" then
+            local parent = findEntity(interrupter.parent_guid, interrupter.parent_name)
+            if parent then
+                interrupter = parent
+            end
+        end
+
         local i = 1
         if unit.casts[target_spell_id] then
             i = unit.casts[target_spell_id].count + 1
@@ -134,8 +234,8 @@ local function interruptCast(unit, timestamp, target_spell_id, interrupter)
         unit.casts[target_spell_id][i].percent = float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
         unit.casts[target_spell_id][i].interrupter = interrupter.name
+        unit.casts[target_spell_id][i].spell_id = source_spell_id
     end
-    unit.casts.current_spell_id = 0
 end
 
 local function finishCast(unit, timestamp, spell_id, result)
@@ -161,12 +261,17 @@ function WDMF:ProcessAuras(src, dst, ...)
     if event ~= "SPELL_AURA_APPLIED" and event ~= "SPELL_AURA_REMOVED" then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_APPLIED" then
-        if src then
-            src.auras[spell_id] = true
-        end
-
         if dst then
-            dst.auras[spell_id] = true
+            -- auras
+            dst.auras[spell_id] = src
+
+            -- interrupts
+            if knockbackSpellIds[spell_id] and not hasAnyAura(dst, rootSpellIds) then
+                interruptCast(dst, timestamp, spell_id, dst.casts.current_spell_id, src)
+            end
+            if controlSpellIds[spell_id] then
+                interruptCast(dst, timestamp, spell_id, dst.casts.current_spell_id, src)
+            end
 
             if rules[dst.role] and
                rules[dst.role]["EV_AURA"] and
@@ -180,10 +285,6 @@ function WDMF:ProcessAuras(src, dst, ...)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_REMOVED" then
-        if src then
-            src.auras[spell_id] = nil
-        end
-
         if dst then
             dst.auras[spell_id] = nil
 
@@ -214,6 +315,15 @@ function WDMF:ProcessCasts(src, dst, ...)
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
     if event ~= "SPELL_CAST_START" and event ~= "SPELL_CAST_SUCCESS" and event ~= "SPELL_MISS" and event ~= "SPELL_CAST_FAILED" and event ~= "SPELL_INTERRUPT" then return end
+
+    if src.type == "pet" then
+        local parent = findEntity(src.parent_guid, src.parent_name)
+        if parent then
+            src_name = getShortCharacterName(src.parent_name)
+            src = parent
+        end
+    end
+
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_START" then
         --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
@@ -226,7 +336,7 @@ function WDMF:ProcessCasts(src, dst, ...)
                rules[src.role]["EV_CAST_START"][spell_id][src_name]
             then
                 local p = rules[src.role]["EV_CAST_START"][spell_id][src_name].points
-                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, src.name, getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
             end
         end
     end
@@ -242,7 +352,7 @@ function WDMF:ProcessCasts(src, dst, ...)
                rules[src.role]["EV_CAST_END"][spell_id][src_name]
             then
                 local p = rules[src.role]["EV_CAST_END"][spell_id][src_name].points
-                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, src.name, getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
             end
         end
     end
@@ -278,7 +388,7 @@ function WDMF:ProcessCasts(src, dst, ...)
         end
 
         if dst then
-            interruptCast(dst, timestamp, target_spell_id, src)
+            interruptCast(dst, timestamp, spell_id, target_spell_id, src)
         end
     end
 end
@@ -288,11 +398,17 @@ function WDMF:ProcessSummons(src, ...)
     local timestamp, event, src_name, dst_guid, dst_name, spell_id = arg[1], arg[2], arg[5], arg[8], arg[9], tonumber(arg[12])
     if event ~= "SPELL_SUMMON" then return end
     if not dst_name then return end
+    --if src_name then print(event..' : src '..src_name) end
+    --if dst_name then print(event..' : dst '..dst_name) end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_SUMMON" then
         -- find parent by name
-        if src.type ~= "player" then return end
-        local parent = findEntity(src.guid, getFullCharacterName(src_name))
+        local parent = nil
+        if src.type == "player" then
+            parent = findEntity(src.guid, getFullCharacterName(src_name))
+        else
+            parent = findEntity(src.guid, src_name)
+        end
         if not parent then return end
 
         if parent.pet_guid then
@@ -305,18 +421,16 @@ function WDMF:ProcessSummons(src, ...)
             unit = "raidpet"..i
         elseif parent.unit == "player" then
             unit = "pet"
-        else
-            return
         end
 
         local v = createNpc(dst_guid, dst_name, unit)
         v.type = "pet"
         v.parent_guid = parent.guid
-        v.parent_name = parent.name
+        v.parent_name = src_name
         self.encounter.players[#self.encounter.players+1] = v
 
         if not parent.pets then parent.pets = {} end
-        parent.pets[#parent.pets+1] = { guid = v.guid, name = v.name }
+        parent.pets[#parent.pets+1] = v
     end
 end
 
@@ -382,25 +496,29 @@ function WDMF:Tracker_OnEvent(...)
         end
     end
     -----------------------------------------------------------------------------------------------------------------------
-    if event == "SPELL_DAMAGE" and
-        dst and
-        rules[dst.role]
-    then
-        local amount, overkill = tonumber(arg[15]), tonumber(arg[16])
-        local total = amount + overkill
-        if overkill == 0 then total = total + 1 end
+    if event == "SPELL_DAMAGE" then
+        -- interrupts
+        if knockbackSpellIds[spell_id] and not hasAnyAura(dst, rootSpellIds) then
+            interruptCast(dst, timestamp, spell_id, dst.casts.current_spell_id, src)
+        end
 
-        if overkill > -1 and rules[dst.role]["EV_DEATH"] and rules[dst.role]["EV_DEATH"][spell_id] then
-            local p = rules[dst.role]["EV_DEATH"][spell_id].points
-            self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DEATH, getSpellLinkByIdWithTexture(spell_id)), p)
-        else
-            if rules[dst.role]["EV_DAMAGETAKEN"] and rules[dst.role]["EV_DAMAGETAKEN"][spell_id] then
-                local damagetaken_rule = rules[dst.role]["EV_DAMAGETAKEN"][spell_id]
-                local p = damagetaken_rule.points
-                if damagetaken_rule.amount > 0 and total > damagetaken_rule.amount then
-                    self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, getSpellLinkByIdWithTexture(spell_id)), p)
-                elseif damagetaken_rule.amount == 0 and total > 0 then
-                    self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkByIdWithTexture(spell_id)), p)
+        if rules[dst.role] then
+            local amount, overkill = tonumber(arg[15]), tonumber(arg[16])
+            local total = amount + overkill
+            if overkill == 0 then total = total + 1 end
+
+            if overkill > -1 and rules[dst.role]["EV_DEATH"] and rules[dst.role]["EV_DEATH"][spell_id] then
+                local p = rules[dst.role]["EV_DEATH"][spell_id].points
+                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DEATH, getSpellLinkByIdWithTexture(spell_id)), p)
+            else
+                if rules[dst.role]["EV_DAMAGETAKEN"] and rules[dst.role]["EV_DAMAGETAKEN"][spell_id] then
+                    local damagetaken_rule = rules[dst.role]["EV_DAMAGETAKEN"][spell_id]
+                    local p = damagetaken_rule.points
+                    if damagetaken_rule.amount > 0 and total > damagetaken_rule.amount then
+                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, getSpellLinkByIdWithTexture(spell_id)), p)
+                    elseif damagetaken_rule.amount == 0 and total > 0 then
+                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkByIdWithTexture(spell_id)), p)
+                    end
                 end
             end
         end

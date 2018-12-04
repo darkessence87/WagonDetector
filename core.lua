@@ -119,6 +119,19 @@ local function saveFuckups()
     WD:RefreshGuildRosterFrame()
 end
 
+function WDMF:FindParent(unit)
+    local i = tonumber(string.match(unit, "%d+"))
+    for _,v in pairs(self.encounter.players) do
+        if i and unit:match("raidpet") then
+            local j = tonumber(string.match(v.unit, "%d+"))
+            if i == j then return v end
+        elseif unit == "pet" and v.unit == "player" then
+            return v
+        end
+    end
+    return nil
+end
+
 function WDMF:AddSuccess(timestamp, name, mark, msg, points)
     if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
         local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
@@ -307,8 +320,13 @@ function WDMF:CreateRaidMember(unit)
             self:CheckConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
         else
             p.type = "pet"
+            local parent = self:FindParent(p.unit)
+            p.parent_guid = parent.guid
+            p.parent_name = parent.name
         end
+        return p
     end
+    return nil
 end
 
 function WDMF:StartEncounter(encounterID, encounterName)
@@ -326,8 +344,12 @@ function WDMF:StartEncounter(encounterID, encounterName)
         self.encounter.players = {}
 
         for i=1, GetNumGroupMembers() do
-            self:CreateRaidMember("raid"..i)
-            self:CreateRaidMember("raidpet"..i)
+            local parent = self:CreateRaidMember("raid"..i)
+            local child = self:CreateRaidMember("raidpet"..i)
+            if parent and child then
+                if not parent.pets then parent.pets = {} end
+                parent.pets[#parent.pets+1] = child
+            end
         end
     elseif encounterName == "Test" then
         sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
@@ -339,8 +361,12 @@ function WDMF:StartEncounter(encounterID, encounterName)
         self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
         self.encounter.players = {}
 
-        self:CreateRaidMember("player")
-        self:CreateRaidMember("pet")
+        local parent = self:CreateRaidMember("player")
+        local child = self:CreateRaidMember("pet")
+        if parent and child then
+            if not parent.pets then parent.pets = {} end
+            parent.pets[#parent.pets+1] = child
+        end
     end
 
     if self.encounter.players then

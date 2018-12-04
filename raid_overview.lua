@@ -5,8 +5,7 @@ if not WD.cache then WD.cache = {} end
 WD.cache.raidroster = {}
 WD.cache.raidrosterkeys = {}
 
-local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
-local playerName = UnitName("player") .. "-" .. currentRealmName
+local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 
 local ClassSpecializations = {
 	["DEATHKNIGHT"] = {250, 251, 252},
@@ -98,17 +97,17 @@ local function getConsumables(unit)
         local _, _, _, _, _, _, _, _, _, spellId = UnitBuff(unit, index)
 
         -- flasks
-        if spellId and WD.FLASK_IDS[spellId] then
+        if spellId and WD.Spells.flasks[spellId] then
             flask = spellId
         end
 
         -- food
-        if spellId and WD.FOOD_IDS[spellId] then
+        if spellId and WD.Spells.food[spellId] then
             food = spellId
         end
 
         -- runes
-        if spellId and WD.RUNE_IDS[spellId] then
+        if spellId and WD.Spells.runes[spellId] then
             rune = spellId
         end
     end
@@ -265,7 +264,7 @@ local function updateRaidSpec(inspected)
             local unit = "raid"..i
             local name, realm = UnitName(unit)
             if not realm or realm == "" then
-                realm = currentRealmName
+                realm = WD.CurrentRealmName
             end
             local _,class = UnitClass(unit)
 
@@ -298,7 +297,7 @@ local function updateRaidSpec(inspected)
             if UnitInRaid(data.unit) then
                 local name, realm = UnitName(data.unit)
                 if not realm or realm == "" then
-                    realm = currentRealmName
+                    realm = WD.CurrentRealmName
                 end
                 name = name.."-"..realm
 
@@ -368,7 +367,7 @@ function WD:InitRaidOverviewModule(parent)
             local guid = ...
             local _,_,_,race,_,name,realm = GetPlayerInfoByGUID(guid)
             if not realm or realm == "" then
-                realm = currentRealmName
+                realm = WD.CurrentRealmName
             end
             name = name.."-"..realm
             if WD.cache.raidroster[name] then

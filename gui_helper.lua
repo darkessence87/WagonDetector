@@ -1,6 +1,4 @@
 
-local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
-
 function float_round_to(v, n)
     local mult = 10^n
     return math.floor(v * mult + 0.5) / mult
@@ -147,7 +145,7 @@ function getFullCharacterName(name)
     if string.find(name, "%-") then
         return name;
     else
-        return name .. "-" .. currentRealmName;
+        return name .. "-" .. WD.CurrentRealmName;
     end
 end
 
@@ -157,7 +155,7 @@ function getShortCharacterName(name, noRealm)
         return name
     end
 
-    if noRealm or currentRealmName == string.sub(name, dashIndex + 1) then
+    if noRealm or WD.CurrentRealmName == string.sub(name, dashIndex + 1) then
         return string.sub(name, 1, dashIndex - 1)
     else
         return name
@@ -374,7 +372,7 @@ function createEditBox(parent)
     input:EnableMouse(true)
     input:SetFrameStrata("DIALOG")
     input:SetAutoFocus(false)
-    input:SetMaxLetters(20)
+    input:SetMaxLetters(50)
     input:SetJustifyH("CENTER")
     input:SetFontObject("GameFontNormal")
     input:SetHyperlinksEnabled(true)
@@ -585,11 +583,11 @@ function createRuleWindow(parent)
     r.hiddenMenus["arg1_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg1_edit"]:Hide()
 
-    r.hiddenMenus["arg1_drop1"] = createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
-    r.hiddenMenus["arg1_drop1"].txt:SetJustifyH("CENTER")
-    r.hiddenMenus["arg1_drop1"]:SetSize(xSize, 20)
-    r.hiddenMenus["arg1_drop1"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg1_drop1"]:Hide()
+    r.hiddenMenus["arg1_drop"] = createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
+    r.hiddenMenus["arg1_drop"].txt:SetJustifyH("CENTER")
+    r.hiddenMenus["arg1_drop"]:SetSize(xSize, 20)
+    r.hiddenMenus["arg1_drop"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
+    r.hiddenMenus["arg1_drop"]:Hide()
 
     r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)
 
@@ -607,6 +605,6 @@ function showHiddenEditBox(parent, name, txt)
     parent.hiddenMenus[name]:EnableMouse(true)
     parent.hiddenMenus[name]:SetText(txt)
     parent.hiddenMenus[name]:SetScript("OnEscapePressed", function() parent.hiddenMenus[name]:SetText(txt); parent.hiddenMenus[name]:ClearFocus() end)
-    parent.hiddenMenus[name]:SetScript("OnEditFocusGained", function() parent.hiddenMenus[name]:SetText(""); end)
+    parent.hiddenMenus[name]:SetScript("OnEditFocusGained", function() parent.hiddenMenus[name]:SetCursorPosition(0) end)
     parent.hiddenMenus[name]:Show()
 end

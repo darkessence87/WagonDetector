@@ -25,3 +25,4 @@ raid_overview.lua
 gui.lua
 core.lua
 tracker.lua
+tracker_overview.lua

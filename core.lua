@@ -4,8 +4,7 @@ local WDMF = WD.mainFrame
 WDMF.encounter = {}
 WDMF.encounter.isBlockedByAnother = 0
 
-local currentRealmName = string.gsub(GetRealmName(), "%s+", "")
-local playerName = UnitName("player") .. "-" .. currentRealmName
+local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 
 function getTimedDiff(startTime, endTime)
     if startTime == nil or endTime == nil then return end
@@ -223,17 +222,17 @@ function WDMF:CheckConsumables(timestamp, name, unit, rules)
         local _, _, _, _, _, _, _, _, _, spellId = UnitBuff(unit, index)
 
         -- flasks
-        if spellId and WD.FLASK_IDS[spellId] then
+        if spellId and WD.Spells.flasks[spellId] then
             noflask = false
         end
 
         -- food
-        if spellId and WD.FOOD_IDS[spellId] then
+        if spellId and WD.Spells.food[spellId] then
             nofood = false
         end
 
         -- runes
-        if spellId and WD.RUNE_IDS[spellId] then
+        if spellId and WD.Spells.runes[spellId] then
             norune = false
         end
     end
@@ -296,9 +295,9 @@ end
 
 function WDMF:CreateRaidMember(unit)
     local name, realm = UnitName(unit)
-    if not name then return end
+    if not name then return nil end
     if not realm or realm == "" then
-        realm = currentRealmName
+        realm = WD.CurrentRealmName
     end
     local _,class = UnitClass(unit)
 
@@ -307,6 +306,7 @@ function WDMF:CreateRaidMember(unit)
     p.unit = unit
     p.class = class
     p.guid = UnitGUID(p.unit)
+    p.rt = 0
 
     if UnitIsVisible(p.unit) then
         if WD.cache.raidroster[p.name] then
@@ -320,6 +320,7 @@ function WDMF:CreateRaidMember(unit)
             self:CheckConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
         else
             p.type = "pet"
+            p.name = getShortCharacterName(p.name)
             local parent = self:FindParent(p.unit)
             p.parent_guid = parent.guid
             p.parent_name = parent.name
@@ -414,6 +415,7 @@ function WDMF:ResetEncounter()
 end
 
 function WDMF:StartPull()
+    self:Init()
     self:RegisterEvent("ENCOUNTER_START")
     self:RegisterEvent("ENCOUNTER_END")
 end

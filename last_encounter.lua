@@ -15,7 +15,7 @@ function WD:InitLastEncounterModule(parent)
     table.insert(WDLE.headers, h)
     h = createTableHeaderNext(WDLE, h, WD_BUTTON_POINTS_SHORT, 50, 20)
     table.insert(WDLE.headers, h)
-    h = createTableHeaderNext(WDLE, h, WD_BUTTON_REASON, 300, 20)
+    h = createTableHeaderNext(WDLE, h, WD_BUTTON_REASON, 450, 20)
     table.insert(WDLE.headers, h)
 
     WDLE:SetScript("OnShow", function() WD:RefreshLastEncounterFrame() end)

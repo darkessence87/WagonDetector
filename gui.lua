@@ -177,6 +177,8 @@ local function createModuleFrame(name)
         WD:InitHistoryModule(m)
     elseif name == "raid_overview" then
         WD:InitRaidOverviewModule(m)
+    elseif name == "tracker_overview" then
+        WD:InitTrackerOverviewModule(m)
     elseif name == "help" then
         WD:InitHelpModule(m)
     end
@@ -214,21 +216,32 @@ function WD:CreateGuiFrame()
             local x, y = 20, -30
             local dy = -21
             local mainF = createModuleFrame("main")
-            createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, x, y)
-            local encF = createModuleFrame("encounters")
-            createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, x, y + dy)
-            local statRulesF = createModuleFrame("encounters_statistics")
-            createModuleButton(statRulesF, WD_BUTTON_TRACKING_RULES_MODULE, x, y + 2 * dy)
+            local i = 0
+            createModuleButton(mainF, WD_BUTTON_MAIN_MODULE, x, y + i * dy)
             local pointsF = createModuleFrame("guild_roster")
-            createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, x, y + 3 * dy)
+            i = i + 1
+            createModuleButton(pointsF, WD_BUTTON_GUILD_ROSTER_MODULE, x, y + i * dy)
             local raidF = createModuleFrame("raid_overview")
-            createModuleButton(raidF, WD_BUTTON_RAID_OVERVIEW_MODULE, x, y + 4 * dy)
+            i = i + 1
+            createModuleButton(raidF, WD_BUTTON_RAID_OVERVIEW_MODULE, x, y + i * dy)
+            local encF = createModuleFrame("encounters")
+            i = i + 1
+            createModuleButton(encF, WD_BUTTON_ENCOUNTERS_MODULE, x, y + i * dy)
+            local statRulesF = createModuleFrame("encounters_statistics")
+            i = i + 1
+            createModuleButton(statRulesF, WD_BUTTON_TRACKING_RULES_MODULE, x, y + i * dy)
+            local trackerF = createModuleFrame("tracker_overview")
+            i = i + 1
+            createModuleButton(trackerF, WD_BUTTON_TRACKING_OVERVIEW_MODULE, x, y + i * dy)
             local lastEncF = createModuleFrame("last_encounter")
-            createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, x, y + 5 * dy)
+            i = i + 1
+            createModuleButton(lastEncF, WD_BUTTON_LAST_ENCOUNTER_MODULE, x, y + i * dy)
             local historyF = createModuleFrame("history")
-            createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, x, y + 6 * dy)
+            i = i + 1
+            createModuleButton(historyF, WD_BUTTON_HISTORY_MODULE, x, y + i * dy)
             local helpF = createModuleFrame("help")
-            createModuleButton(helpF, WD_BUTTON_HELP_MODULE, x, y + 7 * dy)
+            i = i + 1
+            createModuleButton(helpF, WD_BUTTON_HELP_MODULE, x, y + i * dy)
             hideModules()
             WDGF:UnregisterEvent("PLAYER_ENTERING_WORLD")
         elseif event == "GUILD_ROSTER_UPDATE" then

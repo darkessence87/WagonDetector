@@ -8,7 +8,7 @@ local function getInterruptStatusText(v)
     elseif v.status == "SUCCESS" then
         return "|cffff0000Casted!|r"
     end
-    
+
     return v.status
 end
 
@@ -40,7 +40,7 @@ local function updateInterruptsInfo(v)
                     else
                         member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
                     end
-                    
+
                     index = index + 1
                     addNextColumn(parent, member, index, "CENTER", getTimedDiff(core.encounter.startTime, v.timestamp))
                     index = index + 1
@@ -50,7 +50,7 @@ local function updateInterruptsInfo(v)
                     index = index + 1
                     local percent = v.percent or 0
                     addNextColumn(parent, member, index, "CENTER", percent)
-                    
+
                     table.insert(parent.members, member)
                 else
                     local member = parent.members[n]
@@ -125,7 +125,7 @@ function WD:RefereshTrackedCreatures()
             end
         end
     end
-    
+
     local func = function(a, b)
         return a.name < b.name
     end
@@ -150,7 +150,7 @@ function WD:RefereshTrackedCreatures()
             else
                 member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
             end
-            
+
             member.column[index]:EnableMouse(true)
             member.column[index]:SetScript("OnClick", function(self) resetColor(); updateInterruptsInfo(v); self.t:SetColorTexture(.2, .6, .2, 1) end)
 
@@ -171,7 +171,7 @@ function WD:RefereshTrackedCreatures()
             WDTO.creatures.members[i]:Hide()
         end
     end
-    
+
     resetColor()
 end
 
@@ -184,9 +184,9 @@ function WD:InitTrackerOverviewModule(parent)
     WDTO.creatures.members = {}
 
     table.insert(WDTO.creatures.headers, createTableHeader(WDTO, "Creatures", 1, -30, 250, 25))
-    
+
     WDTO:SetScript("OnShow", self.RefereshTrackedCreatures)
-    
+
     initInterruptsInfoTable()
 
     function WDTO:OnUpdate()

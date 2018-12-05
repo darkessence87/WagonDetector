@@ -608,3 +608,16 @@ function showHiddenEditBox(parent, name, txt)
     parent.hiddenMenus[name]:SetScript("OnEditFocusGained", function() parent.hiddenMenus[name]:SetCursorPosition(0) end)
     parent.hiddenMenus[name]:Show()
 end
+
+function generateSpellHover(frame, searchIn)
+    frame:SetScript("OnEnter", function(self)
+        local _, _, spellId = string.find(searchIn, "|Hspell:(.+)|h ")
+        if spellId then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetHyperlink(getSpellLinkById(spellId))
+            GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
+            GameTooltip:Show()
+        end
+    end)
+    frame:SetScript("OnLeave", function() GameTooltip_Hide() end)
+end

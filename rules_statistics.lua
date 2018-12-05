@@ -257,7 +257,7 @@ local function initSelectedRuleMenu()
         elseif i == m then
             r:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT", 1, 0)
         else
-            r:SetPoint("TOPLEFT", parent.hiddenMenus["selected_rule_"..(i-1)], "TOPRIGHT", 1, 0)
+            r:SetPoint("TOPLEFT", parent.hiddenMenus["selected_rule_"..(i-1)], "TOPRIGHT", 0, 0)
         end
 
         parent.hiddenMenus["selected_rule_"..i] = r

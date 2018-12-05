@@ -103,6 +103,8 @@ WD.RoleTypes = {
     "NOT_TANK"
 }
 
+WD.MIN_CAST_TIME_TRACKED = 150 -- in msec
+
 WD.Spells = {}
 WD.Spells.flasks = {
     [251837] = "/flask-of-endless-fathoms",

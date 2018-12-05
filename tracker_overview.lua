@@ -6,13 +6,14 @@ local function getInterruptStatusText(v)
         local str = "Interrupted by %s's %s in %s sec"
         return string.format(str, getShortCharacterName(v.interrupter), getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
-        return "|cffff0000Casted!|r"
+        local str = "|cffff0000Casted in %s sec!|r"
+        return string.format(str, v.timediff)
     end
 
     return v.status
 end
 
-local function updateInterruptsInfo(v)
+local function updateInterruptsInfo()
     local core = WD.mainFrame
     local parent = WDTO.data["interrupts"]
 
@@ -20,8 +21,28 @@ local function updateInterruptsInfo(v)
         v:Hide()
     end
 
-    if not v then return end
+    if not WDTO.lastSelectedCreature then return end
+    local v = WDTO.lastSelectedCreature:GetParent().info
 
+    local maxWidth = 30
+    local maxHeight = 210
+    for i=1,#parent.headers do
+        maxWidth = maxWidth + parent.headers[i]:GetWidth() + 1
+    end
+
+    local totalCasts = 0
+    for _,castInfo in pairs(v.casts) do
+        if type(castInfo) == "table" then
+            totalCasts = totalCasts + #castInfo
+        end
+    end
+
+    local scroller = parent.scroller or createScroller(parent, maxWidth, maxHeight, totalCasts)
+    if not parent.scroller then
+        parent.scroller = scroller
+    end
+
+    local x, y = 30, -51
     local n = 0
     for spell_id,castInfo in pairs(v.casts) do
         if type(castInfo) == "table" then
@@ -29,9 +50,9 @@ local function updateInterruptsInfo(v)
                 n = n + 1
                 local v = castInfo[k]
                 if not parent.members[n] then
-                    local member = CreateFrame("Frame", nil, parent.headers[1])
+                    local member = CreateFrame("Frame", nil, parent.scroller.scrollerChild)
                     member:SetSize(parent.headers[1]:GetSize())
-                    member:SetPoint("TOPLEFT", parent.headers[1], "BOTTOMLEFT", 0, -1)
+                    member:SetPoint("TOPLEFT", parent.scroller.scrollerChild, "TOPLEFT", x, y)
                     member.column = {}
 
                     local index = 1
@@ -42,6 +63,8 @@ local function updateInterruptsInfo(v)
                     else
                         member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
                     end
+                    generateSpellHover(member.column[index], getSpellLinkByIdWithTexture(spell_id))
+
 
                     index = index + 1
                     addNextColumn(parent, member, index, "CENTER", getTimedDiff(core.encounter.startTime, v.timestamp))
@@ -57,6 +80,7 @@ local function updateInterruptsInfo(v)
                 else
                     local member = parent.members[n]
                     member.column[1].txt:SetText(getSpellLinkByIdWithTexture(spell_id))
+                    generateSpellHover(member.column[1], getSpellLinkByIdWithTexture(spell_id))
                     member.column[2].txt:SetText(getTimedDiff(core.encounter.startTime, v.timestamp))
                     member.column[3].txt:SetText(k)
                     member.column[4].txt:SetText(getInterruptStatusText(v))
@@ -64,8 +88,15 @@ local function updateInterruptsInfo(v)
                     member.column[5].txt:SetText(percent)
 
                     member:Show()
+                    updateScroller(parent.scroller.slider, totalCasts)
                 end
             end
+        end
+    end
+
+    if totalCasts < #parent.members then
+        for i=totalCasts+1, #parent.members do
+            parent.members[i]:Hide()
         end
     end
 
@@ -98,14 +129,18 @@ local function initInterruptsInfoTable()
     r:Hide()
 end
 
-local function resetColor()
+local function updateCreatureButtons()
     for _,v in pairs(WDTO.creatures.members) do
         v.column[1].t:SetColorTexture(.2, .2, .2, 1)
+    end
+
+    if WDTO.lastSelectedCreature then
+        WDTO.lastSelectedCreature.t:SetColorTexture(.2, .6, .2, 1)
+        updateInterruptsInfo()
     end
 end
 
 local function isValidNpc(v)
-    if v.type == "player" then return nil end
     for spell_id,castInfo in pairs(v.casts) do
         if type(castInfo) == "table" and #castInfo > 0 then
             return true
@@ -114,18 +149,23 @@ local function isValidNpc(v)
     return nil
 end
 
-function WD:RefereshTrackedCreatures()
+function WD:RefreshTrackedCreatures()
     if not WDTO then return end
 
     local creatures = {}
-    for name,info in pairs(WD.cache.tracker) do
-        for guid,npc in pairs(info) do
+    for npcId,data in pairs(WD.cache.tracker.npc) do
+        for guid,npc in pairs(data) do
             if type(npc) == "table" then
                 if isValidNpc(npc) then
                     creatures[#creatures+1] = npc
                 end
             end
         end
+    end
+
+    if WDTO.lastSelectedCreature and #creatures == 0 then
+        WDTO.lastSelectedCreature = nil
+        updateInterruptsInfo()
     end
 
     local func = function(a, b)
@@ -139,7 +179,6 @@ function WD:RefereshTrackedCreatures()
             local member = CreateFrame("Frame", nil, WDTO.creatures.headers[1])
             member.info = v
             member:SetSize(WDTO.creatures.headers[1]:GetSize())
-            member:SetPoint("TOPLEFT", WDTO.creatures.headers[1], "BOTTOMLEFT", 0, -1)
             member.column = {}
 
             local index = 1
@@ -147,22 +186,27 @@ function WD:RefereshTrackedCreatures()
             if v.rt > 0 then creatureName = getRaidTargetTextureLink(v.rt).." "..creatureName end
             addNextColumn(WDTO.creatures, member, index, "LEFT", creatureName)
             if k > 1 then
-                member.column[index]:SetPoint("TOPLEFT", WDTO.creatures.members[k - 1], "BOTTOMLEFT", 0, -1)
                 member:SetPoint("TOPLEFT", WDTO.creatures.members[k - 1], "BOTTOMLEFT", 0, -1)
+                member.column[index]:SetPoint("TOPLEFT", WDTO.creatures.members[k - 1], "BOTTOMLEFT", 0, -1)
             else
+                member:SetPoint("TOPLEFT", WDTO.creatures.headers[1], "BOTTOMLEFT", 0, -2)
                 member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
             end
 
             member.column[index]:EnableMouse(true)
-            member.column[index]:SetScript("OnClick", function(self) resetColor(); updateInterruptsInfo(v); self.t:SetColorTexture(.2, .6, .2, 1) end)
+            member.column[index]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
 
             table.insert(WDTO.creatures.members, member)
         else
             local member = WDTO.creatures.members[k]
+            if WDTO.lastSelectedCreature and WDTO.lastSelectedCreature:GetParent().info.guid == member.info.guid then
+                WDTO.lastSelectedCreature = member.column[1]
+            end
             local creatureName = v.name
             if v.rt > 0 then creatureName = getRaidTargetTextureLink(v.rt).." "..creatureName end
             member.column[1].txt:SetText(creatureName)
-            member.column[1]:SetScript("OnClick", function(self) resetColor(); updateInterruptsInfo(v); self.t:SetColorTexture(.2, .6, .2, 1) end)
+            member.column[1]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
+            member.info = v
 
             member:Show()
         end
@@ -174,7 +218,10 @@ function WD:RefereshTrackedCreatures()
         end
     end
 
-    resetColor()
+    if not WDTO.lastSelectedCreature and #creatures > 0 then
+        WDTO.lastSelectedCreature = WDTO.creatures.members[1].column[1]
+    end
+    updateCreatureButtons()
 end
 
 function WD:InitTrackerOverviewModule(parent)
@@ -187,11 +234,11 @@ function WD:InitTrackerOverviewModule(parent)
 
     table.insert(WDTO.creatures.headers, createTableHeader(WDTO, "Creatures", 1, -30, 300, 20))
 
-    WDTO:SetScript("OnShow", function(self) updateInterruptsInfo(); WD:RefereshTrackedCreatures() end)
+    WDTO:SetScript("OnShow", function(self) WD:RefreshTrackedCreatures() end)
 
     initInterruptsInfoTable()
 
     function WDTO:OnUpdate()
-        WD:RefereshTrackedCreatures()
+        WD:RefreshTrackedCreatures()
     end
 end

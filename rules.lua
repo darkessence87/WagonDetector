@@ -336,17 +336,7 @@ local function updateRuleLines()
             addNextColumn(WDRM, ruleLine, index, "LEFT", v.role)
             index = index + 1
             addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
-            ruleLine.column[index]:SetScript("OnEnter", function(self)
-                local reason = getRuleDescription(v)
-                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h ")
-                if spellId then
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
-                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
-                    GameTooltip:Show()
-                end
-            end)
-            ruleLine.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
+            generateSpellHover(ruleLine.column[index], getRuleDescription(v))
 
             index = index + 1
             addNextColumn(WDRM, ruleLine, index, "CENTER", v.points)
@@ -388,16 +378,7 @@ local function updateRuleLines()
             end)
             ruleLine.column[3].txt:SetText(v.role)
             ruleLine.column[4].txt:SetText(getRuleDescription(v))
-            ruleLine.column[4]:SetScript("OnEnter", function(self)
-                local reason = getRuleDescription(v)
-                local _, _, spellId = string.find(reason, "|Hspell:(.+)|h ")
-                if spellId then
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
-                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
-                    GameTooltip:Show()
-                end
-            end)
+            generateSpellHover(ruleLine.column[4], getRuleDescription(v))
 
             ruleLine.column[5].txt:SetText(v.points)
             ruleLine.column[6]:SetScript("OnClick", function() editRuleLine(ruleLine); end)

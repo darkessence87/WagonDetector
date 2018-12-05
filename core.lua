@@ -2,7 +2,10 @@
 WD.mainFrame = CreateFrame("Frame")
 local WDMF = WD.mainFrame
 WDMF.encounter = {}
+WDMF.encounter.players = {}
+WDMF.encounter.rules = {}
 WDMF.encounter.isBlockedByAnother = 0
+WDMF.encounter.isActive = 0
 
 local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 
@@ -264,11 +267,9 @@ function WDMF:OnUpdate()
 end
 
 function WDMF:OnCombatEvent(...)
-    if self.encounter.interrupted == 1 then
+    if self.encounter.interrupted == 1 or self.encounter.isActive == 0 then
         return
     end
-
-    if not WDMF.encounter.rules then return end
 
     self:Tracker_OnEvent(...)
 end
@@ -322,8 +323,8 @@ function WDMF:CreateRaidMember(unit)
             p.type = "pet"
             p.name = getShortCharacterName(p.name)
             local parent = self:FindParent(p.unit)
-            p.parent_guid = parent.guid
-            p.parent_name = parent.name
+            p.parentGuid = parent.guid
+            p.parentName = parent.name
         end
         return p
     end
@@ -337,6 +338,8 @@ function WDMF:StartEncounter(encounterID, encounterName)
     if UnitInRaid("player") ~= nil then
         sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
         WD:AddPullHistory(encounterName)
+
+        self.encounter.isActive = 1
 
         self.encounter.id = encounterID
         self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
@@ -352,9 +355,14 @@ function WDMF:StartEncounter(encounterID, encounterName)
                 parent.pets[#parent.pets+1] = child
             end
         end
+
+        self:Tracker_OnStartEncounter(self.encounter.players)
+        return
     elseif encounterName == "Test" then
         sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
         WD:AddPullHistory(encounterName)
+
+        self.encounter.isActive = 1
 
         self.encounter.id = encounterID
         self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
@@ -368,16 +376,15 @@ function WDMF:StartEncounter(encounterID, encounterName)
             if not parent.pets then parent.pets = {} end
             parent.pets[#parent.pets+1] = child
         end
-    end
 
-    if self.encounter.players then
         self:Tracker_OnStartEncounter(self.encounter.players)
+        return
     end
 end
 
 function WDMF:StopEncounter()
     if not self.encounter.startTime or self.encounter.startTime == 0 then return end
-    if self.encounter.stopped == 1 then return end
+    if self.encounter.isActive == 0 then return end
     self.encounter.endTime = time()
 
     if self.encounter.isBlockedByAnother == 0 then
@@ -395,7 +402,7 @@ function WDMF:StopEncounter()
         WD:RefreshGuildRosterFrame()
     end
 
-    self.encounter.stopped = 1
+    self.encounter.isActive = 0
     sendMessage(string.format(WD_ENCOUNTER_STOP, self.encounter.name, getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)))
 
     self:Tracker_OnStopEncounter()
@@ -411,7 +418,7 @@ function WDMF:ResetEncounter()
     self.encounter.players = {}
     self.encounter.deaths = 0
     self.encounter.interrupted = 0
-    self.encounter.stopped = 0
+    self.encounter.isActive = 0
 end
 
 function WDMF:StartPull()

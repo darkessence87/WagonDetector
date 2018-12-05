@@ -1,6 +1,9 @@
 
 local WDMF = WD.mainFrame
 WD.cache.tracker = {}
+WD.cache.tracker.npc = {}
+WD.cache.tracker.pets = {}
+WD.cache.tracker.players = {}
 
 local callbacks = {}
 local function registerCallback(callback, ...)
@@ -14,85 +17,131 @@ local function getNpcId(guid)
     return select(6, strsplit("-", guid))
 end
 
-local function loadEntity(guid, name, unit_type)
+local function createEntity(guid, name, unit_type, parentGuid, parentName)
+    local v = {}
+    v.guid = guid
+    v.name = name
+    v.type = unit_type
+    v.parentGuid = parentGuid
+    v.parentName = parentName
+    v.auras = {}
+    v.casts = {}
+    v.casts.current_spell_id = 0
+    return v
+end
+
+local function findEntityIndex(holder, guid)
+    for i=1,#holder do
+        if holder[i] and holder[i].guid == guid then return i end
+    end
+    return nil
+end
+
+local function findEntity(holder, guid, name)
+    if not name or not guid then return nil end
+    if not holder[name] or not holder[name][guid] then return nil end
+    return holder[name][guid]
+end
+
+local function loadNpc(guid, name)
+    local npcId = getNpcId(guid)
+    local holder = WD.cache.tracker.npc[npcId]
+    if not holder then
+        WD.cache.tracker.npc[npcId] = {}
+        holder = WD.cache.tracker.npc[npcId]
+        holder[#holder+1] = createEntity(guid, name, "creature")
+        return holder[1]
+    end
+
+    local index = findEntityIndex(holder, guid)
+    if not index then
+        if #holder == 1 then
+            holder[1].name = holder[1].name.."-1"
+        end
+        local npc = createEntity(guid, name.."-"..(#holder + 1), "creature")
+        holder[#holder+1] = npc
+        return npc
+    end
+    return holder[index]
+end
+
+local function loadPet(guid, name, parentGuid, parentName)
+    if not WD.cache.tracker.players[parentGuid] and not WD.cache.tracker.npc[parentGuid] then return nil end
+
+    local holder = WD.cache.tracker.pets[name]
+    if not holder then
+        WD.cache.tracker.pets[name] = {}
+        holder = WD.cache.tracker.pets[name]
+        holder[#holder+1] = createEntity(guid, name, "pet", parentGuid, parentName)
+        return holder[1]
+    end
+
+    local index = findEntityIndex(holder, guid)
+    if not index then
+        if #holder == 1 then
+            holder[1].name = holder[1].name.."-1"
+        end
+        local pet = createEntity(guid, name.."-"..(#holder + 1), "pet", parentGuid, parentName)
+        holder[#holder+1] = pet
+        return pet
+    end
+    return holder[index]
+end
+
+local function loadPlayer(guid, name)
+    if not WD.cache.tracker.players[guid] then
+        WD.cache.tracker.players[guid] = {}
+        WD.cache.tracker.players[guid] = createEntity(guid, name, "player")
+    end
+    return WD.cache.tracker.players[guid]
+end
+
+local function loadEntity(guid, name, unit_type, parentGuid)
     if not name or not guid or guid == "" then
         --print('no name or no guid')
         return nil
     end
     if name == UNKNOWNOBJECT then
-        --print('trying to find guid by name next time')
+        --[[print('trying to find guid by name next time')
+        if WD.cache.tracker[UNKNOWNOBJECT] and WD.cache.tracker[UNKNOWNOBJECT][guid] then
+            WD.cache.tracker[key] = WD.cache.tracker[UNKNOWNOBJECT]
+            WD.cache.tracker[key][guid].name = name
+            WD.cache.tracker[UNKNOWNOBJECT] = nil
+            return WD.cache.tracker[key][guid]
+        end
+        ]]
         return nil
     end
-    local p = WD.cache.tracker[name]
-    if not p then
-        if WD.cache.tracker[UNKNOWNOBJECT] and WD.cache.tracker[UNKNOWNOBJECT][guid] then
-            WD.cache.tracker[name] = WD.cache.tracker[UNKNOWNOBJECT]
-            WD.cache.tracker[name][guid].name = name
-            WD.cache.tracker[UNKNOWNOBJECT] = nil
-            return WD.cache.tracker[name][guid]
-        end
 
-        local v = {}
-        v.name = name
-        v.unit = ""
-        v.class = 0
-        v.guid = guid
-        v.type = unit_type or "creature"
-        v.auras = {}
-        v.casts = {}
-        v.casts.current_spell_id = 0
-        WD.cache.tracker[v.name] = {}
-        local t = WD.cache.tracker[v.name]
-        t[guid] = v
-        t.count = 1
-        return v
-    elseif not p[guid] then
-        if p.count == 1 then
-            for _,v in pairs(p) do
-                if type(v) == "table" then
-                    v.name = name.."-"..p.count
-                end
-            end
-        end
-        p.count = p.count + 1
-        local v = {}
-        v.name = name.."-"..p.count
-        v.unit = ""
-        v.class = 0
-        v.guid = guid
-        v.type = unit_type or "creature"
-        v.auras = {}
-        v.casts = {}
-        v.casts.current_spell_id = 0
-        p[guid] = v
-        return v
+    if unit_type == "creature" then
+        return loadNpc(guid, name)
+    elseif unit_type == "pet" then
+        return loadPet(guid, name, parentGuid)
+    elseif unit_type == "player" then
+        return loadPlayer(guid, name)
     end
 
-    return p[guid]
+    return nil
 end
 
 local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
     local src = nil
     if WD:IsNpc(src_flags) then
-        src = loadEntity(src_guid, src_name)
+        src = loadEntity(src_guid, src_name, "creature")
     elseif WD:IsPet(src_flags) then
         src = loadEntity(src_guid, src_name, "pet")
     elseif src_name then
         src_name = getFullCharacterName(src_name)
-        if WD.cache.tracker[src_name] then
-            src = WD.cache.tracker[src_name][src_guid]
-        end
+        src = loadEntity(src_guid, src_name, "player")
     end
     local dst = nil
     if WD:IsNpc(dst_flags) then
-        dst = loadEntity(dst_guid, dst_name)
+        dst = loadEntity(dst_guid, dst_name, "creature")
     elseif WD:IsPet(dst_flags) then
         dst = loadEntity(dst_guid, dst_name, "pet")
     elseif dst_name then
         dst_name = getFullCharacterName(dst_name)
-        if WD.cache.tracker[dst_name] then
-            dst = WD.cache.tracker[dst_name][dst_guid]
-        end
+        dst = loadEntity(dst_guid, dst_name, "player")
     end
 
     local src_role, dst_role = "", ""
@@ -104,12 +153,6 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
     if dst then dst.rt = WD:GetRaidTarget(dst_raid_flags) end
 
     return src, dst
-end
-
-local function findEntity(guid, name)
-    if not name or not guid then return nil end
-    if not WD.cache.tracker[name] or not WD.cache.tracker[name][guid] then return nil end
-    return WD.cache.tracker[name][guid]
 end
 
 local function hasAura(unit, auraId)
@@ -181,6 +224,8 @@ local function interruptCast(unit, unit_name, timestamp, source_spell_id, target
                 end
             end
         end
+
+        WD:RefreshTrackedCreatures()
     end
 
     unit.casts.current_spell_id = 0
@@ -189,16 +234,22 @@ end
 local function finishCast(unit, timestamp, spell_id, result)
     if unit.casts.current_spell_id == 0 then return end
     if unit.casts.current_spell_id == spell_id and result ~= "FAILED" then
-        local i = 1
-        if unit.casts[spell_id] then
-            i = unit.casts[spell_id].count + 1
-        else
-            unit.casts[spell_id] = {}
+        local diff = (timestamp - unit.casts.current_timestamp) * 1000
+        if diff >= WD.MIN_CAST_TIME_TRACKED then
+            local i = 1
+            if unit.casts[spell_id] then
+                i = unit.casts[spell_id].count + 1
+            else
+                unit.casts[spell_id] = {}
+            end
+            unit.casts[spell_id].count = i
+            unit.casts[spell_id][i] = {}
+            unit.casts[spell_id][i].status = result
+            unit.casts[spell_id][i].timestamp = timestamp
+            unit.casts[spell_id][i].timediff = float_round_to(diff / 1000, 2)
+
+            WD:RefreshTrackedCreatures()
         end
-        unit.casts[spell_id].count = i
-        unit.casts[spell_id][i] = {}
-        unit.casts[spell_id][i].status = result
-        unit.casts[spell_id][i].timestamp = timestamp
     end
     unit.casts.current_spell_id = 0
 end
@@ -213,28 +264,14 @@ function WDMF:ProcessSummons(src, dst, ...)
         -- find parent by name
         local parent = nil
         if src.type == "player" then
-            parent = findEntity(src.guid, getFullCharacterName(src_name))
+            parent = findEntity(WD.cache.tracker.players, src.guid, getFullCharacterName(src_name))
         else
-            parent = findEntity(src.guid, src_name)
+            local index = findEntityIndex(WD.cache.tracker.npc, src.guid, src_name)
+            if index then parent = WD.cache.tracker.npc[index] end
         end
         if not parent then return end
 
-        local unit = ""
-        if parent.unit:match("raid") then
-            local i = tonumber(string.match(parent.unit, "%d+"))
-            unit = "raidpet"..i
-        elseif parent.unit == "player" then
-            unit = "pet"
-        end
-
-        local v = loadEntity(dst_guid, dst_name, unit)
-        v.type = "pet"
-        v.parent_guid = parent.guid
-        v.parent_name = parent.name
-        self.encounter.players[#self.encounter.players+1] = v
-
-        if not parent.pets then parent.pets = {} end
-        parent.pets[#parent.pets+1] = v
+        loadPet(dst_guid, dst_name, parent.guid, parent.name)
     end
 end
 
@@ -509,19 +546,21 @@ function WDMF:Init()
 end
 
 function WDMF:Tracker_OnStartEncounter(raiders)
-    table.wipe(WD.cache.tracker)
+    table.wipe(WD.cache.tracker.npc)
+    table.wipe(WD.cache.tracker.pets)
+    table.wipe(WD.cache.tracker.players)
 
     for k,v in pairs(raiders) do
-        v.auras = {}
-        v.casts = {}
-        v.casts.current_spell_id = 0
-        WD.cache.tracker[v.name] = {}
-        local t = WD.cache.tracker[v.name]
-        t[v.guid] = v
         if v.type == "pet" then
-            if t.count then t.count = t.count + 1 else t.count = 1 end
+            local p = loadPet(v.guid, v.name, v.parentGuid, v.parentName)
+            p.rt = v.rt
+        else
+            local p = loadPlayer(v.guid, v.name)
+            p.rt = v.rt
         end
     end
+
+    WD:RefreshTrackedCreatures()
 end
 
 function WDMF:Tracker_OnStopEncounter()

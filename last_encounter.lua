@@ -67,16 +67,7 @@ function WD:RefreshLastEncounterFrame()
             addNextColumn(WDLE, member, index, "CENTER", v.points)
             index = index + 1
             addNextColumn(WDLE, member, index, "LEFT", v.reason)
-            member.column[index]:SetScript("OnEnter", function(self)
-                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h ")
-                if spellId then
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
-                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
-                    GameTooltip:Show()
-                end
-            end)
-            member.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
+            generateSpellHover(member.column[index], v.reason)
 
             table.insert(WDLE.members, member)
         else
@@ -88,15 +79,7 @@ function WD:RefreshLastEncounterFrame()
             member.column[3].txt:SetText(v.role)
             member.column[4].txt:SetText(v.points)
             member.column[5].txt:SetText(v.reason)
-            member.column[5]:SetScript("OnEnter", function(self)
-                local _, _, spellId = string.find(v.reason, "|Hspell:(.+)|h ")
-                if spellId then
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetHyperlink(getSpellLinkById(spellId))
-                    GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
-                    GameTooltip:Show()
-                end
-            end)
+            generateSpellHover(member.column[5], v.reason)
             member:Show()
             updateScroller(WDLE.scroller.slider, #core.encounter.fuckers)
         end

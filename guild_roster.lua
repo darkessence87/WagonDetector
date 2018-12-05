@@ -143,9 +143,9 @@ end
 local function initClassRoster()
     local d = #WDGR.headers
     local x, y = 500, -30
-    local h = createTableHeader(WDGR, WD_BUTTON_CLASS, x, y, 125, 20)
+    local h = createTableHeader(WDGR, WD_BUTTON_CLASS, x, y,    125, 20)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_CLASS_NUMBER, 50, 20)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_CLASS_NUMBER,   50, 20)
     table.insert(WDGR.headers, h)
 
     WDGR.classMembers = {}
@@ -215,13 +215,13 @@ function WD:InitGuildRosterModule(parent)
 
     local h = createTableHeader(WDGR, WD_BUTTON_NAME, x, y, 150, 20, function() headerButtonFunction("BY_NAME") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_RANK, 75, 20, function() headerButtonFunction("BY_RANK") end)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_RANK,      100, 20, function() headerButtonFunction("BY_RANK") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_POINTS, 75, 20, function() headerButtonFunction("BY_POINTS") end)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_POINTS,     65, 20, function() headerButtonFunction("BY_POINTS") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_PULLS, 75, 20, function() headerButtonFunction("BY_PULLS") end)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_PULLS,      65, 20, function() headerButtonFunction("BY_PULLS") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_COEF, 75, 20, function() headerButtonFunction("BY_RESULT") end)
+    h = createTableHeaderNext(WDGR, h, WD_BUTTON_COEF,       65, 20, function() headerButtonFunction("BY_RESULT") end)
     table.insert(WDGR.headers, h)
 
     initClassRoster()
@@ -291,7 +291,7 @@ function WD:OnGuildRosterUpdate()
         if officernote and rankIndex <= WD.db.profile.minGuildRank.id then
             local info = {}
             info.index = i
-            info.name, info.class, info.rank = name, class, rank
+            info.name, info.class, info.rank, info.rankIndex = name, class, rank, rankIndex
             info.points, info.pulls, info.isAlt = parseOfficerNote(officernote)
             info.alts = {}
             if info.isAlt == "no" then
@@ -336,7 +336,7 @@ function WD:SortGuildRoster(param, inverse, callback)
     elseif param == "BY_PULLS" then
         func = function(a, b) if inverse == true then return WD.cache.roster[a].pulls < WD.cache.roster[b].pulls else return WD.cache.roster[a].pulls > WD.cache.roster[b].pulls end end
     elseif param == "BY_RANK" then
-        func = function(a, b) if inverse == true then return WD.cache.roster[a].rank < WD.cache.roster[b].rank else return WD.cache.roster[a].rank > WD.cache.roster[b].rank end end
+        func = function(a, b) if inverse == true then return WD.cache.roster[a].rankIndex > WD.cache.roster[b].rankIndex else return WD.cache.roster[a].rankIndex < WD.cache.roster[b].rankIndex end end
     elseif param == "BY_RESULT" then
         func = function(a, b) if inverse == true then return WD.cache.roster[a].coef < WD.cache.roster[b].coef else return WD.cache.roster[a].coef > WD.cache.roster[b].coef end end
     else
@@ -398,10 +398,10 @@ end
 function WD:ResetGuildStatistics()
     for i=1,GetNumGuildMembers() do
         local name, rank, rankIndex, _, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
-        if officernote and rankIndex < 6 then
+        if officernote and rankIndex <= WD.db.profile.minGuildRank.id then
             local info = {}
             info.index = i
-            info.name, info.class, info.rank = name, class, rank
+            info.name, info.class, info.rank, info.rankIndex = name, class, rank, rankIndex
             info.points, info.pulls, info.isAlt = parseOfficerNote(officernote)
             info.alts = {}
             if info.isAlt == "no" then

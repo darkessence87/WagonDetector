@@ -191,7 +191,7 @@ function WD:CreateGuiFrame()
     self.guiFrame = CreateFrame("Frame", "WD.guiFrame", UIParent)
     WDGF = self.guiFrame
     WDGF.module = {}
-    WDGF:SetSize(1000, 600)
+    WDGF:SetSize(1200, 600)
     WDGF:SetPoint("CENTER", 0, 0)
     WDGF:SetFrameStrata("HIGH")
     -- default drag mode

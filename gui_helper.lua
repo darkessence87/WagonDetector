@@ -129,7 +129,7 @@ end
 function getSpellLinkByIdWithTexture(id)
     local name,_,icon = GetSpellInfo(id)
     if not name then return "Unknown" end
-    return "|cff71d5ff|Hspell:"..id.."|h "..getTextureLinkByPath(icon, 20)..name.."|h|r"
+    return "|cff71d5ff|Hspell:"..id.."|h "..getTextureLinkByPath(icon, 20).." "..name.."|h|r"
 end
 
 function getTextureLinkByPath(path, sz)

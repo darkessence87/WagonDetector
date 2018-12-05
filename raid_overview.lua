@@ -348,11 +348,11 @@ function WD:InitRaidOverviewModule(parent)
     WDRO.unknown.headers = {}
     WDRO.unknown.members = {}
 
-    table.insert(WDRO.tanks.headers,    createTableHeader(WDRO, "Tanks",    1,   -30, 160, 20))
-    table.insert(WDRO.healers.headers,  createTableHeader(WDRO, "Healers",  162, -30, 160, 20))
-    table.insert(WDRO.melees.headers,   createTableHeader(WDRO, "Melee",    323, -30, 160, 20))
-    table.insert(WDRO.ranged.headers,   createTableHeader(WDRO, "Ranged",   484, -30, 160, 20))
-    table.insert(WDRO.unknown.headers,   createTableHeader(WDRO, "Unknown", 645, -30, 160, 20))
+    table.insert(WDRO.tanks.headers,    createTableHeader(WDRO, "Tanks",    0,   -30, 200, 20))
+    table.insert(WDRO.healers.headers,  createTableHeader(WDRO, "Healers",  201, -30, 200, 20))
+    table.insert(WDRO.melees.headers,   createTableHeader(WDRO, "Melee",    402, -30, 200, 20))
+    table.insert(WDRO.ranged.headers,   createTableHeader(WDRO, "Ranged",   603, -30, 200, 20))
+    table.insert(WDRO.unknown.headers,   createTableHeader(WDRO, "Unknown", 804, -30, 200, 20))
 
     WDRO:RegisterEvent("GROUP_ROSTER_UPDATE")
     WDRO:RegisterEvent("INSPECT_READY")

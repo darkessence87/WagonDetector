@@ -3,7 +3,7 @@ local WDTO = nil
 
 local function getInterruptStatusText(v)
     if v.status == "INTERRUPTED" then
-        local str = "by %s's %s in %s sec"
+        local str = "Interrupted by %s's %s in %s sec"
         return string.format(str, getShortCharacterName(v.interrupter), getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
         return "|cffff0000Casted!|r"
@@ -19,6 +19,8 @@ local function updateInterruptsInfo(v)
     for _,v in pairs(parent.members) do
         v:Hide()
     end
+
+    if not v then return end
 
     local n = 0
     for spell_id,castInfo in pairs(v.casts) do
@@ -46,7 +48,7 @@ local function updateInterruptsInfo(v)
                     index = index + 1
                     addNextColumn(parent, member, index, "CENTER", k)
                     index = index + 1
-                    addNextColumn(parent, member, index, "CENTER", getInterruptStatusText(v))
+                    addNextColumn(parent, member, index, "LEFT", getInterruptStatusText(v))
                     index = index + 1
                     local percent = v.percent or 0
                     addNextColumn(parent, member, index, "CENTER", percent)
@@ -88,7 +90,7 @@ local function initInterruptsInfoTable()
     table.insert(r.headers, h)
     h = createTableHeaderNext(r, h, "N", 25, 20)
     table.insert(r.headers, h)
-    h = createTableHeaderNext(r, h, "Status", 285, 20)
+    h = createTableHeaderNext(r, h, "Status", 400, 20)
     table.insert(r.headers, h)
     h = createTableHeaderNext(r, h, "Quality", 50, 20)
     table.insert(r.headers, h)
@@ -183,9 +185,9 @@ function WD:InitTrackerOverviewModule(parent)
     WDTO.creatures.headers = {}
     WDTO.creatures.members = {}
 
-    table.insert(WDTO.creatures.headers, createTableHeader(WDTO, "Creatures", 1, -30, 250, 25))
+    table.insert(WDTO.creatures.headers, createTableHeader(WDTO, "Creatures", 1, -30, 300, 20))
 
-    WDTO:SetScript("OnShow", self.RefereshTrackedCreatures)
+    WDTO:SetScript("OnShow", function(self) updateInterruptsInfo(); WD:RefereshTrackedCreatures() end)
 
     initInterruptsInfoTable()
 

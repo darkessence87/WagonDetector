@@ -99,3 +99,6 @@ WD_RULE_FOOD = "отсутствие еды"
 WD_RULE_RUNES = "отсутствие руны"
 
 WD_RULE_ERROR_OLD_VERSION = "Версия правила слишком старая: %s. Минимальная поддерживаемая версия: %s"
+
+WD_TRACKER_INTERRUPTED_BY = "Сбито %s's %s через %s сек"
+WD_TRACKER_CASTED_IN = "|cffff0000Каст через %s сек!|r"

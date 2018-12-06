@@ -31,16 +31,31 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
 end
 
 local function findEntityIndex(holder, guid)
+    if not holder then return nil end
     for i=1,#holder do
         if holder[i] and holder[i].guid == guid then return i end
     end
     return nil
 end
 
-local function findEntity(holder, guid, name)
-    if not name or not guid then return nil end
-    if not holder[name] or not holder[name][guid] then return nil end
-    return holder[name][guid]
+local function findNpc(guid)
+    if not guid or not guid:match("Creature") then return nil end
+    local npcId = getNpcId(guid)
+    local holder = WD.cache.tracker.npc[npcId]
+    local index = findEntityIndex(holder, guid)
+    if index then return holder[index] end
+    return nil
+end
+
+local function findPlayer(guid)
+    return WD.cache.tracker.players[guid]
+end
+
+local function findParent(v)
+    if v.type ~= "pet" or not v.parentGuid or not v.parentName then return nil end
+    local parent = findPlayer(v.parentGuid)
+    if parent then return parent end
+    return findNpc(v.parentGuid)
 end
 
 local function loadNpc(guid, name)
@@ -66,8 +81,6 @@ local function loadNpc(guid, name)
 end
 
 local function loadPet(guid, name, parentGuid, parentName)
-    if not WD.cache.tracker.players[parentGuid] and not WD.cache.tracker.npc[parentGuid] then return nil end
-
     local holder = WD.cache.tracker.pets[name]
     if not holder then
         WD.cache.tracker.pets[name] = {}
@@ -85,6 +98,8 @@ local function loadPet(guid, name, parentGuid, parentName)
         holder[#holder+1] = pet
         return pet
     end
+    if parentGuid then holder[index].parentGuid = parentGuid end
+    if parentName then holder[index].parentName = parentName end
     return holder[index]
 end
 
@@ -96,7 +111,7 @@ local function loadPlayer(guid, name)
     return WD.cache.tracker.players[guid]
 end
 
-local function loadEntity(guid, name, unit_type, parentGuid)
+local function loadEntity(guid, name, unit_type)
     if not name or not guid or guid == "" then
         --print('no name or no guid')
         return nil
@@ -116,7 +131,7 @@ local function loadEntity(guid, name, unit_type, parentGuid)
     if unit_type == "creature" then
         return loadNpc(guid, name)
     elseif unit_type == "pet" then
-        return loadPet(guid, name, parentGuid)
+        return loadPet(guid, name)
     elseif unit_type == "player" then
         return loadPlayer(guid, name)
     end
@@ -185,7 +200,7 @@ end
 local function interruptCast(unit, unit_name, timestamp, source_spell_id, target_spell_id, interrupter)
     if unit.casts.current_spell_id == 0 then return end
     if unit.casts.current_spell_id == target_spell_id then
-        local parent = findEntity(interrupter.parent_guid, interrupter.parent_name)
+        local parent = findParent(interrupter)
         if parent then
             interrupter = parent
         end
@@ -203,7 +218,7 @@ local function interruptCast(unit, unit_name, timestamp, source_spell_id, target
         unit.casts[target_spell_id][i].timediff = float_round_to(diff / 1000, 2)
         unit.casts[target_spell_id][i].percent = float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
-        unit.casts[target_spell_id][i].interrupter = interrupter.name
+        unit.casts[target_spell_id][i].interrupter = interrupter
         unit.casts[target_spell_id][i].spell_id = source_spell_id
 
         if interrupter then
@@ -255,23 +270,13 @@ local function finishCast(unit, timestamp, spell_id, result)
 end
 
 function WDMF:ProcessSummons(src, dst, ...)
+    if not src then return end
     local arg = {...}
     local timestamp, event, src_name, dst_guid, dst_name, spell_id = arg[1], arg[2], arg[5], arg[8], arg[9], tonumber(arg[12])
-    if not src and src_name then return end
     if not dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_SUMMON" then
-        -- find parent by name
-        local parent = nil
-        if src.type == "player" then
-            parent = findEntity(WD.cache.tracker.players, src.guid, getFullCharacterName(src_name))
-        else
-            local index = findEntityIndex(WD.cache.tracker.npc, src.guid, src_name)
-            if index then parent = WD.cache.tracker.npc[index] end
-        end
-        if not parent then return end
-
-        loadPet(dst_guid, dst_name, parent.guid, parent.name)
+        loadPet(dst_guid, dst_name, src.guid, src.name)
     end
 end
 
@@ -350,6 +355,7 @@ function WDMF:ProcessAuras(src, dst, ...)
 end
 
 function WDMF:ProcessCasts(src, dst, ...)
+    if not src then return end
     local rules = self.encounter.rules
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
@@ -357,9 +363,9 @@ function WDMF:ProcessCasts(src, dst, ...)
     if not dst and dst_name then return end
 
     if src.type ~= "player" then
-        local parent = findEntity(src.parent_guid, src.parent_name)
+        local parent = findParent(src)
         if parent then
-            src_name = getShortCharacterName(src.parent_name)
+            src_name = getShortCharacterName(src.parentName)
             src = parent
         end
     end
@@ -367,24 +373,22 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_START" then
         --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            startCast(src, timestamp, spell_id)
+        startCast(src, timestamp, spell_id)
 
-            if rules[src.role] and
-               rules[src.role]["EV_CAST_START"] and
-               rules[src.role]["EV_CAST_START"][spell_id]
-            then
-                local key = getNpcId(src.guid)
-                if not rules[src.role]["EV_CAST_START"][spell_id][key] then
-                    key = getShortCharacterName(src_name)
-                end
-                if rules[src.role]["EV_CAST_START"][spell_id][key] then
-                    local p = rules[src.role]["EV_CAST_START"][spell_id][key].points
-                    if src.type ~= "player" then
-                        self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST_START, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
-                    else
-                        self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
-                    end
+        if rules[src.role] and
+           rules[src.role]["EV_CAST_START"] and
+           rules[src.role]["EV_CAST_START"][spell_id]
+        then
+            local key = getNpcId(src.guid)
+            if not rules[src.role]["EV_CAST_START"][spell_id][key] then
+                key = getShortCharacterName(src_name)
+            end
+            if rules[src.role]["EV_CAST_START"][spell_id][key] then
+                local p = rules[src.role]["EV_CAST_START"][spell_id][key].points
+                if src.type ~= "player" then
+                    self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST_START, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
+                else
+                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
                 end
             end
         end
@@ -392,24 +396,22 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
         --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            finishCast(src, timestamp, spell_id, "SUCCESS")
+        finishCast(src, timestamp, spell_id, "SUCCESS")
 
-            if rules[src.role] and
-               rules[src.role]["EV_CAST_END"] and
-               rules[src.role]["EV_CAST_END"][spell_id]
-            then
-                local key = getNpcId(src.guid)
-                if not rules[src.role]["EV_CAST_END"][spell_id][key] then
-                    key = getShortCharacterName(src_name)
-                end
-                if rules[src.role]["EV_CAST_END"][spell_id][key] then
-                    local p = rules[src.role]["EV_CAST_END"][spell_id][key].points
-                    if src.type ~= "player" then
-                        self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
-                    else
-                        self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
-                    end
+        if rules[src.role] and
+           rules[src.role]["EV_CAST_END"] and
+           rules[src.role]["EV_CAST_END"][spell_id]
+        then
+            local key = getNpcId(src.guid)
+            if not rules[src.role]["EV_CAST_END"][spell_id][key] then
+                key = getShortCharacterName(src_name)
+            end
+            if rules[src.role]["EV_CAST_END"][spell_id][key] then
+                local p = rules[src.role]["EV_CAST_END"][spell_id][key].points
+                if src.type ~= "player" then
+                    self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
+                else
+                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
                 end
             end
         end
@@ -417,16 +419,12 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_MISS" then
         --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            finishCast(src, timestamp, spell_id, "MISSED")
-        end
+        finishCast(src, timestamp, spell_id, "MISSED")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_FAILED" then
         --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        if src then
-            finishCast(src, timestamp, spell_id, "FAILED")
-        end
+        finishCast(src, timestamp, spell_id, "FAILED")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_INTERRUPT" then
@@ -440,6 +438,7 @@ function WDMF:ProcessCasts(src, dst, ...)
 end
 
 function WDMF:ProcessDamage(src, dst, ...)
+    if not dst then return end
     local rules = self.encounter.rules
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
@@ -484,6 +483,7 @@ function WDMF:ProcessHealing(src, dst, ...)
 end
 
 function WDMF:ProcessDeaths(src, dst, ...)
+    if not dst then return end
     local rules = self.encounter.rules
     local arg = {...}
     local timestamp, event, dst_name, spell_id = arg[1], arg[2], arg[9], tonumber(arg[12])
@@ -516,6 +516,7 @@ function WDMF:ProcessDeaths(src, dst, ...)
 end
 
 function WDMF:ProcessDispels(src, dst, ...)
+    if not src then return end
     local rules = self.encounter.rules
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
@@ -557,6 +558,8 @@ function WDMF:Tracker_OnStartEncounter(raiders)
         else
             local p = loadPlayer(v.guid, v.name)
             p.rt = v.rt
+            p.class = v.class
+            p.role = v.role
         end
     end
 

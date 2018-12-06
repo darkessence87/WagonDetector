@@ -621,3 +621,20 @@ function generateSpellHover(frame, searchIn)
     end)
     frame:SetScript("OnLeave", function() GameTooltip_Hide() end)
 end
+
+function generateHover(frame, text)
+    frame:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(text, 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    frame:SetScript("OnLeave", function() GameTooltip_Hide() end)
+end
+
+function getColoredName(name, class)
+    if class then
+        local c = select(4, GetClassColor(class))
+        return "|c"..c..name.."|r"
+    end
+    return name
+end

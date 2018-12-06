@@ -56,11 +56,9 @@ local function updateGuildRosterFrame()
             member.column = {}
 
             local index = 1
-            addNextColumn(WDGR, member, index, "LEFT", getShortCharacterName(v.name))
+            addNextColumn(WDGR, member, index, "LEFT", getColoredName(getShortCharacterName(v.name), v.class))
             member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
             member.column[index]:EnableMouse(true)
-            local r,g,b = GetClassColor(v.class)
-            member.column[index].txt:SetTextColor(r, g, b, 1)
             member.column[index]:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
@@ -86,9 +84,7 @@ local function updateGuildRosterFrame()
             table.insert(WDGR.members, member)
         else
             local member = WDGR.members[k]
-            member.column[1].txt:SetText(getShortCharacterName(v.name))
-            local r,g,b = GetClassColor(v.class)
-            member.column[1].txt:SetTextColor(r, g, b, 1)
+            member.column[1].txt:SetText(getColoredName(getShortCharacterName(v.name), v.class))
             member.column[1]:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
@@ -160,7 +156,7 @@ local function initClassRoster()
         member.class = class
 
         local index = d + 1
-        addNextColumn(WDGR, member, index, "LEFT", className)
+        addNextColumn(WDGR, member, index, "LEFT", getColoredName(className, class))
         if k > 1 then
             member.column[index]:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
             member:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
@@ -169,8 +165,6 @@ local function initClassRoster()
             member:SetPoint("TOPLEFT", WDGR.headers[d+1], "BOTTOMLEFT", 0, -1)
         end
         member.column[index]:EnableMouse(false)
-        local r,g,b = GetClassColor(class)
-        member.column[index].txt:SetTextColor(r, g, b, 1)
         member.column[index].txt:SetPoint("LEFT", 5, 0)
 
         index = index + 1

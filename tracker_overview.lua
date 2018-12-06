@@ -3,11 +3,9 @@ local WDTO = nil
 
 local function getInterruptStatusText(v)
     if v.status == "INTERRUPTED" then
-        local str = "Interrupted by %s's %s in %s sec"
-        return string.format(str, getShortCharacterName(v.interrupter), getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
+        return string.format(WD_TRACKER_INTERRUPTED_BY, getColoredName(getShortCharacterName(v.interrupter.name), v.interrupter.class), getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
-        local str = "|cffff0000Casted in %s sec!|r"
-        return string.format(str, v.timediff)
+        return string.format(WD_TRACKER_CASTED_IN, v.timediff)
     end
 
     return v.status
@@ -115,7 +113,7 @@ local function initInterruptsInfoTable()
     r.members = {}
 
     -- headers
-    local h = createTableHeader(r, "Spell", 0, 0, 150, 20)
+    local h = createTableHeader(r, "Spell", 0, 0, 170, 20)
     table.insert(r.headers, h)
     h = createTableHeaderNext(r, h, WD_BUTTON_TIME, 70, 20)
     table.insert(r.headers, h)
@@ -157,6 +155,7 @@ function WD:RefreshTrackedCreatures()
         for guid,npc in pairs(data) do
             if type(npc) == "table" then
                 if isValidNpc(npc) then
+                    npc.npc_id = npcId
                     creatures[#creatures+1] = npc
                 end
             end
@@ -195,6 +194,7 @@ function WD:RefreshTrackedCreatures()
 
             member.column[index]:EnableMouse(true)
             member.column[index]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
+            generateHover(member.column[index], "id: "..v.npc_id)
 
             table.insert(WDTO.creatures.members, member)
         else
@@ -206,6 +206,7 @@ function WD:RefreshTrackedCreatures()
             if v.rt > 0 then creatureName = getRaidTargetTextureLink(v.rt).." "..creatureName end
             member.column[1].txt:SetText(creatureName)
             member.column[1]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
+            generateHover(member.column[1], "id: "..v.npc_id)
             member.info = v
 
             member:Show()

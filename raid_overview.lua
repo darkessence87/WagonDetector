@@ -159,7 +159,7 @@ local function updateRaidOverviewMember(data, parent)
             member.column = {}
 
             local index = 1
-            addNextColumn(parent, member, index, "LEFT", getShortCharacterName(v.name, "noRealm"))
+            addNextColumn(parent, member, index, "LEFT", getColoredName(getShortCharacterName(v.name, "noRealm"), v.class))
             if k > 1 then
                 member.column[index]:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
                 member:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
@@ -167,8 +167,6 @@ local function updateRaidOverviewMember(data, parent)
                 member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
             end
             member.column[index]:EnableMouse(false)
-            local r,g,b = GetClassColor(v.class)
-            member.column[index].txt:SetTextColor(r, g, b, 1)
             member.column[index].txt:SetPoint("LEFT", 20, 0)
 
             -- add buff frames
@@ -187,9 +185,7 @@ local function updateRaidOverviewMember(data, parent)
         else
             local member = parent.members[k]
             member.info = v
-            member.column[1].txt:SetText(getShortCharacterName(v.name, "noRealm"))
-            local r,g,b = GetClassColor(v.class)
-            member.column[1].txt:SetTextColor(r, g, b, 1)
+            member.column[1].txt:SetText(getColoredName(getShortCharacterName(v.name, "noRealm"), v.class))
 
             -- update buff frames
             local flask, food, rune = getConsumables(v.unit)

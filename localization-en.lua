@@ -95,3 +95,6 @@ WD_RULE_FOOD = "no food buff"
 WD_RULE_RUNES = "no rune buff"
 
 WD_RULE_ERROR_OLD_VERSION = "Rule's version is too old: %s. Minimal version supported: %s"
+
+WD_TRACKER_INTERRUPTED_BY = "Interrupted by %s's %s in %s sec"
+WD_TRACKER_CASTED_IN = "|cffff0000Casted in %s sec!|r"

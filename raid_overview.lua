@@ -254,58 +254,70 @@ local function updateRaidOverviewFrame()
     updateRaidOverviewMember(unknown, WDRO.unknown)
 end
 
-local function updateRaidSpec(inspected)
-    if UnitInRaid("player") ~= nil then
-        for i=1, GetNumGroupMembers() do
-            local unit = "raid"..i
-            local name, realm = UnitName(unit)
+local function checkGroup(unitBase, inspected)
+    for i=1, GetNumGroupMembers() do
+        local unit = unitBase..i
+        local name, realm = UnitName(unit)
+        if not name then return end
+        if not realm or realm == "" then
+            realm = WD.CurrentRealmName
+        end
+        local _,class = UnitClass(unit)
+
+        local p = {}
+        p.name = name.."-"..realm
+        p.unit = unit
+        p.class = class
+
+        if p.name == playerName then
+            p.specId = getSpecialization(p.name, p.class, p.unit)
+        else
+            if not inspected then
+                NotifyInspect(unit)
+            end
+        end
+
+        if WD.cache.raidroster[p.name] then
+            WD.cache.raidroster[p.name].unit = p.unit
+            if p.name == playerName then
+                WD.cache.raidroster[p.name].specId = p.specId
+            end
+        else
+            WD.cache.raidrosterkeys[#WD.cache.raidrosterkeys+1] = p.name
+            WD.cache.raidroster[p.name] = p
+        end
+    end
+
+    local to_be_removed = {}
+    for k,v in pairs(WD.cache.raidrosterkeys) do
+        local data = WD.cache.raidroster[v]
+        if (unitBase == "raid" and UnitInRaid(data.unit)) or
+           (unitBase == "party" and UnitInParty(data.unit) == true)
+        then
+            local name, realm = UnitName(data.unit)
             if not realm or realm == "" then
                 realm = WD.CurrentRealmName
             end
-            local _,class = UnitClass(unit)
+            name = name.."-"..realm
 
-            local p = {}
-            p.name = name.."-"..realm
-            p.unit = unit
-            p.class = class
-
-            if p.name == playerName then
-                p.specId = getSpecialization(p.name, p.class, p.unit)
-            else
-                if not inspected then
-                    NotifyInspect(unit)
-                end
+            if name ~= data.name then
+                to_be_removed[k] = v
             end
-
-            if WD.cache.raidroster[p.name] then
-                WD.cache.raidroster[p.name].unit = p.unit
-                if p.name == playerName then
-                    WD.cache.raidroster[p.name].specId = p.specId
-                end
-            else
-                WD.cache.raidrosterkeys[#WD.cache.raidrosterkeys+1] = p.name
-                WD.cache.raidroster[p.name] = p
-            end
+        else
+            to_be_removed[k] = v
         end
+    end
+    for k,v in pairs(to_be_removed) do
+        WD.cache.raidroster[v.name] = nil
+        table.remove(WD.cache.raidrosterkeys, k)
+    end
+end
 
-        for k,v in pairs(WD.cache.raidrosterkeys) do
-            local data = WD.cache.raidroster[v]
-            if UnitInRaid(data.unit) then
-                local name, realm = UnitName(data.unit)
-                if not realm or realm == "" then
-                    realm = WD.CurrentRealmName
-                end
-                name = name.."-"..realm
-
-                if name ~= data.name then
-                    WD.cache.raidroster[v] = nil
-                    table.remove(WD.cache.raidrosterkeys, k)
-                end
-            else
-                WD.cache.raidroster[v] = nil
-                table.remove(WD.cache.raidrosterkeys, k)
-            end
-        end
+local function updateRaidSpec(inspected)
+    if UnitInRaid("player") then
+        checkGroup("raid", inspected)
+    elseif UnitInParty("player") ~= false then
+        checkGroup("party", inspected)
     else
         WdLib:table_wipe(WD.cache.raidrosterkeys)
         WdLib:table_wipe(WD.cache.raidroster)
@@ -355,9 +367,12 @@ function WD:InitRaidOverviewModule(parent)
     WDRO:RegisterEvent("PLAYER_ENTERING_WORLD")
     WDRO:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
     WDRO:RegisterEvent("READY_CHECK")
+    WDRO:RegisterEvent("UNIT_NAME_UPDATE")
 
     WDRO:SetScript("OnEvent", function(self, event, ...)
         if event == "GROUP_ROSTER_UPDATE" then
+            updateRaidSpec()
+        elseif event == "UNIT_NAME_UPDATE" then
             updateRaidSpec()
         elseif event == "INSPECT_READY" then
             local guid = ...

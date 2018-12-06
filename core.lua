@@ -206,7 +206,7 @@ function WDMF:OnEvent(event, ...)
 end
 
 function WDMF:IsEncounterValid(encounterId)
-    if UnitInRaid("player") == nil and encounterId ~= 0 then return nil end
+    if UnitInRaid("player") == nil and UnitInParty("player") == false and encounterId ~= 0 then return nil end
     return true
 end
 

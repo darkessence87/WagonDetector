@@ -674,6 +674,10 @@ function WDMF:ProcessPull()
         for i=1, GetNumGroupMembers() do
             self:CreateRaidMember("raid"..i, "raidpet"..i)
         end
+    elseif UnitInParty("player") ~= false then
+        for i=1, GetNumGroupMembers() do
+            self:CreateRaidMember("party"..i, "partypet"..i)
+        end
     else
         self:CreateRaidMember("player", "pet")
     end

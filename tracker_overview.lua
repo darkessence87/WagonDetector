@@ -65,7 +65,7 @@ local function updateInterruptsInfo()
 
 
                     index = index + 1
-                    WdLib:addNextColumn(parent, member, index, "CENTER", getTimedDiff(core.encounter.startTime, v.timestamp))
+                    WdLib:addNextColumn(parent, member, index, "CENTER", v.timestamp)
                     index = index + 1
                     WdLib:addNextColumn(parent, member, index, "CENTER", k)
                     index = index + 1
@@ -79,7 +79,7 @@ local function updateInterruptsInfo()
                     local member = parent.members[n]
                     member.column[1].txt:SetText(WdLib:getSpellLinkByIdWithTexture(spell_id))
                     WdLib:generateSpellHover(member.column[1], WdLib:getSpellLinkByIdWithTexture(spell_id))
-                    member.column[2].txt:SetText(getTimedDiff(core.encounter.startTime, v.timestamp))
+                    member.column[2].txt:SetText(v.timestamp)
                     member.column[3].txt:SetText(k)
                     member.column[4].txt:SetText(getInterruptStatusText(v))
                     local percent = v.percent or 0

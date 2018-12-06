@@ -26,6 +26,13 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     return v
 end
 
+local function createExistingEntity(v)
+    v.auras = {}
+    v.casts = {}
+    v.casts.current_spell_id = 0
+    return v
+end
+
 local function findEntityIndex(holder, guid)
     if not holder then return nil end
     for i=1,#holder do
@@ -99,12 +106,41 @@ local function loadPet(guid, name, parentGuid, parentName)
     return holder[index]
 end
 
+local function loadExistingPet(pet)
+    local holder = WD.db.profile.tracker.pets[pet.name]
+    if not holder then
+        WD.db.profile.tracker.pets[pet.name] = {}
+        holder = WD.db.profile.tracker.pets[pet.name]
+        holder[#holder+1] = createExistingEntity(pet)
+        return
+    end
+
+    local index = findEntityIndex(holder, pet.guid)
+    if not index then
+        if #holder == 1 then
+            holder[1].name = holder[1].name.."-1"
+        end
+        pet.name = pet.name.."-"..(#holder + 1)
+        holder[#holder+1] = pet
+        return
+    end
+    if parentGuid then holder[index].parentGuid = pet.parentGuid end
+    if parentName then holder[index].parentName = pet.parentName end
+end
+
 local function loadPlayer(guid, name)
     if not WD.db.profile.tracker.players[guid] then
         WD.db.profile.tracker.players[guid] = {}
         WD.db.profile.tracker.players[guid] = createEntity(guid, name, "player")
     end
     return WD.db.profile.tracker.players[guid]
+end
+
+local function loadExistingPlayer(v)
+    if not WD.db.profile.tracker.players[v.guid] then
+        WD.db.profile.tracker.players[v.guid] = {}
+        WD.db.profile.tracker.players[v.guid] = createExistingEntity(v)
+    end
 end
 
 local function loadEntity(guid, name, unit_type)
@@ -193,7 +229,7 @@ local function startCast(unit, timestamp, spell_id)
     unit.casts.current_timestamp = timestamp
 end
 
-local function interruptCast(unit, unit_name, timestamp, source_spell_id, target_spell_id, interrupter)
+local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, target_spell_id, interrupter)
     if unit.casts.current_spell_id == 0 then return end
     if unit.casts.current_spell_id == target_spell_id then
         local parent = findParent(interrupter)
@@ -210,7 +246,7 @@ local function interruptCast(unit, unit_name, timestamp, source_spell_id, target
         local diff = (timestamp - unit.casts.current_timestamp) * 1000
         unit.casts[target_spell_id].count = i
         unit.casts[target_spell_id][i] = {}
-        unit.casts[target_spell_id][i].timestamp = timestamp
+        unit.casts[target_spell_id][i].timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
         unit.casts[target_spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
         unit.casts[target_spell_id][i].percent = WdLib:float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
@@ -242,7 +278,7 @@ local function interruptCast(unit, unit_name, timestamp, source_spell_id, target
     unit.casts.current_spell_id = 0
 end
 
-local function finishCast(unit, timestamp, spell_id, result)
+local function finishCast(self, unit, timestamp, spell_id, result)
     if unit.casts.current_spell_id == 0 then return end
     if unit.casts.current_spell_id == spell_id and result ~= "FAILED" then
         local diff = (timestamp - unit.casts.current_timestamp) * 1000
@@ -256,7 +292,7 @@ local function finishCast(unit, timestamp, spell_id, result)
             unit.casts[spell_id].count = i
             unit.casts[spell_id][i] = {}
             unit.casts[spell_id][i].status = result
-            unit.casts[spell_id][i].timestamp = timestamp
+            unit.casts[spell_id][i].timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
             unit.casts[spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
 
             WD:RefreshTrackedCreatures()
@@ -290,10 +326,10 @@ function WDMF:ProcessAuras(src, dst, ...)
 
             -- interrupts
             if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
-                interruptCast(dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
+                interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
             end
             if WD.Spells.controlEffects[spell_id] then
-                interruptCast(dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
+                interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
             end
 
             if rules[dst.role] and
@@ -392,7 +428,7 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
         --print(event..' : '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        finishCast(src, timestamp, spell_id, "SUCCESS")
+        finishCast(self, src, timestamp, spell_id, "SUCCESS")
 
         if rules[src.role] and
            rules[src.role]["EV_CAST_END"] and
@@ -415,12 +451,12 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_MISS" then
         --print(event..' : '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        finishCast(src, timestamp, spell_id, "MISSED")
+        finishCast(self, src, timestamp, spell_id, "MISSED")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_FAILED" then
         --print(event..' : '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
-        finishCast(src, timestamp, spell_id, "FAILED")
+        finishCast(self, src, timestamp, spell_id, "FAILED")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_INTERRUPT" then
@@ -428,7 +464,7 @@ function WDMF:ProcessCasts(src, dst, ...)
         --print(event..' : interrupted '..WdLib:getSpellLinkByIdWithTexture(target_spell_id)..' target:'..dst.name..' by '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
 
         if dst then
-            interruptCast(dst, dst_name, timestamp, spell_id, target_spell_id, src)
+            interruptCast(self, dst, dst_name, timestamp, spell_id, target_spell_id, src)
         end
     end
 end
@@ -444,7 +480,7 @@ function WDMF:ProcessDamage(src, dst, ...)
     if event == "SPELL_DAMAGE" then
         -- interrupts
         if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
-            interruptCast(dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
+            interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
         end
 
         if rules[dst.role] then
@@ -486,8 +522,8 @@ function WDMF:ProcessDeaths(src, dst, ...)
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "UNIT_DIED" then
-        for i=1,#self.encounter.players do
-            if WdLib:getFullCharacterName(self.encounter.players[i].name) == WdLib:getFullCharacterName(dst.name) then
+        for guid in pairs(WD.db.profile.tracker.players) do
+            if guid == dst.guid then
                 self.encounter.deaths = self.encounter.deaths + 1
                 break
             end
@@ -531,6 +567,50 @@ function WDMF:ProcessDispels(src, dst, ...)
     end
 end
 
+function WDMF:CheckConsumables(name, unit)
+    local rules = self.encounter.rules
+    local role = WD:GetRole(name)
+    local noflask, nofood, norune = nil, nil, nil
+    if rules[role] and rules[role]["EV_FLASKS"] then
+        noflask = true
+    end
+    if rules[role] and rules[role]["EV_FOOD"] then
+        nofood = true
+    end
+    if rules[role] and rules[role]["EV_RUNES"] then
+        norune = true
+    end
+
+    for index=1,40 do
+        local _, _, _, _, _, _, _, _, _, spellId = UnitBuff(unit, index)
+
+        -- flasks
+        if spellId and WD.Spells.flasks[spellId] then
+            noflask = false
+        end
+
+        -- food
+        if spellId and WD.Spells.food[spellId] then
+            nofood = false
+        end
+
+        -- runes
+        if spellId and WD.Spells.runes[spellId] then
+            norune = false
+        end
+    end
+
+    if noflask and noflask == true then
+        self:AddFail(time(), name, 0, WD_RULE_FLASKS, rules[role]["EV_FLASKS"].points)
+    end
+    if nofood and nofood == true then
+        self:AddFail(time(), name, 0, WD_RULE_FOOD, rules[role]["EV_FOOD"].points)
+    end
+    if norune and norune == true then
+        self:AddFail(time(), name, 0, WD_RULE_RUNES, rules[role]["EV_RUNES"].points)
+    end
+end
+
 function WDMF:Init()
     WdLib:table_wipe(callbacks)
     registerCallback(self.ProcessSummons,   "SPELL_SUMMON")
@@ -542,22 +622,69 @@ function WDMF:Init()
     registerCallback(self.ProcessDispels,   "SPELL_DISPEL", "SPELL_STOLEN")
 end
 
-function WDMF:Tracker_OnStartEncounter(raiders)
+function WDMF:CreateRaidMember(unit, petUnit)
+    local function createInternalEntity(unit)
+        local name, realm = UnitName(unit)
+        if not name then return nil end
+        if not UnitIsVisible(unit) then return nil end
+        if not realm or realm == "" then
+            realm = WD.CurrentRealmName
+        end
+        local _,class = UnitClass(unit)
+
+        local p = {}
+        p.name = name.."-"..realm
+        p.unit = unit
+        p.class = class
+        p.guid = UnitGUID(p.unit)
+        p.rt = 0
+        return p
+    end
+
+    local player = createInternalEntity(unit)
+    local pet = createInternalEntity(petUnit)
+
+    if player then
+        if WD.cache.raidroster[player.name] then
+            player.specId = WD.cache.raidroster[player.name].specId
+        elseif player.unit ~= "player" then
+            NotifyInspect(player.unit)
+        end
+
+        player.type = "player"
+        loadExistingPlayer(player)
+
+        self:CheckConsumables(player.name, player.unit)
+    end
+
+    if pet then
+        pet.type = "pet"
+        pet.name = WdLib:getShortCharacterName(pet.name)
+        pet.parentGuid = player.guid
+        pet.parentName = player.name
+        loadExistingPet(pet)
+
+        if not player.pets then player.pets = {} end
+        player.pets[#player.pets+1] = pet
+    end
+end
+
+function WDMF:ProcessPull()
+    if UnitInRaid("player") ~= nil then
+        for i=1, GetNumGroupMembers() do
+            self:CreateRaidMember("raid"..i, "raidpet"..i)
+        end
+    else
+        self:CreateRaidMember("player", "pet")
+    end
+end
+
+function WDMF:Tracker_OnStartEncounter()
     WdLib:table_wipe(WD.db.profile.tracker.npc)
     WdLib:table_wipe(WD.db.profile.tracker.pets)
     WdLib:table_wipe(WD.db.profile.tracker.players)
 
-    for k,v in pairs(raiders) do
-        if v.type == "pet" then
-            local p = loadPet(v.guid, v.name, v.parentGuid, v.parentName)
-            p.rt = v.rt
-        else
-            local p = loadPlayer(v.guid, v.name)
-            p.rt = v.rt
-            p.class = v.class
-            p.role = v.role
-        end
-    end
+    self:ProcessPull()
 
     WD:RefreshTrackedCreatures()
 end

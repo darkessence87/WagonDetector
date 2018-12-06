@@ -1,6 +1,59 @@
 
 WdLib = {}
 
+local function table_val_to_str(v)
+    if "string" == type(v) then
+        v = string.gsub(v, "\n", "\\n")
+        if string.match(string.gsub(v,"[^'\"]",""), '^"+$') then
+            return "'" .. v .. "'"
+        end
+        return '"' .. string.gsub(v,'"', '\\"' ) .. '"'
+    else
+        return "table" == type(v) and WdLib:table_tostring(v) or tostring(v)
+    end
+end
+
+local function table_key_to_str(k)
+    if "string" == type(k) and string.match( k, "^[_%a][_%a%d]*$") then
+        return k
+    else
+        return "[" .. table_val_to_str(k) .. "]"
+    end
+end
+
+local function make_border(f, cR, cG, cB, cA, size, offsetX, offsetY)
+    offsetX = offsetX or 0
+    offsetY = offsetY or 0
+
+    f.bdTop = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
+    f.bdTop:SetPoint("TOPLEFT", -size - offsetX, size + offsetY)
+    f.bdTop:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", size + offsetX, offsetY)
+
+    f.bdLeft = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
+    f.bdLeft:SetPoint("TOPLEFT", -size - offsetX, offsetY)
+    f.bdLeft:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", -offsetX, -offsetY)
+
+    f.bdBottom = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
+    f.bdBottom:SetPoint("BOTTOMLEFT", -size - offsetX, -size - offsetY)
+    f.bdBottom:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", size + offsetX, -offsetY)
+
+    f.bdRight = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
+    f.bdRight:SetPoint("BOTTOMRIGHT", size + offsetX, offsetY)
+    f.bdRight:SetPoint("TOPLEFT", f, "TOPRIGHT", offsetX, -offsetY)
+end
+
+local function createListButton(parent, name)
+    local button = WdLib:createButton(parent)
+    button.txt = WdLib:createFont(button, "LEFT", name)
+    button.txt:SetPoint("LEFT", button, "LEFT", 5, 0)
+
+    button.items = {}
+    button.arrow = WdLib:createTexture(button, "Interface\\ChatFrame\\ChatFrameExpandArrow", "ARTWORK")
+    button.arrow:SetSize(15, 15)
+    button.arrow:SetPoint("RIGHT")
+    return button
+end
+
 function WdLib:float_round_to(v, n)
     local mult = 10^n
     return math.floor(v * mult + 0.5) / mult
@@ -33,35 +86,15 @@ function WdLib:string_totable(str)
     return t
 end
 
-function WdLib:table_val_to_str(v)
-    if "string" == type(v) then
-        v = string.gsub(v, "\n", "\\n")
-        if string.match(string.gsub(v,"[^'\"]",""), '^"+$') then
-            return "'" .. v .. "'"
-        end
-        return '"' .. string.gsub(v,'"', '\\"' ) .. '"'
-    else
-        return "table" == type(v) and WdLib:table_tostring(v) or tostring(v)
-    end
-end
-
-function WdLib:table_key_to_str(k)
-    if "string" == type(k) and string.match( k, "^[_%a][_%a%d]*$") then
-        return k
-    else
-        return "[" .. WdLib:table_val_to_str(k) .. "]"
-    end
-end
-
 function WdLib:table_tostring(tbl)
     local result, done = {}, {}
     for k, v in ipairs(tbl) do
-        table.insert(result, WdLib:table_val_to_str(v))
+        table.insert(result, table_val_to_str(v))
         done[k] = true
     end
     for k, v in pairs( tbl ) do
         if not done[k] then
-            table.insert(result, WdLib:table_key_to_str(k) .. "=" .. WdLib:table_val_to_str(v) )
+            table.insert(result, table_key_to_str(k) .. "=" .. table_val_to_str(v) )
         end
     end
     return "{" .. table.concat(result, ",") .. "}"
@@ -106,11 +139,6 @@ function WdLib:decode64(data)
         for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
         return string.char(c)
     end))
-end
-
-function WdLib:isNonZero(text)
-    if not tonumber(text) or tonumber(text) == 0 then return false end
-    return true
 end
 
 function WdLib:sendMessage(msg)
@@ -180,27 +208,6 @@ function WdLib:createTexture(parent, file, level)
     return t
 end
 
-function WdLib:make_border(f, cR, cG, cB, cA, size, offsetX, offsetY)
-    offsetX = offsetX or 0
-    offsetY = offsetY or 0
-
-    f.bdTop = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
-    f.bdTop:SetPoint("TOPLEFT", -size - offsetX, size + offsetY)
-    f.bdTop:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", size + offsetX, offsetY)
-
-    f.bdLeft = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
-    f.bdLeft:SetPoint("TOPLEFT", -size - offsetX, offsetY)
-    f.bdLeft:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", -offsetX, -offsetY)
-
-    f.bdBottom = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
-    f.bdBottom:SetPoint("BOTTOMLEFT", -size - offsetX, -size - offsetY)
-    f.bdBottom:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", size + offsetX, -offsetY)
-
-    f.bdRight = WdLib:createColorTexture(f, "BACKGROUND", cR, cG, cB, cA)
-    f.bdRight:SetPoint("BOTTOMRIGHT", size + offsetX, offsetY)
-    f.bdRight:SetPoint("TOPLEFT", f, "TOPRIGHT", offsetX, -offsetY)
-end
-
 function WdLib:createFontDefault(parent, hJustify, name)
     local font = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
     font:SetSize(parent:GetSize())
@@ -220,7 +227,7 @@ function WdLib:createCheckButton(parent)
     local button = CreateFrame("CheckButton", nil, parent)
     button:SetSize(20,20)
 
-    WdLib:make_border(button, .24, .25, .3, 1, 1)
+    make_border(button, .24, .25, .3, 1, 1)
 
     button.t = WdLib:createColorTexture(button, "BACKGROUND", 0, 0, 0, .3)
     button.t:SetAllPoints()
@@ -348,18 +355,6 @@ function WdLib:createXButton(parent, xOffset)
     return xButton
 end
 
-function WdLib:createListButton(parent, name)
-    local button = WdLib:createButton(parent)
-    button.txt = WdLib:createFont(button, "LEFT", name)
-    button.txt:SetPoint("LEFT", button, "LEFT", 5, 0)
-
-    button.items = {}
-    button.arrow = WdLib:createTexture(button, "Interface\\ChatFrame\\ChatFrameExpandArrow", "ARTWORK")
-    button.arrow:SetSize(15, 15)
-    button.arrow:SetPoint("RIGHT")
-    return button
-end
-
 function WdLib:createListItemButton(parent, name, index)
     local button = WdLib:createButton(parent, name)
     button:SetPoint("TOPLEFT", parent, "TOPRIGHT", 1, index * -21)
@@ -458,14 +453,14 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
     WdLib:dropDownHide(self)
 end
 
-function WdLib:updateDropDownMenu(self, name)
+function WdLib:resetDropDownMenu(self, name)
     self.selected = nil
     self.txt:SetText(name)
     WdLib:dropDownHide(self)
 end
 
 function WdLib:createDropDownMenu(parent, name, items, grandParent)
-    local dropFrame = WdLib:createListButton(parent, name)
+    local dropFrame = createListButton(parent, name)
     dropFrame:SetScript("OnClick", function(self)
         local parent = self:GetParent()
         if self.isVisible then
@@ -490,11 +485,11 @@ function WdLib:createDropDownMenu(parent, name, items, grandParent)
             end
         end
     end)
-    dropFrame:SetScript("OnHide", function() WdLib:updateDropDownMenu(dropFrame, name) end)
+    dropFrame:SetScript("OnHide", function() WdLib:resetDropDownMenu(dropFrame, name) end)
     dropFrame.items = {}
 
     WdLib:updateDropDownMenu(dropFrame, name, items, grandParent or dropFrame)
-    WdLib:updateDropDownMenu(dropFrame, name)
+    WdLib:resetDropDownMenu(dropFrame, name)
 
     return dropFrame
 end
@@ -552,7 +547,10 @@ function WdLib:convertTypesToItems(t, fn)
     return items
 end
 
-function WdLib:updateItemsByHoverInfo(items, info)
+function WdLib:updateItemsByHoverInfo(needConversion, items, info, fn)
+    if needConversion == true then
+        items = WdLib:convertTypesToItems(items, fn)
+    end
     for _,v in pairs(items) do
         if v.name and info[v.name] then
             v.hover = info[v.name]
@@ -639,4 +637,29 @@ function WdLib:getColoredName(name, class)
         return "|c"..c..name.."|r"
     end
     return name
+end
+
+function WdLib:getTimedDiff(startTime, endTime)
+    if startTime == nil or endTime == nil then return end
+    local dt = endTime - startTime
+    if startTime > endTime then dt = -dt end
+    local m = floor(dt / 60)
+    dt = dt - m * 60
+    local s = floor(dt)
+    dt = dt - s
+    local ms = dt * 1000
+    local MIN = string.format("%02d", m)
+    local SEC = string.format("%02d", s)
+    local MSC = string.format("%003d", ms)
+    return MIN .. ":" .. SEC .. "." .. MSC
+end
+
+function WdLib:getTimedDiffShort(startTime, endTime)
+    local dt = endTime - startTime
+    local m = floor(dt / 60)
+    dt = dt - m * 60
+    local s = floor(dt)
+    local MIN = string.format("%02d", m)
+    local SEC = string.format("%02d", s)
+    return MIN .. ":" .. SEC
 end

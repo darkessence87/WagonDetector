@@ -121,9 +121,9 @@ local function updateRangeRuleMenu(frame, selected)
     elseif rule == "RT_UNIT_CASTING" then
         WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
     elseif rule == "RT_CUSTOM" then
-        WdLib:updateDropDownMenu(arg0_drop, "Select start event:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        WdLib:updateDropDownMenu(arg0_drop, "Select start event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg0_drop:Show()
-        WdLib:updateDropDownMenu(arg1_drop, "Select end event:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        WdLib:updateDropDownMenu(arg1_drop, "Select end event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg1_drop:Show()
     end
 
@@ -177,7 +177,7 @@ local function updateNewRuleHiddenMenu(frame, selected)
         or name == "ST_SOURCE_INTERRUPTS"
     then
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(rangeRuleTypes, updateRangeRuleMenu), WD.Help.rangesInfo))
+        WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
         arg1_drop.label:SetText("Range rule type:")
         arg1_drop:Show()
 
@@ -205,20 +205,20 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
 
     if rule == "RL_RANGE_RULE" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select range:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(rangeRuleTypes, updateRangeRuleMenu), WD.Help.rangesInfo))
+        WdLib:updateDropDownMenu(arg0_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
         arg0_drop.label:SetText("Range rule type:")
         arg0_drop:Show()
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
     elseif rule == "RL_DEPENDENCY" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select reason event:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        WdLib:updateDropDownMenu(arg0_drop, "Select reason event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg0_drop.label:SetText("Reason event:")
         arg0_drop:Show()
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(WD.EventTypes, updateEventConfigMenu), WD.Help.eventsInfo))
+        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
         -- arg2
@@ -226,7 +226,7 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
         WdLib:showHiddenEditBox(parent, "arg2_edit", "1000")
     elseif rule == "RL_STATISTICS" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select statistics:", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(statisticTypes, updateNewRuleHiddenMenu), WD.Help.statisticInfo))
+        WdLib:updateDropDownMenu(arg0_drop, "Select statistics:", WdLib:updateItemsByHoverInfo(true, statisticTypes, WD.Help.statisticInfo, updateNewRuleHiddenMenu))
         arg0_drop.label:SetText("Statistics mode:")
         arg0_drop:Show()
     elseif rule == "RL_QUALITY" then
@@ -327,7 +327,7 @@ local function initNewRuleWindow()
     r.menus["encounters"].label:SetSize(x - 5, 20)
     r.menus["encounters"].label:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
     -- tracking rules menu
-    r.menus["rule_types"] = WdLib:createDropDownMenu(r, "Select rule type", WdLib:updateItemsByHoverInfo(WdLib:convertTypesToItems(trackingRuleTypes, updateNewRuleMenuByTrackingRules), WD.Help.rulesInfo))
+    r.menus["rule_types"] = WdLib:createDropDownMenu(r, "Select rule type", WdLib:updateItemsByHoverInfo(true, trackingRuleTypes, WD.Help.rulesInfo, updateNewRuleMenuByTrackingRules))
     r.menus["rule_types"]:SetSize(xSize, 20)
     r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
     r.menus["rule_types"].label = WdLib:createFontDefault(r.menus["rule_types"], "RIGHT", "Rule:")

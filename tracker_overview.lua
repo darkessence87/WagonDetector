@@ -3,7 +3,7 @@ local WDTO = nil
 
 local function getInterruptStatusText(v)
     if v.status == "INTERRUPTED" then
-        return string.format(WD_TRACKER_INTERRUPTED_BY, getColoredName(getShortCharacterName(v.interrupter.name), v.interrupter.class), getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
+        return string.format(WD_TRACKER_INTERRUPTED_BY, WdLib:getColoredName(WdLib:getShortCharacterName(v.interrupter.name), v.interrupter.class), WdLib:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
         return string.format(WD_TRACKER_CASTED_IN, v.timediff)
     end
@@ -35,7 +35,7 @@ local function updateInterruptsInfo()
         end
     end
 
-    local scroller = parent.scroller or createScroller(parent, maxWidth, maxHeight, totalCasts)
+    local scroller = parent.scroller or WdLib:createScroller(parent, maxWidth, maxHeight, totalCasts)
     if not parent.scroller then
         parent.scroller = scroller
     end
@@ -54,31 +54,31 @@ local function updateInterruptsInfo()
                     member.column = {}
 
                     local index = 1
-                    addNextColumn(parent, member, index, "LEFT", getSpellLinkByIdWithTexture(spell_id))
+                    WdLib:addNextColumn(parent, member, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(spell_id))
                     if n > 1 then
                         member.column[index]:SetPoint("TOPLEFT", parent.members[n - 1], "BOTTOMLEFT", 0, -1)
                         member:SetPoint("TOPLEFT", parent.members[n - 1], "BOTTOMLEFT", 0, -1)
                     else
                         member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
                     end
-                    generateSpellHover(member.column[index], getSpellLinkByIdWithTexture(spell_id))
+                    WdLib:generateSpellHover(member.column[index], WdLib:getSpellLinkByIdWithTexture(spell_id))
 
 
                     index = index + 1
-                    addNextColumn(parent, member, index, "CENTER", getTimedDiff(core.encounter.startTime, v.timestamp))
+                    WdLib:addNextColumn(parent, member, index, "CENTER", getTimedDiff(core.encounter.startTime, v.timestamp))
                     index = index + 1
-                    addNextColumn(parent, member, index, "CENTER", k)
+                    WdLib:addNextColumn(parent, member, index, "CENTER", k)
                     index = index + 1
-                    addNextColumn(parent, member, index, "LEFT", getInterruptStatusText(v))
+                    WdLib:addNextColumn(parent, member, index, "LEFT", getInterruptStatusText(v))
                     index = index + 1
                     local percent = v.percent or 0
-                    addNextColumn(parent, member, index, "CENTER", percent)
+                    WdLib:addNextColumn(parent, member, index, "CENTER", percent)
 
                     table.insert(parent.members, member)
                 else
                     local member = parent.members[n]
-                    member.column[1].txt:SetText(getSpellLinkByIdWithTexture(spell_id))
-                    generateSpellHover(member.column[1], getSpellLinkByIdWithTexture(spell_id))
+                    member.column[1].txt:SetText(WdLib:getSpellLinkByIdWithTexture(spell_id))
+                    WdLib:generateSpellHover(member.column[1], WdLib:getSpellLinkByIdWithTexture(spell_id))
                     member.column[2].txt:SetText(getTimedDiff(core.encounter.startTime, v.timestamp))
                     member.column[3].txt:SetText(k)
                     member.column[4].txt:SetText(getInterruptStatusText(v))
@@ -86,7 +86,7 @@ local function updateInterruptsInfo()
                     member.column[5].txt:SetText(percent)
 
                     member:Show()
-                    updateScroller(parent.scroller.slider, totalCasts)
+                    WdLib:updateScroller(parent.scroller.slider, totalCasts)
                 end
             end
         end
@@ -106,22 +106,22 @@ local function initInterruptsInfoTable()
     local r = WDTO.data["interrupts"]
     r:SetPoint("TOPLEFT", WDTO.creatures.headers[1], "TOPRIGHT", 1, 0)
     r:SetSize(550, 300)
-    --r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    --r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     --r.bg:SetAllPoints()
 
     r.headers = {}
     r.members = {}
 
     -- headers
-    local h = createTableHeader(r, "Spell", 0, 0, 170, 20)
+    local h = WdLib:createTableHeader(r, "Spell", 0, 0, 170, 20)
     table.insert(r.headers, h)
-    h = createTableHeaderNext(r, h, WD_BUTTON_TIME, 70, 20)
+    h = WdLib:createTableHeaderNext(r, h, WD_BUTTON_TIME, 70, 20)
     table.insert(r.headers, h)
-    h = createTableHeaderNext(r, h, "N", 25, 20)
+    h = WdLib:createTableHeaderNext(r, h, "N", 25, 20)
     table.insert(r.headers, h)
-    h = createTableHeaderNext(r, h, "Status", 400, 20)
+    h = WdLib:createTableHeaderNext(r, h, "Status", 400, 20)
     table.insert(r.headers, h)
-    h = createTableHeaderNext(r, h, "Quality", 50, 20)
+    h = WdLib:createTableHeaderNext(r, h, "Quality", 50, 20)
     table.insert(r.headers, h)
 
     r:Hide()
@@ -182,8 +182,8 @@ function WD:RefreshTrackedCreatures()
 
             local index = 1
             local creatureName = v.name
-            if v.rt > 0 then creatureName = getRaidTargetTextureLink(v.rt).." "..creatureName end
-            addNextColumn(WDTO.creatures, member, index, "LEFT", creatureName)
+            if v.rt > 0 then creatureName = WdLib:getRaidTargetTextureLink(v.rt).." "..creatureName end
+            WdLib:addNextColumn(WDTO.creatures, member, index, "LEFT", creatureName)
             if k > 1 then
                 member:SetPoint("TOPLEFT", WDTO.creatures.members[k - 1], "BOTTOMLEFT", 0, -1)
                 member.column[index]:SetPoint("TOPLEFT", WDTO.creatures.members[k - 1], "BOTTOMLEFT", 0, -1)
@@ -194,7 +194,7 @@ function WD:RefreshTrackedCreatures()
 
             member.column[index]:EnableMouse(true)
             member.column[index]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
-            generateHover(member.column[index], "id: "..v.npc_id)
+            WdLib:generateHover(member.column[index], "id: "..v.npc_id)
 
             table.insert(WDTO.creatures.members, member)
         else
@@ -203,10 +203,10 @@ function WD:RefreshTrackedCreatures()
                 WDTO.lastSelectedCreature = member.column[1]
             end
             local creatureName = v.name
-            if v.rt > 0 then creatureName = getRaidTargetTextureLink(v.rt).." "..creatureName end
+            if v.rt > 0 then creatureName = WdLib:getRaidTargetTextureLink(v.rt).." "..creatureName end
             member.column[1].txt:SetText(creatureName)
             member.column[1]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
-            generateHover(member.column[1], "id: "..v.npc_id)
+            WdLib:generateHover(member.column[1], "id: "..v.npc_id)
             member.info = v
 
             member:Show()
@@ -233,7 +233,7 @@ function WD:InitTrackerOverviewModule(parent)
     WDTO.creatures.headers = {}
     WDTO.creatures.members = {}
 
-    table.insert(WDTO.creatures.headers, createTableHeader(WDTO, "Creatures", 1, -30, 300, 20))
+    table.insert(WDTO.creatures.headers, WdLib:createTableHeader(WDTO, "Creatures", 1, -30, 300, 20))
 
     WDTO:SetScript("OnShow", function(self) WD:RefreshTrackedCreatures() end)
 

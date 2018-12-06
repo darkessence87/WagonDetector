@@ -52,11 +52,11 @@ function WD:InitHelpModule(parent)
     WDHP.mainPage:SetFont("Fonts\\FRIZQT__.TTF", 12);
     local header = "<html><body>"
     local footer = "</body></html>"
-    local version = "<p align=\"center\">Current version: |cff00ff00"..WD.version.."|r</p><br/>"
-    local eventsHelp = "<h1>Events list:</h1>" .. table.tohtml(WD.Help.eventsInfo) .. "<br/>"
-    local rulesHelp = "<h1>Rules list:</h1>" .. table.tohtml(WD.Help.rulesInfo) .. "<br/>"
-    local statsHelp = "<h1>Statistic modes:</h1>" .. table.tohtml(WD.Help.statisticInfo) .. "<br/>"
-    local rangesHelp = "<h1>Ranges list:</h1>" .. table.tohtml(WD.Help.rangesInfo) .. "<br/>"
+    local version = "<p align=\"center\">Current version: |cff00ff00"..WD.Version.."|r</p><br/>"
+    local eventsHelp = "<h1>Events list:</h1>" .. WdLib:table_tohtml(WD.Help.eventsInfo) .. "<br/>"
+    local rulesHelp = "<h1>Rules list:</h1>" .. WdLib:table_tohtml(WD.Help.rulesInfo) .. "<br/>"
+    local statsHelp = "<h1>Statistic modes:</h1>" .. WdLib:table_tohtml(WD.Help.statisticInfo) .. "<br/>"
+    local rangesHelp = "<h1>Ranges list:</h1>" .. WdLib:table_tohtml(WD.Help.rangesInfo) .. "<br/>"
     WDHP.mainPage:SetText(header .. version .. eventsHelp .. rulesHelp .. statsHelp .. rangesHelp .. footer)
 
     -- link button

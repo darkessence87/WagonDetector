@@ -142,7 +142,7 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
     elseif WD:IsPet(src_flags) then
         src = loadEntity(src_guid, src_name, "pet")
     elseif src_name then
-        src_name = getFullCharacterName(src_name)
+        src_name = WdLib:getFullCharacterName(src_name)
         src = loadEntity(src_guid, src_name, "player")
     end
     local dst = nil
@@ -151,7 +151,7 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
     elseif WD:IsPet(dst_flags) then
         dst = loadEntity(dst_guid, dst_name, "pet")
     elseif dst_name then
-        dst_name = getFullCharacterName(dst_name)
+        dst_name = WdLib:getFullCharacterName(dst_name)
         dst = loadEntity(dst_guid, dst_name, "player")
     end
 
@@ -211,8 +211,8 @@ local function interruptCast(unit, unit_name, timestamp, source_spell_id, target
         unit.casts[target_spell_id].count = i
         unit.casts[target_spell_id][i] = {}
         unit.casts[target_spell_id][i].timestamp = timestamp
-        unit.casts[target_spell_id][i].timediff = float_round_to(diff / 1000, 2)
-        unit.casts[target_spell_id][i].percent = float_round_to(diff / unit.casts.current_cast_time, 2) * 100
+        unit.casts[target_spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
+        unit.casts[target_spell_id][i].percent = WdLib:float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
         unit.casts[target_spell_id][i].interrupter = interrupter
         unit.casts[target_spell_id][i].spell_id = source_spell_id
@@ -225,13 +225,13 @@ local function interruptCast(unit, unit_name, timestamp, source_spell_id, target
             then
                 local key = getNpcId(unit.guid)
                 if not rules[interrupter.role]["EV_CAST_INTERRUPTED"][target_spell_id][key] then
-                    key = getShortCharacterName(unit_name, "ignoreRealm")
+                    key = WdLib:getShortCharacterName(unit_name, "ignoreRealm")
                 end
                 if rules[interrupter.role]["EV_CAST_INTERRUPTED"][target_spell_id][key] then
                     local p = rules[interrupter.role]["EV_CAST_INTERRUPTED"][target_spell_id][key].points
                     local dst_nameWithMark = unit.name
-                    if unit.rt > 0 then dst_nameWithMark = getRaidTargetTextureLink(unit.rt).." "..unit.name end
-                    WDMF:AddSuccess(timestamp, interrupter.name, interrupter.rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, getSpellLinkByIdWithTexture(target_spell_id)), p)
+                    if unit.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(unit.rt).." "..unit.name end
+                    WDMF:AddSuccess(timestamp, interrupter.name, interrupter.rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
                 end
             end
         end
@@ -257,7 +257,7 @@ local function finishCast(unit, timestamp, spell_id, result)
             unit.casts[spell_id][i] = {}
             unit.casts[spell_id][i].status = result
             unit.casts[spell_id][i].timestamp = timestamp
-            unit.casts[spell_id][i].timediff = float_round_to(diff / 1000, 2)
+            unit.casts[spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
 
             WD:RefreshTrackedCreatures()
         end
@@ -302,7 +302,7 @@ function WDMF:ProcessAuras(src, dst, ...)
                rules[dst.role]["EV_AURA"][spell_id]["apply"]
             then
                 local p = rules[dst.role]["EV_AURA"][spell_id]["apply"].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_APPLY_AURA, getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             end
         end
     end
@@ -317,7 +317,7 @@ function WDMF:ProcessAuras(src, dst, ...)
                rules[dst.role]["EV_AURA"][spell_id]["remove"]
             then
                 local p = rules[dst.role]["EV_AURA"][spell_id]["remove"].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_REMOVE_AURA, getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             end
 
             -- potions
@@ -341,10 +341,10 @@ function WDMF:ProcessAuras(src, dst, ...)
             local stacks = tonumber(arg[16])
             if rules[dst.role]["EV_AURA_STACKS"][spell_id][stacks] then
                 local p = rules[dst.role]["EV_AURA_STACKS"][spell_id][stacks].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_AURA_STACKS, stacks, getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_AURA_STACKS, stacks, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             elseif rules[dst.role]["EV_AURA_STACKS"][spell_id][0] then
                 local p = rules[dst.role]["EV_AURA_STACKS"][spell_id][0].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             end
         end
     end
@@ -361,14 +361,14 @@ function WDMF:ProcessCasts(src, dst, ...)
     if src.type ~= "player" then
         local parent = findParent(src)
         if parent then
-            src_name = getShortCharacterName(src.parentName)
+            src_name = WdLib:getShortCharacterName(src.parentName)
             src = parent
         end
     end
 
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_START" then
-        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
         startCast(src, timestamp, spell_id)
 
         if rules[src.role] and
@@ -377,21 +377,21 @@ function WDMF:ProcessCasts(src, dst, ...)
         then
             local key = getNpcId(src.guid)
             if not rules[src.role]["EV_CAST_START"][spell_id][key] then
-                key = getShortCharacterName(src_name)
+                key = WdLib:getShortCharacterName(src_name)
             end
             if rules[src.role]["EV_CAST_START"][spell_id][key] then
                 local p = rules[src.role]["EV_CAST_START"][spell_id][key].points
                 if src.type ~= "player" then
-                    self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST_START, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
+                    self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST_START, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 else
-                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
+                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 end
             end
         end
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
-        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
         finishCast(src, timestamp, spell_id, "SUCCESS")
 
         if rules[src.role] and
@@ -400,32 +400,32 @@ function WDMF:ProcessCasts(src, dst, ...)
         then
             local key = getNpcId(src.guid)
             if not rules[src.role]["EV_CAST_END"][spell_id][key] then
-                key = getShortCharacterName(src_name)
+                key = WdLib:getShortCharacterName(src_name)
             end
             if rules[src.role]["EV_CAST_END"][spell_id][key] then
                 local p = rules[src.role]["EV_CAST_END"][spell_id][key].points
                 if src.type ~= "player" then
-                    self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
+                    self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 else
-                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, getShortCharacterName(src.name), getSpellLinkByIdWithTexture(spell_id)), p)
+                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 end
             end
         end
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_MISS" then
-        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
         finishCast(src, timestamp, spell_id, "MISSED")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_FAILED" then
-        --print(event..' : '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
         finishCast(src, timestamp, spell_id, "FAILED")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_INTERRUPT" then
         local target_spell_id = tonumber(arg[15])
-        --print(event..' : interrupted '..getSpellLinkByIdWithTexture(target_spell_id)..' target:'..dst.name..' by '..getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
+        --print(event..' : interrupted '..WdLib:getSpellLinkByIdWithTexture(target_spell_id)..' target:'..dst.name..' by '..WdLib:getSpellLinkByIdWithTexture(spell_id)..' caster:'..src.name)
 
         if dst then
             interruptCast(dst, dst_name, timestamp, spell_id, target_spell_id, src)
@@ -454,15 +454,15 @@ function WDMF:ProcessDamage(src, dst, ...)
 
             if overkill > -1 and rules[dst.role]["EV_DEATH"] and rules[dst.role]["EV_DEATH"][spell_id] then
                 local p = rules[dst.role]["EV_DEATH"][spell_id].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DEATH, getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             else
                 if rules[dst.role]["EV_DAMAGETAKEN"] and rules[dst.role]["EV_DAMAGETAKEN"][spell_id] then
                     local damagetaken_rule = rules[dst.role]["EV_DAMAGETAKEN"][spell_id]
                     local p = damagetaken_rule.points
                     if damagetaken_rule.amount > 0 and total > damagetaken_rule.amount then
-                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, getSpellLinkByIdWithTexture(spell_id)), p)
+                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                     elseif damagetaken_rule.amount == 0 and total > 0 then
-                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkByIdWithTexture(spell_id)), p)
+                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                     end
                 end
             end
@@ -487,7 +487,7 @@ function WDMF:ProcessDeaths(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "UNIT_DIED" then
         for i=1,#self.encounter.players do
-            if getFullCharacterName(self.encounter.players[i].name) == getFullCharacterName(dst.name) then
+            if WdLib:getFullCharacterName(self.encounter.players[i].name) == WdLib:getFullCharacterName(dst.name) then
                 self.encounter.deaths = self.encounter.deaths + 1
                 break
             end
@@ -497,10 +497,10 @@ function WDMF:ProcessDeaths(src, dst, ...)
            rules[dst.role]["EV_DEATH_UNIT"]
         then
             local u = rules[dst.role]["EV_DEATH_UNIT"].unit
-            if (tonumber(u) and u == getNpcId(dst.guid)) or (u == getShortCharacterName(dst_name)) then
+            if (tonumber(u) and u == getNpcId(dst.guid)) or (u == WdLib:getShortCharacterName(dst_name)) then
                 local p = rules[dst.role]["EV_DEATH_UNIT"].points
                 local dst_nameWithMark = dst.name
-                if dst.rt > 0 then dst_nameWithMark = getRaidTargetTextureLink(dst.rt).." "..dst.name end
+                if dst.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(dst.rt).." "..dst.name end
                 if dst.type ~= "player" then
                     self:AddSuccess(timestamp, "creature"..getNpcId(dst.guid), dst.rt, string.format(WD_RULE_DEATH_UNIT, dst_nameWithMark), p)
                 else
@@ -526,13 +526,13 @@ function WDMF:ProcessDispels(src, dst, ...)
            rules[src.role]["EV_DISPEL"][target_spell_id]
         then
             local p = rules[src.role]["EV_DISPEL"][target_spell_id].points
-            self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_DISPEL, getSpellLinkByIdWithTexture(target_spell_id)), p)
+            self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
         end
     end
 end
 
 function WDMF:Init()
-    table.wipe(callbacks)
+    WdLib:table_wipe(callbacks)
     registerCallback(self.ProcessSummons,   "SPELL_SUMMON")
     registerCallback(self.ProcessAuras,     "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
     registerCallback(self.ProcessCasts,     "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
@@ -543,9 +543,9 @@ function WDMF:Init()
 end
 
 function WDMF:Tracker_OnStartEncounter(raiders)
-    table.wipe(WD.db.profile.tracker.npc)
-    table.wipe(WD.db.profile.tracker.pets)
-    table.wipe(WD.db.profile.tracker.players)
+    WdLib:table_wipe(WD.db.profile.tracker.npc)
+    WdLib:table_wipe(WD.db.profile.tracker.pets)
+    WdLib:table_wipe(WD.db.profile.tracker.players)
 
     for k,v in pairs(raiders) do
         if v.type == "pet" then

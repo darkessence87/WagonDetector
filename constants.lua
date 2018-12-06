@@ -1,6 +1,6 @@
 
-WD.minRulesVersion = "v0.0.24"
-WD.version = "v0.0.33"
+WD.MinRulesVersion = "v0.0.24"
+WD.Version = "v0.0.33"
 WD.TiersInfo = {}
 
 WD.CurrentRealmName = string.gsub(GetRealmName(), "%s+", "")
@@ -231,7 +231,6 @@ WD.Spells.knockbackEffects = {
     [152175] = "Monk - TODO check whirling-dragon-punch",
     [204263] = "Priest - talent shining-force",
      [51490] = "Shaman - thunderstorm",
-      [6360] = "Warlock-pet Aura",
 }
 
 function WD.LoadTiers()

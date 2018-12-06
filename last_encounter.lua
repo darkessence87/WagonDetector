@@ -7,15 +7,15 @@ function WD:InitLastEncounterModule(parent)
     local x, y = 1, -30
 
     WDLE.headers = {}
-    local h = createTableHeader(WDLE, WD_BUTTON_TIME, x, y, 70, 20)
+    local h = WdLib:createTableHeader(WDLE, WD_BUTTON_TIME, x, y, 70, 20)
     table.insert(WDLE.headers, h)
-    h = createTableHeaderNext(WDLE, h, WD_BUTTON_NAME, 200, 20)
+    h = WdLib:createTableHeaderNext(WDLE, h, WD_BUTTON_NAME, 200, 20)
     table.insert(WDLE.headers, h)
-    h = createTableHeaderNext(WDLE, h, WD_BUTTON_ROLE, 75, 20)
+    h = WdLib:createTableHeaderNext(WDLE, h, WD_BUTTON_ROLE, 75, 20)
     table.insert(WDLE.headers, h)
-    h = createTableHeaderNext(WDLE, h, WD_BUTTON_POINTS_SHORT, 60, 20)
+    h = WdLib:createTableHeaderNext(WDLE, h, WD_BUTTON_POINTS_SHORT, 60, 20)
     table.insert(WDLE.headers, h)
-    h = createTableHeaderNext(WDLE, h, WD_BUTTON_REASON, 600, 20)
+    h = WdLib:createTableHeaderNext(WDLE, h, WD_BUTTON_REASON, 600, 20)
     table.insert(WDLE.headers, h)
 
     WDLE:SetScript("OnShow", function() WD:RefreshLastEncounterFrame() end)
@@ -38,7 +38,7 @@ function WD:RefreshLastEncounterFrame()
         maxWidth = maxWidth + WDLE.headers[i]:GetWidth() + 1
     end
 
-    local scroller = WDLE.scroller or createScroller(WDLE, maxWidth, maxHeight, #core.encounter.fuckers)
+    local scroller = WDLE.scroller or WdLib:createScroller(WDLE, maxWidth, maxHeight, #core.encounter.fuckers)
     if not WDLE.scroller then
         WDLE.scroller = scroller
     end
@@ -54,34 +54,34 @@ function WD:RefreshLastEncounterFrame()
             member.column = {}
 
             local index = 1
-            addNextColumn(WDLE, member, index, "LEFT", v.timestamp)
+            WdLib:addNextColumn(WDLE, member, index, "LEFT", v.timestamp)
             member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
 
             index = index + 1
-            local fuckerName = getShortCharacterName(v.name)
-            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
-            addNextColumn(WDLE, member, index, "LEFT", fuckerName)
+            local fuckerName = WdLib:getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            WdLib:addNextColumn(WDLE, member, index, "LEFT", fuckerName)
             index = index + 1
-            addNextColumn(WDLE, member, index, "CENTER", v.role)
+            WdLib:addNextColumn(WDLE, member, index, "CENTER", v.role)
             index = index + 1
-            addNextColumn(WDLE, member, index, "CENTER", v.points)
+            WdLib:addNextColumn(WDLE, member, index, "CENTER", v.points)
             index = index + 1
-            addNextColumn(WDLE, member, index, "LEFT", v.reason)
-            generateSpellHover(member.column[index], v.reason)
+            WdLib:addNextColumn(WDLE, member, index, "LEFT", v.reason)
+            WdLib:generateSpellHover(member.column[index], v.reason)
 
             table.insert(WDLE.members, member)
         else
             local member = WDLE.members[k]
             member.column[1].txt:SetText(v.timestamp)
-            local fuckerName = getShortCharacterName(v.name)
-            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            local fuckerName = WdLib:getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             member.column[2].txt:SetText(fuckerName)
             member.column[3].txt:SetText(v.role)
             member.column[4].txt:SetText(v.points)
             member.column[5].txt:SetText(v.reason)
-            generateSpellHover(member.column[5], v.reason)
+            WdLib:generateSpellHover(member.column[5], v.reason)
             member:Show()
-            updateScroller(WDLE.scroller.slider, #core.encounter.fuckers)
+            WdLib:updateScroller(WDLE.scroller.slider, #core.encounter.fuckers)
         end
 
         y = y - 21

@@ -99,14 +99,14 @@ end
 local function printFuckups()
     for _,v in pairs(WDMF.encounter.fuckers) do
         if v.points >= 0 then
-            local fuckerName = getShortCharacterName(v.name)
-            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            local fuckerName = WdLib:getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             if v.points == 0 then
                 local msg = string.format(WD_PRINT_INFO, v.timestamp, fuckerName, v.reason)
-                sendMessage(msg)
+                WdLib:sendMessage(msg)
             else
                 local msg = string.format(WD_PRINT_FAILURE, v.timestamp, fuckerName, v.reason, v.points)
-                sendMessage(msg)
+                WdLib:sendMessage(msg)
             end
         end
     end
@@ -137,7 +137,7 @@ end
 function WDMF:AddSuccess(timestamp, name, mark, msg, points)
     if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
         local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
-        if mark > 0 then name = getRaidTargetTextureLink(mark).." "..name end
+        if mark > 0 then name = WdLib:getRaidTargetTextureLink(mark).." "..name end
         local txt = t.." "..name.." [NICE] "..msg
         print("Ignored success: "..txt)
         return
@@ -146,7 +146,7 @@ function WDMF:AddSuccess(timestamp, name, mark, msg, points)
     local niceBro = {}
     niceBro.encounter = WDMF.encounter.name
     niceBro.timestamp = getTimedDiff(WDMF.encounter.startTime, timestamp)
-    niceBro.name = getFullCharacterName(name)
+    niceBro.name = WdLib:getFullCharacterName(name)
     niceBro.mark = mark
     niceBro.reason = msg
     niceBro.points = points
@@ -156,11 +156,11 @@ function WDMF:AddSuccess(timestamp, name, mark, msg, points)
     if WDMF.encounter.isBlockedByAnother == 0 then
         if WD.db.profile.sendFailImmediately == true then
 
-            local broName = getShortCharacterName(niceBro.name)
-            if niceBro.mark > 0 then broName = getRaidTargetTextureLink(niceBro.mark).." "..broName end
+            local broName = WdLib:getShortCharacterName(niceBro.name)
+            if niceBro.mark > 0 then broName = WdLib:getRaidTargetTextureLink(niceBro.mark).." "..broName end
             if niceBro.points == 0 then
                 local txt = string.format(WD_PRINT_INFO, niceBro.timestamp, broName, niceBro.reason)
-                sendMessage(txt)
+                WdLib:sendMessage(txt)
             end
 
             WD:SavePenaltyPointsToGuildRoster(niceBro)
@@ -173,7 +173,7 @@ end
 function WDMF:AddFail(timestamp, name, mark, msg, points)
     if WDMF.encounter.deaths > WD.db.profile.maxDeaths then
         local t = getTimedDiff(WDMF.encounter.startTime, timestamp)
-        if mark > 0 then name = getRaidTargetTextureLink(mark).." "..name end
+        if mark > 0 then name = WdLib:getRaidTargetTextureLink(mark).." "..name end
         local txt = t.." "..name.." [FAIL] "..msg
         print("Ignored fuckup: "..txt)
         return
@@ -182,7 +182,7 @@ function WDMF:AddFail(timestamp, name, mark, msg, points)
     local fucker = {}
     fucker.encounter = WDMF.encounter.name
     fucker.timestamp = getTimedDiff(WDMF.encounter.startTime, timestamp)
-    fucker.name = getFullCharacterName(name)
+    fucker.name = WdLib:getFullCharacterName(name)
     fucker.mark = mark
     fucker.reason = msg
     fucker.points = points
@@ -191,14 +191,14 @@ function WDMF:AddFail(timestamp, name, mark, msg, points)
 
     if WDMF.encounter.isBlockedByAnother == 0 then
         if WD.db.profile.sendFailImmediately == true then
-            local fuckerName = getShortCharacterName(fucker.name)
-            if fucker.mark > 0 then fuckerName = getRaidTargetTextureLink(fucker.mark).." "..fuckerName end
+            local fuckerName = WdLib:getShortCharacterName(fucker.name)
+            if fucker.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(fucker.mark).." "..fuckerName end
             if fucker.points == 0 then
                 local txt = string.format(WD_PRINT_INFO, fucker.timestamp, fuckerName, fucker.reason)
-                sendMessage(txt)
+                WdLib:sendMessage(txt)
             else
                 local txt = string.format(WD_PRINT_FAILURE, fucker.timestamp, fuckerName, fucker.reason, fucker.points)
-                sendMessage(txt)
+                WdLib:sendMessage(txt)
             end
 
             WD:SavePenaltyPointsToGuildRoster(fucker)
@@ -321,7 +321,7 @@ function WDMF:CreateRaidMember(unit)
             self:CheckConsumables(self.encounter.startTime, p.name, p.unit, self.encounter.rules)
         else
             p.type = "pet"
-            p.name = getShortCharacterName(p.name)
+            p.name = WdLib:getShortCharacterName(p.name)
             local parent = self:FindParent(p.unit)
             p.parentGuid = parent.guid
             p.parentName = parent.name
@@ -336,7 +336,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
     if WD.db.profile.encounters[encounterName] then pullId = WD.db.profile.encounters[encounterName] + 1 end
 
     if UnitInRaid("player") ~= nil then
-        sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
+        WdLib:sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
         WD:AddPullHistory(encounterName)
 
         self.encounter.isActive = 1
@@ -359,7 +359,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
         self:Tracker_OnStartEncounter(self.encounter.players)
         return
     elseif encounterName == "Test" then
-        sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
+        WdLib:sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
         WD:AddPullHistory(encounterName)
 
         self.encounter.isActive = 1
@@ -403,7 +403,7 @@ function WDMF:StopEncounter()
     end
 
     self.encounter.isActive = 0
-    sendMessage(string.format(WD_ENCOUNTER_STOP, self.encounter.name, getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)))
+    WdLib:sendMessage(string.format(WD_ENCOUNTER_STOP, self.encounter.name, getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)))
 
     self:Tracker_OnStopEncounter()
 
@@ -438,7 +438,7 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
     local cmd, data = string.match(msg, "^(.*):(.*)$")
     local receiver = playerName
 
-    sender = getFullCharacterName(sender)
+    sender = WdLib:getFullCharacterName(sender)
 
     if WD:IsOfficer(receiver) == false then
         print("You are not officer to receive message")
@@ -502,12 +502,12 @@ function WD:EnableConfig()
         end
 
         WD.db.profile.isEnabled = true
-        sendMessage(WD_ENABLED)
+        WdLib:sendMessage(WD_ENABLED)
     else
         WDMF:StopPull()
         WDMF:UnregisterEvent("CHAT_MSG_ADDON")
 
         WD.db.profile.isEnabled = false
-        sendMessage(WD_DISABLED)
+        WdLib:sendMessage(WD_DISABLED)
     end
 end

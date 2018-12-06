@@ -6,7 +6,7 @@ WD.cache.roster = {}
 WD.cache.rosterkeys = {}
 
 function calculateCoef(points, pulls)
-    return float_round_to(points * 1.0 / pulls, 2)
+    return WdLib:float_round_to(points * 1.0 / pulls, 2)
 end
 
 local function parseOfficerNote(note)
@@ -15,7 +15,7 @@ local function parseOfficerNote(note)
 
     for i=1,GetNumGuildMembers() do
         local name, _, rankIndex = GetGuildRosterInfo(i)
-        if note == getShortCharacterName(name) and rankIndex <= WD.db.profile.minGuildRank.id then
+        if note == WdLib:getShortCharacterName(name) and rankIndex <= WD.db.profile.minGuildRank.id then
             isAlt = "yes"
             break
         end
@@ -40,7 +40,7 @@ local function updateGuildRosterFrame()
         maxWidth = maxWidth + WDGR.headers[i]:GetWidth() + 1
     end
 
-    local scroller = WDGR.scroller or createScroller(WDGR, maxWidth, maxHeight, #WD.cache.rosterkeys)
+    local scroller = WDGR.scroller or WdLib:createScroller(WDGR, maxWidth, maxHeight, #WD.cache.rosterkeys)
     if not WDGR.scroller then
         WDGR.scroller = scroller
     end
@@ -56,14 +56,14 @@ local function updateGuildRosterFrame()
             member.column = {}
 
             local index = 1
-            addNextColumn(WDGR, member, index, "LEFT", getColoredName(getShortCharacterName(v.name), v.class))
+            WdLib:addNextColumn(WDGR, member, index, "LEFT", WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
             member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
             member.column[index]:EnableMouse(true)
             member.column[index]:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
                 for i=1,#v.alts do
-                    tooltip = tooltip..getShortCharacterName(v.alts[i]).."\n"
+                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
                 end
                 if #v.alts > 0 then
                     GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
@@ -73,23 +73,23 @@ local function updateGuildRosterFrame()
             member.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
 
             index = index + 1
-            addNextColumn(WDGR, member, index, "CENTER", v.rank)
+            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.rank)
             index = index + 1
-            addNextColumn(WDGR, member, index, "CENTER", v.points)
+            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.points)
             index = index + 1
-            addNextColumn(WDGR, member, index, "CENTER", v.pulls)
+            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.pulls)
             index = index + 1
-            addNextColumn(WDGR, member, index, "CENTER", v.coef)
+            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.coef)
 
             table.insert(WDGR.members, member)
         else
             local member = WDGR.members[k]
-            member.column[1].txt:SetText(getColoredName(getShortCharacterName(v.name), v.class))
+            member.column[1].txt:SetText(WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
             member.column[1]:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
                 for i=1,#v.alts do
-                    tooltip = tooltip..getShortCharacterName(v.alts[i]).."\n"
+                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
                 end
                 if #v.alts > 0 then
                     GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
@@ -101,7 +101,7 @@ local function updateGuildRosterFrame()
             member.column[4].txt:SetText(v.pulls)
             member.column[5].txt:SetText(v.coef)
             member:Show()
-            updateScroller(WDGR.scroller.slider, #WD.cache.rosterkeys)
+            WdLib:updateScroller(WDGR.scroller.slider, #WD.cache.rosterkeys)
         end
 
         y = y - 21
@@ -139,9 +139,9 @@ end
 local function initClassRoster()
     local d = #WDGR.headers
     local x, y = 500, -30
-    local h = createTableHeader(WDGR, WD_BUTTON_CLASS, x, y,    125, 20)
+    local h = WdLib:createTableHeader(WDGR, WD_BUTTON_CLASS, x, y,    125, 20)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_CLASS_NUMBER,   50, 20)
+    h = WdLib:createTableHeaderNext(WDGR, h, WD_BUTTON_CLASS_NUMBER,   50, 20)
     table.insert(WDGR.headers, h)
 
     WDGR.classMembers = {}
@@ -156,7 +156,7 @@ local function initClassRoster()
         member.class = class
 
         local index = d + 1
-        addNextColumn(WDGR, member, index, "LEFT", getColoredName(className, class))
+        WdLib:addNextColumn(WDGR, member, index, "LEFT", WdLib:getColoredName(className, class))
         if k > 1 then
             member.column[index]:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
             member:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
@@ -168,7 +168,7 @@ local function initClassRoster()
         member.column[index].txt:SetPoint("LEFT", 5, 0)
 
         index = index + 1
-        addNextColumn(WDGR, member, index, "CENTER", 0)
+        WdLib:addNextColumn(WDGR, member, index, "CENTER", 0)
 
         prevFrame = member
         table.insert(WDGR.classMembers, member)
@@ -179,7 +179,7 @@ local function initClassRoster()
     member.column = {}
 
     local index = d + 1
-    addNextColumn(WDGR, member, index, "LEFT", WD_LABEL_TOTAL)
+    WdLib:addNextColumn(WDGR, member, index, "LEFT", WD_LABEL_TOTAL)
     member.column[index]:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
     member:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
     member.column[index]:EnableMouse(false)
@@ -187,7 +187,7 @@ local function initClassRoster()
     member.column[index].t:SetColorTexture(.5, .5, .5, 1)
 
     index = index + 1
-    addNextColumn(WDGR, member, index, "CENTER", 0)
+    WdLib:addNextColumn(WDGR, member, index, "CENTER", 0)
     table.insert(WDGR.classMembers, member)
 end
 
@@ -207,15 +207,15 @@ function WD:InitGuildRosterModule(parent)
         WDGR.sorted = param
     end
 
-    local h = createTableHeader(WDGR, WD_BUTTON_NAME, x, y, 150, 20, function() headerButtonFunction("BY_NAME") end)
+    local h = WdLib:createTableHeader(WDGR, WD_BUTTON_NAME, x, y, 150, 20, function() headerButtonFunction("BY_NAME") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_RANK,      100, 20, function() headerButtonFunction("BY_RANK") end)
+    h = WdLib:createTableHeaderNext(WDGR, h, WD_BUTTON_RANK,      100, 20, function() headerButtonFunction("BY_RANK") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_POINTS,     65, 20, function() headerButtonFunction("BY_POINTS") end)
+    h = WdLib:createTableHeaderNext(WDGR, h, WD_BUTTON_POINTS,     65, 20, function() headerButtonFunction("BY_POINTS") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_PULLS,      65, 20, function() headerButtonFunction("BY_PULLS") end)
+    h = WdLib:createTableHeaderNext(WDGR, h, WD_BUTTON_PULLS,      65, 20, function() headerButtonFunction("BY_PULLS") end)
     table.insert(WDGR.headers, h)
-    h = createTableHeaderNext(WDGR, h, WD_BUTTON_COEF,       65, 20, function() headerButtonFunction("BY_RESULT") end)
+    h = WdLib:createTableHeaderNext(WDGR, h, WD_BUTTON_COEF,       65, 20, function() headerButtonFunction("BY_RESULT") end)
     table.insert(WDGR.headers, h)
 
     initClassRoster()
@@ -310,7 +310,7 @@ function WD:OnGuildRosterUpdate()
     end
 
     for _,v in pairs(altInfos) do
-        mainName = getFullCharacterName(v.main)
+        mainName = WdLib:getFullCharacterName(v.main)
         if WD.cache.roster[mainName] then
             table.insert(WD.cache.roster[mainName].alts, v.name)
         end
@@ -372,7 +372,7 @@ function WD:SavePullsToGuildRoster(v)
 end
 
 function WD:SavePenaltyPointsToGuildRoster(v, isRevert)
-    local name = self:FindMain(getFullCharacterName(v.name))
+    local name = self:FindMain(WdLib:getFullCharacterName(v.name))
     if WD.cache.roster[name] then
         local info = WD.cache.roster[name]
         info.points = info.points + v.points
@@ -406,7 +406,7 @@ function WD:ResetGuildStatistics()
 
     self:OnGuildRosterUpdate()
 
-    sendMessage(WD_RESET_GUILD_ROSTER)
+    WdLib:sendMessage(WD_RESET_GUILD_ROSTER)
 end
 
 function WD:GetGuildRanks()

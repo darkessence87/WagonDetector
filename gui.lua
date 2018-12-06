@@ -43,82 +43,82 @@ local function reloadGuildRanksMenu(parent)
         end }
         table.insert(items3, item)
     end
-    updateDropDownMenu(parent, "GuildRanks", items3)
+    WdLib:updateDropDownMenu(parent, "GuildRanks", items3)
 end
 
 local function initMainModule(mainF)
     -- check lock button
-    mainF.lockButton = createCheckButton(mainF)
+    mainF.lockButton = WdLib:createCheckButton(mainF)
     mainF.lockButton:SetPoint("TOPLEFT", mainF, "TOPLEFT", 5, -5)
     mainF.lockButton:SetChecked(WD.db.profile.isLocked)
     mainF.lockButton:SetScript("OnClick", function() lockConfig() end)
-    mainF.lockButton.txt = createFont(mainF.lockButton, "LEFT", WD_BUTTON_LOCK_GUI)
+    mainF.lockButton.txt = WdLib:createFont(mainF.lockButton, "LEFT", WD_BUTTON_LOCK_GUI)
     mainF.lockButton.txt:SetSize(300, 20)
     mainF.lockButton.txt:SetPoint("LEFT", mainF.lockButton, "RIGHT", 5, 0)
 
     -- default chat selector
-    mainF.dropFrame0 = createDropDownMenu(mainF)
-    updateDropDownMenu(mainF.dropFrame0, WD_BUTTON_DEFAULT_CHAT, convertTypesToItems(chatTypes, function() WD.db.profile.chat = mainF.dropFrame0.txt:GetText() end))
+    mainF.dropFrame0 = WdLib:createDropDownMenu(mainF)
+    WdLib:updateDropDownMenu(mainF.dropFrame0, WD_BUTTON_DEFAULT_CHAT, WdLib:convertTypesToItems(chatTypes, function() WD.db.profile.chat = mainF.dropFrame0.txt:GetText() end))
     mainF.dropFrame0:SetSize(350, 20)
     mainF.dropFrame0:SetPoint("TOPLEFT", mainF.lockButton, "BOTTOMLEFT", 0, -5)
     mainF.dropFrame0:SetScript("OnShow", function() mainF.dropFrame0.txt:SetText(WD.db.profile.chat) end)
 
     -- check enable button
-    mainF.enableButton = createCheckButton(mainF)
+    mainF.enableButton = WdLib:createCheckButton(mainF)
     mainF.enableButton:SetPoint("TOPLEFT", mainF.dropFrame0, "BOTTOMLEFT", 0, -5)
     mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
     mainF.enableButton:SetScript("OnClick", function() WD:EnableConfig() end)
-    mainF.enableButton.txt = createFont(mainF.enableButton, "LEFT", WD_BUTTON_ENABLE_CONFIG)
+    mainF.enableButton.txt = WdLib:createFont(mainF.enableButton, "LEFT", WD_BUTTON_ENABLE_CONFIG)
     mainF.enableButton.txt:SetSize(300, 20)
     mainF.enableButton.txt:SetPoint("LEFT", mainF.enableButton, "RIGHT", 5, 0)
 
     -- check start tracking only by macro
-    mainF.autotrackButton = createCheckButton(mainF)
+    mainF.autotrackButton = WdLib:createCheckButton(mainF)
     mainF.autotrackButton:SetPoint("TOPLEFT", mainF.enableButton, "BOTTOMLEFT", 0, -5)
     mainF.autotrackButton:SetChecked(WD.db.profile.autoTrack)
     mainF.autotrackButton:SetScript("OnClick", function() WD.db.profile.autoTrack = not WD.db.profile.autoTrack; if WD.db.profile.autoTrack then WD.mainFrame:StartPull() else WD.mainFrame:StopPull() end end)
-    mainF.autotrackButton.txt = createFont(mainF.autotrackButton, "LEFT", WD_BUTTON_AUTOTRACK)
+    mainF.autotrackButton.txt = WdLib:createFont(mainF.autotrackButton, "LEFT", WD_BUTTON_AUTOTRACK)
     mainF.autotrackButton.txt:SetSize(300, 20)
     mainF.autotrackButton.txt:SetPoint("LEFT", mainF.autotrackButton, "RIGHT", 5, 0)
 
     -- check immediate fail button
-    mainF.immediateButton = createCheckButton(mainF)
+    mainF.immediateButton = WdLib:createCheckButton(mainF)
     mainF.immediateButton:SetPoint("TOPLEFT", mainF.autotrackButton, "BOTTOMLEFT", 0, -5)
     mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
     mainF.immediateButton:SetScript("OnClick", function() WD.db.profile.sendFailImmediately = not WD.db.profile.sendFailImmediately end)
-    mainF.immediateButton.txt = createFont(mainF.immediateButton, "LEFT", WD_BUTTON_IMMEDIATE_NOTIFY)
+    mainF.immediateButton.txt = WdLib:createFont(mainF.immediateButton, "LEFT", WD_BUTTON_IMMEDIATE_NOTIFY)
     mainF.immediateButton.txt:SetSize(300, 20)
     mainF.immediateButton.txt:SetPoint("LEFT", mainF.immediateButton, "RIGHT", 5, 0)
 
     -- check penalties button
-    mainF.penaltyButton = createCheckButton(mainF)
+    mainF.penaltyButton = WdLib:createCheckButton(mainF)
     mainF.penaltyButton:SetPoint("TOPLEFT", mainF.immediateButton, "BOTTOMLEFT", 0, -5)
     mainF.penaltyButton:SetChecked(WD.db.profile.enablePenalties)
     mainF.penaltyButton:SetScript("OnClick", function() WD.db.profile.enablePenalties = not WD.db.profile.enablePenalties end)
-    mainF.penaltyButton.txt = createFont(mainF.penaltyButton, "LEFT", WD_BUTTON_ENABLE_PENALTIES)
+    mainF.penaltyButton.txt = WdLib:createFont(mainF.penaltyButton, "LEFT", WD_BUTTON_ENABLE_PENALTIES)
     mainF.penaltyButton.txt:SetSize(300, 20)
     mainF.penaltyButton.txt:SetPoint("LEFT", mainF.penaltyButton, "RIGHT", 5, 0)
 
     -- max deaths button
-    mainF.maxDeathsTxt = createFontDefault(mainF, "LEFT", WD_BUTTON_MAX_DEATHS)
+    mainF.maxDeathsTxt = WdLib:createFontDefault(mainF, "LEFT", WD_BUTTON_MAX_DEATHS)
     mainF.maxDeathsTxt:SetSize(300, 20)
     mainF.maxDeathsTxt:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 0, -5)
-    mainF.maxDeaths = createDropDownMenu(mainF)
+    mainF.maxDeaths = WdLib:createDropDownMenu(mainF)
     local items2 = {}
     for i=1,9 do
         local item = { name = i+1, func = function() WD.db.profile.maxDeaths = tonumber(mainF.maxDeaths.txt:GetText()) end }
         table.insert(items2, item)
     end
-    updateDropDownMenu(mainF.maxDeaths, WD.db.profile.maxDeaths, items2)
+    WdLib:updateDropDownMenu(mainF.maxDeaths, WD.db.profile.maxDeaths, items2)
     mainF.maxDeaths:SetSize(150, 20)
     mainF.maxDeaths:SetPoint("TOPLEFT", mainF.penaltyButton, "BOTTOMLEFT", 200, -5)
     mainF.maxDeaths:SetScript("OnShow", function() mainF.maxDeaths.txt:SetText(WD.db.profile.maxDeaths) end)
 
     -- default guild rank selector
-    mainF.rankSelectorTxt = createFontDefault(mainF, "LEFT", WD_BUTTON_SELECT_RANK)
+    mainF.rankSelectorTxt = WdLib:createFontDefault(mainF, "LEFT", WD_BUTTON_SELECT_RANK)
     mainF.rankSelectorTxt:SetSize(200, 20)
     mainF.rankSelectorTxt:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 0, -5)
-    mainF.dropFrame1 = createDropDownMenu(mainF)
+    mainF.dropFrame1 = WdLib:createDropDownMenu(mainF)
     reloadGuildRanksMenu(mainF.dropFrame1)
     mainF.dropFrame1:SetSize(250, 20)
     mainF.dropFrame1:SetPoint("TOPLEFT", mainF.maxDeathsTxt, "BOTTOMLEFT", 100, -5)
@@ -145,11 +145,11 @@ end
 
 local function createModuleButton(module, name, ySize, yOffset)
     local parent = module:GetParent()
-    module.button = createButton(parent)
+    module.button = WdLib:createButton(parent)
     module.button:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, yOffset)
     module.button:SetSize(158, ySize)
     module.button:SetScript("OnClick", function() if not module:IsVisible() then hideModules(); module:Show(); module.button.t:SetColorTexture(.2, .6, .2, 1); end end)
-    module.button.txt = createFont(module.button, "LEFT", name)
+    module.button.txt = WdLib:createFont(module.button, "LEFT", name)
     module.button.txt:SetSize(150, ySize)
     module.button.txt:SetPoint("LEFT", module.button, "LEFT", 5, 0)
     module.button.t:SetColorTexture(.2, .2, .2, 1)
@@ -199,12 +199,12 @@ function WD:CreateGuiFrame()
     WDGF:SetScript("OnDragStart", WDGF.StartMoving)
     WDGF:SetScript("OnDragStop", WDGF.StopMovingOrSizing)
     -- WDGF background
-    WDGF.bg = createColorTexture(WDGF, "TEXTURE", .1, .1, .1, .99)
+    WDGF.bg = WdLib:createColorTexture(WDGF, "TEXTURE", .1, .1, .1, .99)
     WDGF.bg:ClearAllPoints()
     WDGF.bg:SetPoint("TOPLEFT", WDGF, "TOPLEFT", 0, 0)
     WDGF.bg:SetAllPoints()
     -- x button
-    WDGF.xButton = createXButton(WDGF, 0)
+    WDGF.xButton = WdLib:createXButton(WDGF, 0)
 
     WDGF:RegisterEvent("PLAYER_ENTERING_WORLD")
     WDGF:RegisterEvent("GUILD_ROSTER_UPDATE")

@@ -57,10 +57,10 @@ local function editRuleLine(data)
     end
 
     if rule.type == "EV_AURA" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Aura id:")
 
-        updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
         local frame = findDropDownFrameByName(arg1_drop, rule.arg1)
         if frame then
             arg1_drop.selected = frame
@@ -69,42 +69,42 @@ local function editRuleLine(data)
         arg1_drop.label:SetText("Action:")
         arg1_drop:Show()
     elseif rule.type == "EV_AURA_STACKS" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Aura id:")
-        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        WdLib:showHiddenEditBox(r, "arg1_edit", rule.arg1)
         arg1_edit.label:SetText("Stacks:")
     elseif rule.type == "EV_DISPEL" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Aura id:")
     elseif rule.type == "EV_CAST_START" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Spell id:")
-        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        WdLib:showHiddenEditBox(r, "arg1_edit", rule.arg1)
         arg1_edit.label:SetText("Caster name:")
     elseif rule.type == "EV_CAST_INTERRUPTED" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Target spell id:")
-        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        WdLib:showHiddenEditBox(r, "arg1_edit", rule.arg1)
         arg1_edit.label:SetText("Target name:")
     elseif rule.type == "EV_CAST_END" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Spell id:")
-        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        WdLib:showHiddenEditBox(r, "arg1_edit", rule.arg1)
         arg1_edit.label:SetText("Caster name:")
     elseif rule.type == "EV_DAMAGETAKEN" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Spell id:")
-        showHiddenEditBox(r, "arg1_edit", rule.arg1)
+        WdLib:showHiddenEditBox(r, "arg1_edit", rule.arg1)
         arg1_edit.label:SetText("Amount:")
     elseif rule.type == "EV_DEATH" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Spell id:")
     elseif rule.type == "EV_DEATH_UNIT" then
-        showHiddenEditBox(r, "arg0_edit", rule.arg0)
+        WdLib:showHiddenEditBox(r, "arg0_edit", rule.arg0)
         arg0_edit.label:SetText("Unit name:")
     end
 
-    showHiddenEditBox(r, "arg2_edit", rule.points)
+    WdLib:showHiddenEditBox(r, "arg2_edit", rule.points)
     arg2_edit.label:SetText("Points:")
 
     r:Show()
@@ -113,32 +113,32 @@ end
 local function getRuleDescription(rule)
     if rule.type == "EV_DAMAGETAKEN" then
         if rule.arg1 > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
         else
-            return string.format(WD_RULE_DAMAGE_TAKEN, getSpellLinkByIdWithTexture(rule.arg0))
+            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
         end
     elseif rule.type == "EV_DEATH" then
-        return string.format(WD_RULE_DEATH, getSpellLinkByIdWithTexture(rule.arg0))
+        return string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_AURA" then
         if rule.arg1 == "apply" then
-            return string.format(WD_RULE_APPLY_AURA, getSpellLinkByIdWithTexture(rule.arg0))
+            return string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
         else
-            return string.format(WD_RULE_REMOVE_AURA, getSpellLinkByIdWithTexture(rule.arg0))
+            return string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
         end
     elseif rule.type == "EV_AURA_STACKS" then
         if rule.arg1 > 0 then
-            return string.format(WD_RULE_AURA_STACKS, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
+            return string.format(WD_RULE_AURA_STACKS, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
         else
-            return string.format(WD_RULE_AURA_STACKS_ANY, "", getSpellLinkByIdWithTexture(rule.arg0))
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib:getSpellLinkByIdWithTexture(rule.arg0))
         end
     elseif rule.type == "EV_CAST_START" then
-        return string.format(WD_RULE_CAST_START, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
+        return string.format(WD_RULE_CAST_START, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_CAST_END" then
-        return string.format(WD_RULE_CAST, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
+        return string.format(WD_RULE_CAST, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_CAST_INTERRUPTED" then
-        return string.format(WD_RULE_CAST_INTERRUPT, rule.arg1, getSpellLinkByIdWithTexture(rule.arg0))
+        return string.format(WD_RULE_CAST_INTERRUPT, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_DISPEL" then
-        return string.format(WD_RULE_DISPEL, getSpellLinkByIdWithTexture(rule.arg0))
+        return string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
     elseif rule.type == "EV_DEATH_UNIT" then
         return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
     elseif rule.type == "EV_POTIONS" then
@@ -156,8 +156,8 @@ end
 
 local function isValidRule(rule)
     if rule and rule.type then
-        if not rule.version or rule.version < WD.minRulesVersion then
-            print(string.format(WD_RULE_ERROR_OLD_VERSION, rule.version or "none", WD.minRulesVersion))
+        if not rule.version or rule.version < WD.MinRulesVersion then
+            print(string.format(WD_RULE_ERROR_OLD_VERSION, rule.version or "none", WD.MinRulesVersion))
             return false
         end
     else
@@ -223,8 +223,8 @@ end
 
 local function exportRule(rule)
     if not rule then return end
-    rule.version = WD.version
-    local txt = encode64(table.tostring(rule))
+    rule.version = WD.Version
+    local txt = WdLib:encode64(WdLib:table_tostring(rule))
     local r = WDRM.exportWindow
     r.editBox:SetText(txt)
     r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
@@ -237,8 +237,8 @@ end
 
 local function exportEncounter(rules)
     if not rules or #rules == 0 then return end
-    for _,v in pairs(rules) do v.version = WD.version end
-    local txt = encode64(table.tostring(rules))
+    for _,v in pairs(rules) do v.version = WD.Version end
+    local txt = WdLib:encode64(WdLib:table_tostring(rules))
     local r = WDRM.exportWindow
     r.editBox:SetText(txt)
     r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
@@ -250,21 +250,21 @@ local function exportEncounter(rules)
 end
 
 local function importRule(str)
-    local d = decode64(str)
+    local d = WdLib:decode64(str)
     local rule = parseRule(d)
     return rule
 end
 
 local function importEncounter(str)
-    local d = decode64(str)
+    local d = WdLib:decode64(str)
     local rules = parseEncounter(d)
     return rules
 end
 
 local function shareRule(rule)
     if not rule then return end
-    rule.version = WD.version
-    local txt = encode64(table.tostring(rule))
+    rule.version = WD.Version
+    local txt = WdLib:encode64(WdLib:table_tostring(rule))
     WD:SendAddonMessage("share_rule", txt)
 end
 
@@ -282,7 +282,7 @@ local function updateRuleLines()
         maxWidth = maxWidth + WDRM.headers[i]:GetWidth() + 1
     end
 
-    local scroller = WDRM.scroller or createScroller(WDRM, maxWidth, maxHeight, #WD.db.profile.rules)
+    local scroller = WDRM.scroller or WdLib:createScroller(WDRM, maxWidth, maxHeight, #WD.db.profile.rules)
     if not WDRM.scroller then
         WDRM.scroller = scroller
     end
@@ -313,14 +313,14 @@ local function updateRuleLines()
             ruleLine.column = {}
 
             local index = 1
-            ruleLine.column[index] = createCheckButton(ruleLine)
+            ruleLine.column[index] = WdLib:createCheckButton(ruleLine)
             ruleLine.column[index]:SetSize(18, 18)
             ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine, "TOPLEFT", 1, -1)
             ruleLine.column[index]:SetChecked(v.isActive)
             ruleLine.column[index]:SetScript("OnClick", function() v.isActive = not v.isActive end)
 
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "LEFT", WD.EncounterNames[v.journalId])
+            WdLib:addNextColumn(WDRM, ruleLine, index, "LEFT", WD.EncounterNames[v.journalId])
             ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine.column[index-1], "TOPRIGHT", 2, 1)
             local instanceName = WD.FindInstanceByJournalId(v.journalId)
             ruleLine.column[index]:SetScript("OnEnter", function(self)
@@ -333,30 +333,30 @@ local function updateRuleLines()
             ruleLine.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
 
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "LEFT", v.role)
+            WdLib:addNextColumn(WDRM, ruleLine, index, "LEFT", v.role)
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
-            generateSpellHover(ruleLine.column[index], getRuleDescription(v))
+            WdLib:addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
+            WdLib:generateSpellHover(ruleLine.column[index], getRuleDescription(v))
 
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "CENTER", v.points)
+            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", v.points)
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EDIT)
+            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EDIT)
             ruleLine.column[index]:EnableMouse(true)
             ruleLine.column[index]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
             ruleLine.column[index].t:SetColorTexture(.2, 1, .2, .5)
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_DELETE)
+            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_DELETE)
             ruleLine.column[index]:EnableMouse(true)
             ruleLine.column[index]:SetScript("OnClick", function() table.remove(WD.db.profile.rules, k); updateRuleLines(); end)
             ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EXPORT)
+            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EXPORT)
             ruleLine.column[index]:EnableMouse(true)
             ruleLine.column[index]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
             ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
             index = index + 1
-            addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_SHARE)
+            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_SHARE)
             ruleLine.column[index]:EnableMouse(true)
             ruleLine.column[index]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
             ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
@@ -378,7 +378,7 @@ local function updateRuleLines()
             end)
             ruleLine.column[3].txt:SetText(v.role)
             ruleLine.column[4].txt:SetText(getRuleDescription(v))
-            generateSpellHover(ruleLine.column[4], getRuleDescription(v))
+            WdLib:generateSpellHover(ruleLine.column[4], getRuleDescription(v))
 
             ruleLine.column[5].txt:SetText(v.points)
             ruleLine.column[6]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
@@ -386,7 +386,7 @@ local function updateRuleLines()
             ruleLine.column[8]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
             ruleLine.column[9]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
             ruleLine:Show()
-            updateScroller(WDRM.scroller.slider, #WD.db.profile.rules)
+            WdLib:updateScroller(WDRM.scroller.slider, #WD.db.profile.rules)
         end
 
         y = y - 21
@@ -550,7 +550,7 @@ local function saveRule()
     rule.arg1 = ""
     rule.points = parent.hiddenMenus["arg2_edit"]:GetNumber()
     rule.role = parent.menus["roles"]:GetText()
-    rule.version = WD.version
+    rule.version = WD.Version
 
     if ruleType == "EV_DAMAGETAKEN" then
         rule.arg0 = tonumber(arg0) or 0
@@ -614,48 +614,48 @@ local function updateNewRuleMenu(frame, selected)
     local rule = selected.name
 
     if rule == "EV_AURA" then
-        showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
         arg0_edit.label:SetText("Aura id:")
-        updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
         arg1_drop.label:SetText("Action:")
         arg1_drop:Show()
     elseif rule == "EV_AURA_STACKS" then
-        showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
         arg0_edit.label:SetText("Aura id:")
-        showHiddenEditBox(r, "arg1_edit", "stacks or 0 (if any)")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "stacks or 0 (if any)")
         arg1_edit.label:SetText("Stacks:")
     elseif rule == "EV_DISPEL" then
-        showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
         arg0_edit.label:SetText("Aura id:")
     elseif rule == "EV_CAST_START" then
-        showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
         arg0_edit.label:SetText("Spell id:")
-        showHiddenEditBox(r, "arg1_edit", "caster name")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
         arg1_edit.label:SetText("Caster name:")
     elseif rule == "EV_CAST_INTERRUPTED" then
-        showHiddenEditBox(r, "arg0_edit", "target spell id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
         arg0_edit.label:SetText("Target spell id:")
-        showHiddenEditBox(r, "arg1_edit", "target name")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "target name")
         arg1_edit.label:SetText("Target name:")
     elseif rule == "EV_CAST_END" then
-        showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
         arg0_edit.label:SetText("Spell id:")
-        showHiddenEditBox(r, "arg1_edit", "caster name")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
         arg1_edit.label:SetText("Caster name:")
     elseif rule == "EV_DAMAGETAKEN" then
-        showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
         arg0_edit.label:SetText("Spell id:")
-        showHiddenEditBox(r, "arg1_edit", "amount or 0")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "amount or 0")
         arg1_edit.label:SetText("Amount:")
     elseif rule == "EV_DEATH" then
-        showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
         arg0_edit.label:SetText("Spell id:")
     elseif rule == "EV_DEATH_UNIT" then
-        showHiddenEditBox(r, "arg0_edit", "unit name")
+        WdLib:showHiddenEditBox(r, "arg0_edit", "unit name")
         arg0_edit.label:SetText("Unit name:")
     end
 
-    showHiddenEditBox(r, "arg2_edit", 0)
+    WdLib:showHiddenEditBox(r, "arg2_edit", 0)
     arg2_edit.label:SetText("Points:")
 end
 
@@ -671,92 +671,92 @@ local function initNewRuleWindow()
     local x = totalWidth - xSize
 
     -- encounters menu
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList())
+    r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList())
     r.menus["encounters"]:SetSize(xSize, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", x, -1)
-    r.menus["encounters"].label = createFontDefault(r.menus["encounters"], "RIGHT", "Encounter:")
+    r.menus["encounters"].label = WdLib:createFontDefault(r.menus["encounters"], "RIGHT", "Encounter:")
     r.menus["encounters"].label:SetSize(x - 5, 20)
     r.menus["encounters"].label:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
     -- roles filter
-    r.menus["roles"] = createDropDownMenu(r, "ANY", convertTypesToItems(WD.RoleTypes))
+    r.menus["roles"] = WdLib:createDropDownMenu(r, "ANY", WdLib:convertTypesToItems(WD.RoleTypes))
     r.menus["roles"].txt:SetJustifyH("CENTER")
     r.menus["roles"]:SetSize(xSize, 20)
     r.menus["roles"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
-    r.menus["roles"].label = createFontDefault(r.menus["roles"], "RIGHT", "Role:")
+    r.menus["roles"].label = WdLib:createFontDefault(r.menus["roles"], "RIGHT", "Role:")
     r.menus["roles"].label:SetSize(x - 5, 20)
     r.menus["roles"].label:SetPoint("TOPLEFT", r.menus["encounters"].label, "BOTTOMLEFT", 0, -1)
     -- events menu
-    local items = convertTypesToItems(WD.EventTypes, updateNewRuleMenu)
+    local items = WdLib:convertTypesToItems(WD.EventTypes, updateNewRuleMenu)
     table.insert(items, { name = "EV_POTIONS", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_FLASKS", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_FOOD", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_RUNES", func = updateNewRuleMenu })
-    r.menus["rule_types"] = createDropDownMenu(r, "Select rule type", updateItemsByHoverInfo(items, WD.Help.eventsInfo))
+    r.menus["rule_types"] = WdLib:createDropDownMenu(r, "Select rule type", WdLib:updateItemsByHoverInfo(items, WD.Help.eventsInfo))
     r.menus["rule_types"]:SetSize(xSize, 20)
     r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["roles"], "BOTTOMLEFT", 0, -1)
-    r.menus["rule_types"].label = createFontDefault(r.menus["rule_types"], "RIGHT", "Rule:")
+    r.menus["rule_types"].label = WdLib:createFontDefault(r.menus["rule_types"], "RIGHT", "Rule:")
     r.menus["rule_types"].label:SetSize(x - 5, 20)
     r.menus["rule_types"].label:SetPoint("TOPLEFT", r.menus["roles"].label, "BOTTOMLEFT", 0, -1)
 
     -- arg0: editbox
-    r.hiddenMenus["arg0_edit"] = createEditBox(r)
+    r.hiddenMenus["arg0_edit"] = WdLib:createEditBox(r)
     r.hiddenMenus["arg0_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg0_edit"]:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg0_edit"].label = createFontDefault(r.hiddenMenus["arg0_edit"], "RIGHT", "")
+    r.hiddenMenus["arg0_edit"].label = WdLib:createFontDefault(r.hiddenMenus["arg0_edit"], "RIGHT", "")
     r.hiddenMenus["arg0_edit"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg0_edit"].label:SetPoint("TOPLEFT", r.menus["rule_types"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg0_edit"]:Hide()
 
     -- arg1: dropdown or editbox
-    r.hiddenMenus["arg1_drop"] = createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
+    r.hiddenMenus["arg1_drop"] = WdLib:createDropDownMenu(r, "Select aura action", {{name = "apply"},{name = "remove"}})
     r.hiddenMenus["arg1_drop"].txt:SetJustifyH("CENTER")
     r.hiddenMenus["arg1_drop"]:SetSize(xSize, 20)
     r.hiddenMenus["arg1_drop"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg1_drop"].label = createFontDefault(r.hiddenMenus["arg1_drop"], "RIGHT", "")
+    r.hiddenMenus["arg1_drop"].label = WdLib:createFontDefault(r.hiddenMenus["arg1_drop"], "RIGHT", "")
     r.hiddenMenus["arg1_drop"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg1_drop"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg1_drop"]:Hide()
 
-    r.hiddenMenus["arg1_edit"] = createEditBox(r)
+    r.hiddenMenus["arg1_edit"] = WdLib:createEditBox(r)
     r.hiddenMenus["arg1_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg1_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg1_edit"].label = createFontDefault(r.hiddenMenus["arg1_edit"], "RIGHT", "")
+    r.hiddenMenus["arg1_edit"].label = WdLib:createFontDefault(r.hiddenMenus["arg1_edit"], "RIGHT", "")
     r.hiddenMenus["arg1_edit"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg1_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_edit"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg1_edit"]:Hide()
 
     -- arg2: editbox
-    r.hiddenMenus["arg2_edit"] = createEditBox(r)
+    r.hiddenMenus["arg2_edit"] = WdLib:createEditBox(r)
     r.hiddenMenus["arg2_edit"]:SetNumeric()
     r.hiddenMenus["arg2_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg2_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg2_edit"].label = createFontDefault(r.hiddenMenus["arg2_edit"], "RIGHT", "")
+    r.hiddenMenus["arg2_edit"].label = WdLib:createFontDefault(r.hiddenMenus["arg2_edit"], "RIGHT", "")
     r.hiddenMenus["arg2_edit"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg2_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg2_edit"]:Hide()
 
     r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)
 
-    r.buttons["save"] = createButton(r)
+    r.buttons["save"] = WdLib:createButton(r)
     r.buttons["save"]:SetPoint("TOPLEFT", r.hiddenMenus["arg2_edit"], "BOTTOMLEFT", 1, -2)
     r.buttons["save"]:SetSize(xSize / 2 - 1, 20)
     r.buttons["save"]:SetScript("OnClick", function() if isRuleSavable() then saveRule(); r:Hide() end end)
     r.buttons["save"].t:SetColorTexture(.2, .4, .2, 1)
-    r.buttons["save"].txt = createFont(r.buttons["save"], "CENTER", "Save")
+    r.buttons["save"].txt = WdLib:createFont(r.buttons["save"], "CENTER", "Save")
     r.buttons["save"].txt:SetAllPoints()
 
-    r.buttons["cancel"] = createButton(r)
+    r.buttons["cancel"] = WdLib:createButton(r)
     r.buttons["cancel"]:SetPoint("TOPLEFT", r.buttons["save"], "TOPRIGHT", 1, 0)
     r.buttons["cancel"]:SetSize(xSize / 2 - 2, 20)
     r.buttons["cancel"]:SetScript("OnClick", function() r:Hide() end)
     r.buttons["cancel"].t:SetColorTexture(.4, .2, .2, 1)
-    r.buttons["cancel"].txt = createFont(r.buttons["cancel"], "CENTER", "Cancel")
+    r.buttons["cancel"].txt = WdLib:createFont(r.buttons["cancel"], "CENTER", "Cancel")
     r.buttons["cancel"].txt:SetAllPoints()
 
     r:EnableMouse(true)
     r:SetPoint("CENTER", WDRM, -80, 150)
     r:SetSize(totalWidth, 7 * 21 + 3)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     r:Hide()
@@ -764,11 +764,11 @@ end
 
 local function notifyEncounterRules(encounter)
     print("encounter instance id: " .. encounter.id)
-    sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter.name))
+    WdLib:sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter.name))
     for _,v in pairs(WD.db.profile.rules) do
         if WD.EncounterNames[v.journalId] == encounter.name and v.isActive == true then
             local msg = string.format(WD_NOTIFY_RULE, v.role, v.points, getRuleDescription(v))
-            sendMessage(msg)
+            WdLib:sendMessage(msg)
         end
     end
 end
@@ -780,7 +780,7 @@ local function initNotifyRuleWindow()
     r:EnableMouse(true)
     r:SetPoint("BOTTOMLEFT", WDRM.buttons["notify"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     function notifyRule(encounter)
@@ -788,7 +788,7 @@ local function initNotifyRuleWindow()
         notifyEncounterRules(encounter)
     end
 
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList(notifyRule))
+    r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList(notifyRule))
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -802,7 +802,7 @@ local function initExportEncounterWindow()
     r:EnableMouse(true)
     r:SetPoint("BOTTOMLEFT", WDRM.buttons["export"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     function tryExportEncounter(encounter)
@@ -816,7 +816,7 @@ local function initExportEncounterWindow()
         exportEncounter(rules)
     end
 
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList(tryExportEncounter))
+    r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList(tryExportEncounter))
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -829,12 +829,12 @@ local function initExportWindow()
     r:EnableMouse(true)
     r:SetPoint("CENTER", 0, 0)
     r:SetSize(400, 400)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
-    createXButton(r, -1)
+    WdLib:createXButton(r, -1)
 
-    r.editBox = createEditBox(r)
+    r.editBox = WdLib:createEditBox(r)
     r.editBox:SetSize(398, 378)
     r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -21)
     r.editBox:SetMultiLine(true)
@@ -903,7 +903,7 @@ local function initImportEncounterWindow()
     r:EnableMouse(true)
     r:SetPoint("CENTER", 0, 0)
     r:SetSize(400, 400)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     function tryImportEncounter(str)
@@ -920,9 +920,9 @@ local function initImportEncounterWindow()
         end
     end
 
-    createXButton(r, -1)
+    WdLib:createXButton(r, -1)
 
-    r.editBox = createEditBox(r)
+    r.editBox = WdLib:createEditBox(r)
     r.editBox:SetSize(398, 378)
     r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
     r.editBox:SetMultiLine(true)
@@ -935,11 +935,11 @@ local function initImportEncounterWindow()
     r.editBox:SetScript("OnShow", function() r.editBox:SetText(""); r.editBox:SetFocus() end)
     r.editBox:Show()
 
-    r.button = createButton(r)
+    r.button = WdLib:createButton(r)
     r.button:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
     r.button:SetSize(125, 20)
     r.button:SetScript("OnClick", function() tryImportEncounter(r.editBox:GetText()) end)
-    r.button.txt = createFont(r.button, "CENTER", WD_BUTTON_IMPORT)
+    r.button.txt = WdLib:createFont(r.button, "CENTER", WD_BUTTON_IMPORT)
     r.button.txt:SetAllPoints()
 
     r:Hide()
@@ -954,7 +954,7 @@ local function initShareEncounterWindow()
     r:EnableMouse(true)
     r:SetPoint("BOTTOMLEFT", WDRM.buttons["share"], "TOPLEFT", 0, 1)
     r:SetSize(152, 22)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     function share(encounter)
@@ -968,7 +968,7 @@ local function initShareEncounterWindow()
         shareEncounter(WD.EncounterNames[encounter.journalId], rules)
     end
 
-    r.menus["encounters"] = createDropDownMenu(r, "Select encounter", WD:CreateTierList(share))
+    r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList(share))
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -1015,65 +1015,65 @@ function WD:InitEncountersModule(parent)
     WDRM.rules = {}
 
     -- new rule button
-    WDRM.buttons["add_rule"] = createButton(WDRM)
+    WDRM.buttons["add_rule"] = WdLib:createButton(WDRM)
     WDRM.buttons["add_rule"]:SetPoint("TOPLEFT", WDRM, "TOPLEFT", 1, -5)
     WDRM.buttons["add_rule"]:SetSize(125, 20)
     WDRM.buttons["add_rule"]:SetScript("OnClick", function() onMenuClick("new_rule") end)
-    WDRM.buttons["add_rule"].txt = createFont(WDRM.buttons["add_rule"], "CENTER", WD_BUTTON_NEW_RULE)
+    WDRM.buttons["add_rule"].txt = WdLib:createFont(WDRM.buttons["add_rule"], "CENTER", WD_BUTTON_NEW_RULE)
     WDRM.buttons["add_rule"].txt:SetAllPoints()
 
     -- notify rules button
-    WDRM.buttons["notify"] = createButton(WDRM)
+    WDRM.buttons["notify"] = WdLib:createButton(WDRM)
     WDRM.buttons["notify"]:SetPoint("TOPLEFT", WDRM.buttons["add_rule"], "TOPRIGHT", 1, 0)
     WDRM.buttons["notify"]:SetSize(125, 20)
     WDRM.buttons["notify"]:SetScript("OnClick", function() onMenuClick("notify_rule") end)
-    WDRM.buttons["notify"].txt = createFont(WDRM.buttons["notify"], "CENTER", WD_BUTTON_NOTIFY_RULES)
+    WDRM.buttons["notify"].txt = WdLib:createFont(WDRM.buttons["notify"], "CENTER", WD_BUTTON_NOTIFY_RULES)
     WDRM.buttons["notify"].txt:SetAllPoints()
 
     -- export encounter button
-    WDRM.buttons["export"] = createButton(WDRM)
+    WDRM.buttons["export"] = WdLib:createButton(WDRM)
     WDRM.buttons["export"]:SetPoint("TOPLEFT", WDRM.buttons["notify"], "TOPRIGHT", 1, 0)
     WDRM.buttons["export"]:SetSize(125, 20)
     WDRM.buttons["export"]:SetScript("OnClick", function() onMenuClick("export_encounter") end)
-    WDRM.buttons["export"].txt = createFont(WDRM.buttons["export"], "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
+    WDRM.buttons["export"].txt = WdLib:createFont(WDRM.buttons["export"], "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
     WDRM.buttons["export"].txt:SetAllPoints()
 
     -- import encounter button
-    WDRM.buttons["import"] = createButton(WDRM)
+    WDRM.buttons["import"] = WdLib:createButton(WDRM)
     WDRM.buttons["import"]:SetPoint("TOPLEFT", WDRM.buttons["export"], "TOPRIGHT", 1, 0)
     WDRM.buttons["import"]:SetSize(125, 20)
     WDRM.buttons["import"]:SetScript("OnClick", function() onMenuClick("import_encounter") end)
-    WDRM.buttons["import"].txt = createFont(WDRM.buttons["import"], "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
+    WDRM.buttons["import"].txt = WdLib:createFont(WDRM.buttons["import"], "CENTER", WD_BUTTON_IMPORT_ENCOUNTERS)
     WDRM.buttons["import"].txt:SetAllPoints()
 
     -- share encounter button
-    WDRM.buttons["share"] = createButton(WDRM)
+    WDRM.buttons["share"] = WdLib:createButton(WDRM)
     WDRM.buttons["share"]:SetPoint("TOPLEFT", WDRM.buttons["import"], "TOPRIGHT", 1, 0)
     WDRM.buttons["share"]:SetSize(125, 20)
     WDRM.buttons["share"]:SetScript("OnClick", function() onMenuClick("share_encounter") end)
-    WDRM.buttons["share"].txt = createFont(WDRM.buttons["share"], "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
+    WDRM.buttons["share"].txt = WdLib:createFont(WDRM.buttons["share"], "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
     WDRM.buttons["share"].txt:SetAllPoints()
 
     -- headers
     local x, y = 1, -30
     WDRM.headers = {}
-    local h = createTableHeader(WDRM, "", x, y, 20, 20)
+    local h = WdLib:createTableHeader(WDRM, "", x, y, 20, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeader(WDRM, WD_BUTTON_ENCOUNTER, x + 21, y, 200, 20)
+    h = WdLib:createTableHeader(WDRM, WD_BUTTON_ENCOUNTER, x + 21, y, 200, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, WD_BUTTON_ROLE, 75, 20)
+    h = WdLib:createTableHeaderNext(WDRM, h, WD_BUTTON_ROLE, 75, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, WD_BUTTON_REASON, 450, 20)
+    h = WdLib:createTableHeaderNext(WDRM, h, WD_BUTTON_REASON, 450, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, WD_BUTTON_POINTS_SHORT, 50, 20)
+    h = WdLib:createTableHeaderNext(WDRM, h, WD_BUTTON_POINTS_SHORT, 50, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, "", 50, 20)
+    h = WdLib:createTableHeaderNext(WDRM, h, "", 50, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, "", 50, 20)
+    h = WdLib:createTableHeaderNext(WDRM, h, "", 50, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, "", 50, 20)
+    h = WdLib:createTableHeaderNext(WDRM, h, "", 50, 20)
     table.insert(WDRM.headers, h)
-    h = createTableHeaderNext(WDRM, h, "", 70, 20)
+    h = WdLib:createTableHeaderNext(WDRM, h, "", 70, 20)
     table.insert(WDRM.headers, h)
 
     initNewRuleWindow()
@@ -1110,8 +1110,8 @@ end
 function WD:SendSharedEncounter(sender, encounterName)
     for _,v in pairs(WD.db.profile.rules) do
         if v.journalId == encounterName then
-            v.version = WD.version
-            local txt = encode64(table.tostring(v))
+            v.version = WD.Version
+            local txt = WdLib:encode64(WdLib:table_tostring(v))
             WD:SendAddonMessage("receive_rule", txt, sender)
         end
     end

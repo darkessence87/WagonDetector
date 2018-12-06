@@ -36,7 +36,7 @@ end
 
 local function exportHistory()
     local r = WDHM.exportWindow
-    local history = table.deepcopy(WD.cache.history)
+    local history = WdLib:table_deepcopy(WD.cache.history)
     for k,v in pairs(history) do
         if not v.isReverted or v.isReverted == false then
             local _, _, spellString = string.find(v.reason, "|Hspell(.+)|h ")
@@ -52,7 +52,7 @@ local function exportHistory()
             v.t = v.timestamp
             v.timestamp = nil
 
-            v.n = getShortCharacterName(v.name)
+            v.n = WdLib:getShortCharacterName(v.name)
             v.name = nil
 
             v.rs = v.reason
@@ -72,10 +72,10 @@ local function exportHistory()
             history[k] = nil
         end
     end
-    --local txt = encode64(table.tostring(history))
-    local txt = table.tostring(history)
+    --local txt = WdLib:encode64(WdLib:table_tostring(history))
+    local txt = WdLib:table_tostring(history)
 
-    table.wipe(history)
+    WdLib:table_wipe(history)
 
     r.editBox:SetText(txt)
     r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
@@ -96,7 +96,7 @@ local function refreshHistoryFrame()
         maxWidth = maxWidth + WDHM.headers[i]:GetWidth() + 1
     end
 
-    local scroller = WDHM.scroller or createScroller(WDHM, maxWidth, maxHeight, #WD.cache.history)
+    local scroller = WDHM.scroller or WdLib:createScroller(WDHM, maxWidth, maxHeight, #WD.cache.history)
     if not WDHM.scroller then
         WDHM.scroller = scroller
     end
@@ -113,35 +113,35 @@ local function refreshHistoryFrame()
             member.column = {}
 
             local index = 1
-            addNextColumn(WDHM, member, index, "LEFT", v.timestamp)
+            WdLib:addNextColumn(WDHM, member, index, "LEFT", v.timestamp)
             member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
 
             index = index + 1
-            addNextColumn(WDHM, member, index, "LEFT", v.encounter)
+            WdLib:addNextColumn(WDHM, member, index, "LEFT", v.encounter)
 
             index = index + 1
-            local fuckerName = getShortCharacterName(v.name)
-            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
-            addNextColumn(WDHM, member, index, "LEFT", fuckerName)
+            local fuckerName = WdLib:getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            WdLib:addNextColumn(WDHM, member, index, "LEFT", fuckerName)
 
             index = index + 1
-            addNextColumn(WDHM, member, index, "CENTER", v.role)
+            WdLib:addNextColumn(WDHM, member, index, "CENTER", v.role)
 
             index = index + 1
-            addNextColumn(WDHM, member, index, "CENTER", v.points)
+            WdLib:addNextColumn(WDHM, member, index, "CENTER", v.points)
 
             index = index + 1
-            addNextColumn(WDHM, member, index, "LEFT", v.reason)
-            generateSpellHover(member.column[index], v.reason)
+            WdLib:addNextColumn(WDHM, member, index, "LEFT", v.reason)
+            WdLib:generateSpellHover(member.column[index], v.reason)
 
             index = index + 1
-            addNextColumn(WDHM, member, index, "CENTER", WD_BUTTON_REVERT)
+            WdLib:addNextColumn(WDHM, member, index, "CENTER", WD_BUTTON_REVERT)
             member.column[index]:EnableMouse(true)
             member.column[index].t:SetColorTexture(.2, .6, .2, .7)
             member.column[index]:SetScript("OnClick", function() revertHistory(v); refreshHistoryFrame() end)
 
             index = index + 1
-            addNextColumn(WDHM, member, index, "CENTER", WD_BUTTON_DELETE)
+            WdLib:addNextColumn(WDHM, member, index, "CENTER", WD_BUTTON_DELETE)
             member.column[index]:EnableMouse(true)
             member.column[index].t:SetColorTexture(.6, .2, .2, .7)
             member.column[index]:SetScript("OnClick", function() deleteHistory(v); refreshHistoryFrame() end)
@@ -151,17 +151,17 @@ local function refreshHistoryFrame()
             local member = WDHM.members[k]
             member.column[1].txt:SetText(v.timestamp)
             member.column[2].txt:SetText(v.encounter)
-            local fuckerName = getShortCharacterName(v.name)
-            if v.mark > 0 then fuckerName = getRaidTargetTextureLink(v.mark).." "..fuckerName end
+            local fuckerName = WdLib:getShortCharacterName(v.name)
+            if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             member.column[3].txt:SetText(fuckerName)
             member.column[4].txt:SetText(v.role)
             member.column[5].txt:SetText(v.points)
             member.column[6].txt:SetText(v.reason)
-            generateSpellHover(member.column[6], v.reason)
+            WdLib:generateSpellHover(member.column[6], v.reason)
             member.column[7]:SetScript("OnClick", function() revertHistory(v); refreshHistoryFrame() end)
             member.column[8]:SetScript("OnClick", function() deleteHistory(v); refreshHistoryFrame() end)
             member:Show()
-            updateScroller(WDHM.scroller.slider, #WD.cache.history)
+            WdLib:updateScroller(WDHM.scroller.slider, #WD.cache.history)
         end
 
         y = y - 21
@@ -183,14 +183,14 @@ local function applyFilters()
         WDHM.filters[0] = date("%d/%m")
     end
 
-    table.wipe(WD.cache.history)
+    WdLib:table_wipe(WD.cache.history)
     for k,v in pairs(WD.db.profile.history) do
         if matchFilter(v.encounter, WDHM.filters[0]) and
            matchFilter(v.name, WDHM.filters[1]) and
            matchFilter(v.role, WDHM.filters[2]) and
            matchFilter(v.reason, WDHM.filters[3])
         then
-            local entry = table.deepcopy(v)
+            local entry = WdLib:table_deepcopy(v)
             entry.cacheIndex = #WD.cache.history+1
             WD.cache.history[entry.cacheIndex] = entry
         end
@@ -202,19 +202,19 @@ end
 local function initFiltersTab()
     WDHM.filters = { [0] = "", [1] = "", [2] = "", [3] = "", }
 
-    WDHM.filtersTxt = createFontDefault(WDHM, "RIGHT", WD_BUTTON_HISTORY_FILTER)
+    WDHM.filtersTxt = WdLib:createFontDefault(WDHM, "RIGHT", WD_BUTTON_HISTORY_FILTER)
     WDHM.filtersTxt:SetSize(WDHM.headers[1]:GetSize())
     WDHM.filtersTxt:SetPoint("BOTTOMLEFT", WDHM.headers[1], "TOPLEFT", 0, 5)
 
-    --[[WDHM.clearButton = createButton(WDHM)
+    --[[WDHM.clearButton = WdLib:createButton(WDHM)
     WDHM.clearButton:SetSize(WDHM.headers[1]:GetSize())
     WDHM.clearButton:SetPoint("TOPLEFT", WDHM.filtersTxt, "TOPRIGHT", 1, 0)
     WDHM.clearButton:SetScript("OnClick", function() WD:ClearHistory() end)
-    WDHM.clearButton.txt = createFont(WDHM.clearButton, "CENTER", WD_BUTTON_CLEAR)
+    WDHM.clearButton.txt = WdLib:createFont(WDHM.clearButton, "CENTER", WD_BUTTON_CLEAR)
     WDHM.clearButton.txt:SetAllPoints()
     WDHM.clearButton.t:SetColorTexture(.6, .2, .2, .7)]]
 
-    WDHM.encounterFilter = createEditBox(WDHM)
+    WDHM.encounterFilter = WdLib:createEditBox(WDHM)
     WDHM.encounterFilter:SetSize(WDHM.headers[2]:GetSize())
     WDHM.encounterFilter:EnableMouse(true)
     WDHM.encounterFilter:SetPoint("TOPLEFT", WDHM.filtersTxt, "TOPRIGHT", 1, 0)
@@ -225,7 +225,7 @@ local function initFiltersTab()
     WDHM.encounterFilter:SetScript("OnEnterPressed", function() WDHM.filters[0] = WDHM.encounterFilter:GetText(); applyFilters() end)
     WDHM.encounterFilter:SetScript("OnEscapePressed", function() WDHM.encounterFilter:ClearFocus() end)
 
-    WDHM.nameFilter = createEditBox(WDHM)
+    WDHM.nameFilter = WdLib:createEditBox(WDHM)
     WDHM.nameFilter:SetSize(WDHM.headers[3]:GetSize())
     WDHM.nameFilter:EnableMouse(true)
     WDHM.nameFilter:SetPoint("TOPLEFT", WDHM.encounterFilter, "TOPRIGHT", 1, 0)
@@ -235,7 +235,7 @@ local function initFiltersTab()
     WDHM.nameFilter:SetScript("OnEnterPressed", function() WDHM.filters[1] = WDHM.nameFilter:GetText(); applyFilters() end)
     WDHM.nameFilter:SetScript("OnEscapePressed", function() WDHM.nameFilter:ClearFocus() end)
 
-    WDHM.roleFilter = createEditBox(WDHM)
+    WDHM.roleFilter = WdLib:createEditBox(WDHM)
     WDHM.roleFilter:SetSize(WDHM.headers[4]:GetSize())
     WDHM.roleFilter:EnableMouse(true)
     WDHM.roleFilter:SetPoint("TOPLEFT", WDHM.nameFilter, "TOPRIGHT", 1, 0)
@@ -245,12 +245,12 @@ local function initFiltersTab()
     WDHM.roleFilter:SetScript("OnEnterPressed", function() WDHM.filters[2] = WDHM.roleFilter:GetText(); applyFilters() end)
     WDHM.roleFilter:SetScript("OnEscapePressed", function() WDHM.roleFilter:ClearFocus() end)
 
-    WDHM.pointsFilter = createEditBox(WDHM)
+    WDHM.pointsFilter = WdLib:createEditBox(WDHM)
     WDHM.pointsFilter:SetSize(WDHM.headers[5]:GetSize())
     WDHM.pointsFilter:EnableMouse(false)
     WDHM.pointsFilter:SetPoint("TOPLEFT", WDHM.roleFilter, "TOPRIGHT", 1, 0)
 
-    WDHM.reasonFilter = createEditBox(WDHM)
+    WDHM.reasonFilter = WdLib:createEditBox(WDHM)
     WDHM.reasonFilter:SetSize(WDHM.headers[6]:GetSize())
     WDHM.reasonFilter:EnableMouse(true)
     WDHM.reasonFilter:SetPoint("TOPLEFT", WDHM.pointsFilter, "TOPRIGHT", 1, 0)
@@ -260,11 +260,11 @@ local function initFiltersTab()
     WDHM.reasonFilter:SetScript("OnEnterPressed", function() WDHM.filters[3] = WDHM.reasonFilter:GetText(); applyFilters() end)
     WDHM.reasonFilter:SetScript("OnEscapePressed", function() WDHM.reasonFilter:ClearFocus() end)
 
-    WDHM.export = createButton(WDHM)
+    WDHM.export = WdLib:createButton(WDHM)
     WDHM.export:SetPoint("TOPLEFT", WDHM.reasonFilter, "TOPRIGHT", 1, 0)
     WDHM.export:SetSize(91, 20)
     WDHM.export:SetScript("OnClick", function() exportHistory() end)
-    WDHM.export.txt = createFont(WDHM.export, "CENTER", WD_BUTTON_EXPORT)
+    WDHM.export.txt = WdLib:createFont(WDHM.export, "CENTER", WD_BUTTON_EXPORT)
     WDHM.export.txt:SetAllPoints()
 
     applyFilters()
@@ -276,12 +276,12 @@ local function initExportWindow()
     r:EnableMouse(true)
     r:SetPoint("CENTER", UIParent, "CENTER")
     r:SetSize(800, 600)
-    r.bg = createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
-    createXButton(r, -1)
+    WdLib:createXButton(r, -1)
 
-    r.editBox = createEditBox(r)
+    r.editBox = WdLib:createEditBox(r)
     r.editBox:SetSize(800, 600)
     r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 0, 0)
     r.editBox:SetMultiLine(true)
@@ -303,21 +303,21 @@ function WD:InitHistoryModule(parent)
     local x, y = 1, -30
 
     WDHM.headers = {}
-    local h = createTableHeader(WDHM, WD_BUTTON_TIME, x, y, 70, 20)
+    local h = WdLib:createTableHeader(WDHM, WD_BUTTON_TIME, x, y, 70, 20)
     table.insert(WDHM.headers, h)
-    h = createTableHeaderNext(WDHM, h, WD_BUTTON_ENCOUNTER, 200, 20)
+    h = WdLib:createTableHeaderNext(WDHM, h, WD_BUTTON_ENCOUNTER, 200, 20)
     table.insert(WDHM.headers, h)
-    h = createTableHeaderNext(WDHM, h, WD_BUTTON_NAME, 100, 20)
+    h = WdLib:createTableHeaderNext(WDHM, h, WD_BUTTON_NAME, 100, 20)
     table.insert(WDHM.headers, h)
-    h = createTableHeaderNext(WDHM, h, WD_BUTTON_ROLE, 75, 20)
+    h = WdLib:createTableHeaderNext(WDHM, h, WD_BUTTON_ROLE, 75, 20)
     table.insert(WDHM.headers, h)
-    h = createTableHeaderNext(WDHM, h, WD_BUTTON_POINTS_SHORT, 40, 20)
+    h = WdLib:createTableHeaderNext(WDHM, h, WD_BUTTON_POINTS_SHORT, 40, 20)
     table.insert(WDHM.headers, h)
-    h = createTableHeaderNext(WDHM, h, WD_BUTTON_REASON, 400, 20)
+    h = WdLib:createTableHeaderNext(WDHM, h, WD_BUTTON_REASON, 400, 20)
     table.insert(WDHM.headers, h)
-    h = createTableHeaderNext(WDHM, h, "", 45, 20)
+    h = WdLib:createTableHeaderNext(WDHM, h, "", 45, 20)
     table.insert(WDHM.headers, h)
-    h = createTableHeaderNext(WDHM, h, "", 45, 20)
+    h = WdLib:createTableHeaderNext(WDHM, h, "", 45, 20)
     table.insert(WDHM.headers, h)
 
     initFiltersTab()
@@ -346,8 +346,8 @@ function WD:AddPullHistory(encounter)
 end
 
 function WD:ClearHistory()
-    table.wipe(WD.db.profile.history)
-    table.wipe(WD.cache.history)
+    WdLib:table_wipe(WD.db.profile.history)
+    WdLib:table_wipe(WD.cache.history)
 
     refreshHistoryFrame()
 

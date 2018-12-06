@@ -1,9 +1,5 @@
 
 local WDMF = WD.mainFrame
-WD.cache.tracker = {}
-WD.cache.tracker.npc = {}
-WD.cache.tracker.pets = {}
-WD.cache.tracker.players = {}
 
 local callbacks = {}
 local function registerCallback(callback, ...)
@@ -41,14 +37,14 @@ end
 local function findNpc(guid)
     if not guid or not guid:match("Creature") then return nil end
     local npcId = getNpcId(guid)
-    local holder = WD.cache.tracker.npc[npcId]
+    local holder = WD.db.profile.tracker.npc[npcId]
     local index = findEntityIndex(holder, guid)
     if index then return holder[index] end
     return nil
 end
 
 local function findPlayer(guid)
-    return WD.cache.tracker.players[guid]
+    return WD.db.profile.tracker.players[guid]
 end
 
 local function findParent(v)
@@ -60,10 +56,10 @@ end
 
 local function loadNpc(guid, name)
     local npcId = getNpcId(guid)
-    local holder = WD.cache.tracker.npc[npcId]
+    local holder = WD.db.profile.tracker.npc[npcId]
     if not holder then
-        WD.cache.tracker.npc[npcId] = {}
-        holder = WD.cache.tracker.npc[npcId]
+        WD.db.profile.tracker.npc[npcId] = {}
+        holder = WD.db.profile.tracker.npc[npcId]
         holder[#holder+1] = createEntity(guid, name, "creature")
         return holder[1]
     end
@@ -81,10 +77,10 @@ local function loadNpc(guid, name)
 end
 
 local function loadPet(guid, name, parentGuid, parentName)
-    local holder = WD.cache.tracker.pets[name]
+    local holder = WD.db.profile.tracker.pets[name]
     if not holder then
-        WD.cache.tracker.pets[name] = {}
-        holder = WD.cache.tracker.pets[name]
+        WD.db.profile.tracker.pets[name] = {}
+        holder = WD.db.profile.tracker.pets[name]
         holder[#holder+1] = createEntity(guid, name, "pet", parentGuid, parentName)
         return holder[1]
     end
@@ -104,11 +100,11 @@ local function loadPet(guid, name, parentGuid, parentName)
 end
 
 local function loadPlayer(guid, name)
-    if not WD.cache.tracker.players[guid] then
-        WD.cache.tracker.players[guid] = {}
-        WD.cache.tracker.players[guid] = createEntity(guid, name, "player")
+    if not WD.db.profile.tracker.players[guid] then
+        WD.db.profile.tracker.players[guid] = {}
+        WD.db.profile.tracker.players[guid] = createEntity(guid, name, "player")
     end
-    return WD.cache.tracker.players[guid]
+    return WD.db.profile.tracker.players[guid]
 end
 
 local function loadEntity(guid, name, unit_type)
@@ -118,11 +114,11 @@ local function loadEntity(guid, name, unit_type)
     end
     if name == UNKNOWNOBJECT then
         --[[print('trying to find guid by name next time')
-        if WD.cache.tracker[UNKNOWNOBJECT] and WD.cache.tracker[UNKNOWNOBJECT][guid] then
-            WD.cache.tracker[key] = WD.cache.tracker[UNKNOWNOBJECT]
-            WD.cache.tracker[key][guid].name = name
-            WD.cache.tracker[UNKNOWNOBJECT] = nil
-            return WD.cache.tracker[key][guid]
+        if WD.db.profile.tracker[UNKNOWNOBJECT] and WD.db.profile.tracker[UNKNOWNOBJECT][guid] then
+            WD.db.profile.tracker[key] = WD.db.profile.tracker[UNKNOWNOBJECT]
+            WD.db.profile.tracker[key][guid].name = name
+            WD.db.profile.tracker[UNKNOWNOBJECT] = nil
+            return WD.db.profile.tracker[key][guid]
         end
         ]]
         return nil
@@ -547,9 +543,9 @@ function WDMF:Init()
 end
 
 function WDMF:Tracker_OnStartEncounter(raiders)
-    table.wipe(WD.cache.tracker.npc)
-    table.wipe(WD.cache.tracker.pets)
-    table.wipe(WD.cache.tracker.players)
+    table.wipe(WD.db.profile.tracker.npc)
+    table.wipe(WD.db.profile.tracker.pets)
+    table.wipe(WD.db.profile.tracker.players)
 
     for k,v in pairs(raiders) do
         if v.type == "pet" then

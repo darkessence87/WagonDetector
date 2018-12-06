@@ -97,6 +97,11 @@ function WD:LoadDefaults()
             maxDeaths = 5,
             encounters = {},
             autoTrack = true,
+            tracker = {
+                npc = {},
+                pets = {},
+                players = {},
+            },
         }
     }
 end

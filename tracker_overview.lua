@@ -151,7 +151,7 @@ function WD:RefreshTrackedCreatures()
     if not WDTO then return end
 
     local creatures = {}
-    for npcId,data in pairs(WD.cache.tracker.npc) do
+    for npcId,data in pairs(WD.db.profile.tracker.npc) do
         for guid,npc in pairs(data) do
             if type(npc) == "table" then
                 if isValidNpc(npc) then

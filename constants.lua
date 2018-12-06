@@ -1,6 +1,6 @@
 
 WD.minRulesVersion = "v0.0.24"
-WD.version = "v0.0.32"
+WD.version = "v0.0.33"
 WD.TiersInfo = {}
 
 WD.CurrentRealmName = string.gsub(GetRealmName(), "%s+", "")

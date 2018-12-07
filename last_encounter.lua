@@ -34,62 +34,48 @@ function WD:RefreshLastEncounterFrame()
 
     local maxWidth = 30
     local maxHeight = 545
-    for i=1,#WDLE.headers do
-        maxWidth = maxWidth + WDLE.headers[i]:GetWidth() + 1
-    end
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #core.encounter.fuckers
+    local columnsN = 5
 
-    local scroller = WDLE.scroller or WdLib:createScroller(WDLE, maxWidth, maxHeight, #core.encounter.fuckers)
-    if not WDLE.scroller then
-        WDLE.scroller = scroller
-    end
-
-    local x, y = 30, -51
-    for k=1,#core.encounter.fuckers do
-        local v = core.encounter.fuckers[k]
-        if not WDLE.members[k] then
-            local member = CreateFrame("Frame", nil, WDLE.scroller.scrollerChild)
-            member.info = v
-            member:SetSize(maxWidth, 20)
-            member:SetPoint("TOPLEFT", WDLE.scroller.scrollerChild, "TOPLEFT", x, y)
-            member.column = {}
-
-            local index = 1
-            WdLib:addNextColumn(WDLE, member, index, "LEFT", v.timestamp)
-            member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
-
-            index = index + 1
+    local function createFn(parent, row, index)
+        local v = core.encounter.fuckers[row]
+        if index == 1 then
+            local f = WdLib:addNextColumn(WDLE, parent, index, "LEFT", v.timestamp)
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -1)
+            return f
+        elseif index == 2 then
             local fuckerName = WdLib:getShortCharacterName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
-            WdLib:addNextColumn(WDLE, member, index, "LEFT", fuckerName)
-            index = index + 1
-            WdLib:addNextColumn(WDLE, member, index, "CENTER", v.role)
-            index = index + 1
-            WdLib:addNextColumn(WDLE, member, index, "CENTER", v.points)
-            index = index + 1
-            WdLib:addNextColumn(WDLE, member, index, "LEFT", v.reason)
-            WdLib:generateSpellHover(member.column[index], v.reason)
+            return WdLib:addNextColumn(WDLE, parent, index, "LEFT", fuckerName)
+        elseif index == 3 then
+            return WdLib:addNextColumn(WDLE, parent, index, "CENTER", v.role)
+        elseif index == 4 then
+            return WdLib:addNextColumn(WDLE, parent, index, "CENTER", v.points)
+        elseif index == 5 then
+            local f = WdLib:addNextColumn(WDLE, parent, index, "LEFT", v.reason)
+            WdLib:generateSpellHover(f, v.reason)
+            return f
+        end
+    end
 
-            table.insert(WDLE.members, member)
-        else
-            local member = WDLE.members[k]
-            member.column[1].txt:SetText(v.timestamp)
+    local function updateFn(frame, row, index)
+        local v = core.encounter.fuckers[row]
+        if index == 1 then
+            frame.txt:SetText(v.timestamp)
+        elseif index == 2 then
             local fuckerName = WdLib:getShortCharacterName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
-            member.column[2].txt:SetText(fuckerName)
-            member.column[3].txt:SetText(v.role)
-            member.column[4].txt:SetText(v.points)
-            member.column[5].txt:SetText(v.reason)
-            WdLib:generateSpellHover(member.column[5], v.reason)
-            member:Show()
-            WdLib:updateScroller(WDLE.scroller.slider, #core.encounter.fuckers)
-        end
-
-        y = y - 21
-    end
-
-    if #core.encounter.fuckers < #WDLE.members then
-        for i=#core.encounter.fuckers+1, #WDLE.members do
-            WDLE.members[i]:Hide()
+            frame.txt:SetText(fuckerName)
+        elseif index == 3 then
+            frame.txt:SetText(v.role)
+        elseif index == 4 then
+            frame.txt:SetText(v.points)
+        elseif index == 5 then
+            frame.txt:SetText(v.reason)
+            WdLib:generateSpellHover(frame, v.reason)
         end
     end
+
+    WdLib:updateScrollableTable(WDLE, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end

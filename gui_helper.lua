@@ -1,6 +1,8 @@
 
 WdLib = {}
 
+WdLib.MAX_DROP_DOWN_MENUS = 25
+
 function WdLib:CreateTimer(fn, delay, ...)
     local function executeFn(self) self.fn(unpack(self.args)) end
 
@@ -394,7 +396,7 @@ function WdLib:createXButton(parent, xOffset)
 end
 
 function WdLib:createListItemButton(parent, name, index)
-    local button = WdLib:createButton(parent, name)
+    local button = WdLib:createButton(parent)
     button:SetPoint("TOPLEFT", parent, "TOPRIGHT", 1, index * -21)
     button:SetSize(175, 20)
     button.txt = WdLib:createFont(button, "LEFT", name)
@@ -419,7 +421,11 @@ end
 
 function WdLib:dropDownShow(self)
     if not self.items then return end
-    for _,v in pairs(self.items) do v:Show() end
+    for _,v in pairs(self.items) do
+        if not v.locked then
+            v:Show()
+        end
+    end
     self.isVisible = true
 
     if self.bg then
@@ -454,38 +460,62 @@ end
 function WdLib:updateDropDownMenu(self, name, items, parent)
     self.selected = nil
     self.txt:SetText(name)
-    if #self.items > 0 then WdLib:table_wipe(self.items) end
-    if items then
-        for k,v in pairs(items) do
+    if #self.items > 0 then WdLib:dropDownHide(self) end
+
+    if items and #items > 0 then
+        if #items > WdLib.MAX_DROP_DOWN_MENUS then
+            print("Too many drop frames requested")
+            return
+        end
+        for i=1,#items do
+            local v = items[i]
             if v.items then
-                local item = WdLib:createDropDownMenu(self, v.name, v.items, parent)
-                item:SetSize(175, 20)
-                item:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, (k - 1) * -21)
-                table.insert(self.items, item)
-            else
-                local item = WdLib:createListItemButton(self, v.name, k - 1)
-                item.data = v
-                item:SetScript("OnClick", function() WdLib:onClickDropDown(parent or self, item, v.func) end)
-                if v.hover then
-                    item:SetScript("OnEnter", function(self)
-                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                        GameTooltip:SetText(v.hover, nil, nil, nil, nil, true)
-                        GameTooltip:Show()
-                    end)
-                    item:SetScript("OnLeave", function() GameTooltip_Hide() end)
+                if not self.items[i] then
+                    local item = WdLib:createDropDownMenu(self, v.name, v.items, parent)
+                    item:SetSize(175, 20)
+                    item:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, (i - 1) * -21)
+                    self.items[i] = item
+                else
+                    WdLib:updateDropDownMenu(self, v.name, v.items, parent)
                 end
-                table.insert(self.items, item)
+            else
+                if not self.items[i] then
+                    local item = WdLib:createListItemButton(self, v.name, i - 1)
+                    self.items[i] = item
+                end
+                self.items[i].data = v
+                self.items[i].txt:SetText(v.name)
+                self.items[i]:SetScript("OnClick", function() WdLib:onClickDropDown(parent or self, self.items[i], v.func) end)
+                if v.hover then
+                    WdLib:generateHover(self.items[i], v.hover)
+                end
             end
         end
-    end
+        if #items < #self.items then
+            for i=1, #items do
+                self.items[i].locked = nil
+            end
+            for i=#items+1, #self.items do
+                self.items[i].locked = true
+            end
+        end
 
-    if #self.items > 1 then
-        local width = self.items[1]:GetWidth() + 1
-        local height = #self.items * self.items[1]:GetHeight()
-        self.bg = WdLib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
+        local width = self.items[1]:GetWidth() + 2
+        local height = #items * self.items[1]:GetHeight() + #items + 1
+        if not self.bg then
+            self.bg = WdLib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
+        end
         self.bg:SetSize(width, height)
-        self.bg:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, 0)
+        self.bg:SetPoint("TOPLEFT", self, "TOPRIGHT", 0, 1)
         self.bg:Hide()
+    else
+        for i=1, #self.items do
+            self.items[i].locked = true
+        end
+        if self.bg then
+            self.bg:SetSize(0, 0)
+            self.bg:Hide()
+        end
     end
 
     WdLib:dropDownHide(self)
@@ -574,6 +604,7 @@ function WdLib:addNextColumn(self, parent, index, textOrientation, name)
     else
         parent.column[index].txt:SetAllPoints()
     end
+    return parent.column[index]
 end
 
 function WdLib:convertTypesToItems(t, fn)
@@ -709,4 +740,48 @@ function WdLib:getUnitName(unit)
         realm = WD.CurrentRealmName
     end
     return name.."-"..realm
+end
+
+function WdLib:updateScrollableTable(parent, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    for i=1,#parent.headers do
+        maxWidth = maxWidth + parent.headers[i]:GetWidth() + 1
+    end
+
+    local scroller = parent.scroller or WdLib:createScroller(parent, maxWidth, maxHeight, rowsN)
+    if not parent.scroller then
+        parent.scroller = scroller
+    end
+
+    for k=1,rowsN do
+        if not parent.members[k] then
+            local member = CreateFrame("Frame", nil, parent.scroller.scrollerChild)
+            member:SetSize(parent.headers[1]:GetSize())
+            member.column = {}
+            if k > 1 then
+                member:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
+            else
+                member:SetPoint("TOPLEFT", parent.scroller.scrollerChild, "TOPLEFT", topLeftPosition.x, topLeftPosition.y)
+            end
+
+            for index=1,columnsN do
+                member.column[index] = createFn(member, k, index)
+            end
+
+            table.insert(parent.members, member)
+        else
+            local member = parent.members[k]
+            for index=1,columnsN do
+                updateFn(member.column[index], k, index)
+            end
+            member:Show()
+        end
+    end
+
+    WdLib:updateScroller(parent.scroller.slider, rowsN)
+
+    if rowsN < #parent.members then
+        for i=rowsN+1, #parent.members do
+            parent.members[i]:Hide()
+        end
+    end
 end

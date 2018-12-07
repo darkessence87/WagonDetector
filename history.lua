@@ -92,86 +92,70 @@ local function refreshHistoryFrame()
 
     local maxWidth = 30
     local maxHeight = 545
-    for i=1,#WDHM.headers do
-        maxWidth = maxWidth + WDHM.headers[i]:GetWidth() + 1
-    end
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #WD.cache.history
+    local columnsN = 8
 
-    local scroller = WDHM.scroller or WdLib:createScroller(WDHM, maxWidth, maxHeight, #WD.cache.history)
-    if not WDHM.scroller then
-        WDHM.scroller = scroller
-    end
-
-    local x, y = 30, -51
-    for k=#WD.cache.history,1,-1 do
-        local v = WD.cache.history[k]
-        k=#WD.cache.history-k+1
-        if not WDHM.members[k] then
-            local member = CreateFrame("Frame", nil, WDHM.scroller.scrollerChild)
-            member.info = v
-            member:SetSize(maxWidth, 20)
-            member:SetPoint("TOPLEFT", WDHM.scroller.scrollerChild, "TOPLEFT", x, y)
-            member.column = {}
-
-            local index = 1
-            WdLib:addNextColumn(WDHM, member, index, "LEFT", v.timestamp)
-            member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
-
-            index = index + 1
-            WdLib:addNextColumn(WDHM, member, index, "LEFT", v.encounter)
-
-            index = index + 1
+    local function createFn(parent, row, index)
+        local v = WD.cache.history[#WD.cache.history+1-row]
+        if index == 1 then
+            local f = WdLib:addNextColumn(WDHM, parent, index, "LEFT", v.timestamp)
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -1)
+            return f
+        elseif index == 2 then
+            return WdLib:addNextColumn(WDHM, parent, index, "LEFT", v.encounter)
+        elseif index == 3 then
             local fuckerName = WdLib:getShortCharacterName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
-            WdLib:addNextColumn(WDHM, member, index, "LEFT", fuckerName)
+            return WdLib:addNextColumn(WDHM, parent, index, "LEFT", fuckerName)
+        elseif index == 4 then
+            return WdLib:addNextColumn(WDHM, parent, index, "CENTER", v.role)
+        elseif index == 5 then
+            return WdLib:addNextColumn(WDHM, parent, index, "CENTER", v.points)
+        elseif index == 6 then
+            local f = WdLib:addNextColumn(WDHM, parent, index, "LEFT", v.reason)
+            WdLib:generateSpellHover(f, v.reason)
+            return f
+        elseif index == 7 then
+            local f = WdLib:addNextColumn(WDHM, parent, index, "CENTER", WD_BUTTON_REVERT)
+            f:EnableMouse(true)
+            f.t:SetColorTexture(.2, .6, .2, .7)
+            f:SetScript("OnClick", function() revertHistory(v); refreshHistoryFrame() end)
+            return f
+        elseif index == 8 then
+            local f = WdLib:addNextColumn(WDHM, parent, index, "CENTER", WD_BUTTON_DELETE)
+            f:EnableMouse(true)
+            f.t:SetColorTexture(.6, .2, .2, .7)
+            f:SetScript("OnClick", function() deleteHistory(v); refreshHistoryFrame() end)
+            return f
+        end
+    end
 
-            index = index + 1
-            WdLib:addNextColumn(WDHM, member, index, "CENTER", v.role)
-
-            index = index + 1
-            WdLib:addNextColumn(WDHM, member, index, "CENTER", v.points)
-
-            index = index + 1
-            WdLib:addNextColumn(WDHM, member, index, "LEFT", v.reason)
-            WdLib:generateSpellHover(member.column[index], v.reason)
-
-            index = index + 1
-            WdLib:addNextColumn(WDHM, member, index, "CENTER", WD_BUTTON_REVERT)
-            member.column[index]:EnableMouse(true)
-            member.column[index].t:SetColorTexture(.2, .6, .2, .7)
-            member.column[index]:SetScript("OnClick", function() revertHistory(v); refreshHistoryFrame() end)
-
-            index = index + 1
-            WdLib:addNextColumn(WDHM, member, index, "CENTER", WD_BUTTON_DELETE)
-            member.column[index]:EnableMouse(true)
-            member.column[index].t:SetColorTexture(.6, .2, .2, .7)
-            member.column[index]:SetScript("OnClick", function() deleteHistory(v); refreshHistoryFrame() end)
-
-            table.insert(WDHM.members, member)
-        else
-            local member = WDHM.members[k]
-            member.column[1].txt:SetText(v.timestamp)
-            member.column[2].txt:SetText(v.encounter)
+    local function updateFn(frame, row, index)
+        local v = WD.cache.history[#WD.cache.history+1-row]
+        if index == 1 then
+            frame.txt:SetText(v.timestamp)
+        elseif index == 2 then
+            frame.txt:SetText(v.encounter)
+        elseif index == 3 then
             local fuckerName = WdLib:getShortCharacterName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
-            member.column[3].txt:SetText(fuckerName)
-            member.column[4].txt:SetText(v.role)
-            member.column[5].txt:SetText(v.points)
-            member.column[6].txt:SetText(v.reason)
-            WdLib:generateSpellHover(member.column[6], v.reason)
-            member.column[7]:SetScript("OnClick", function() revertHistory(v); refreshHistoryFrame() end)
-            member.column[8]:SetScript("OnClick", function() deleteHistory(v); refreshHistoryFrame() end)
-            member:Show()
-            WdLib:updateScroller(WDHM.scroller.slider, #WD.cache.history)
-        end
-
-        y = y - 21
-    end
-
-    if #WD.cache.history < #WDHM.members then
-        for i=#WD.cache.history+1, #WDHM.members do
-            WDHM.members[i]:Hide()
+            frame.txt:SetText(fuckerName)
+        elseif index == 4 then
+            frame.txt:SetText(v.role)
+        elseif index == 5 then
+            frame.txt:SetText(v.points)
+        elseif index == 6 then
+            frame.txt:SetText(v.reason)
+            WdLib:generateSpellHover(frame, v.reason)
+        elseif index == 7 then
+            frame:SetScript("OnClick", function() revertHistory(v); refreshHistoryFrame() end)
+        elseif index == 8 then
+            frame:SetScript("OnClick", function() deleteHistory(v); refreshHistoryFrame() end)
         end
     end
+
+    WdLib:updateScrollableTable(WDHM, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end
 
 local function matchFilter(str, filter)

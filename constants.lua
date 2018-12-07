@@ -1,7 +1,8 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.33"
+WD.Version = "v0.0.34"
 WD.TiersInfo = {}
+WD.MaxPullsToBeSaved = 25
 
 WD.CurrentRealmName = string.gsub(GetRealmName(), "%s+", "")
 

@@ -193,8 +193,8 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
 
     local src_role, dst_role = "", ""
     local src_rt, dst_rt = 0, 0
-    if src and not src.role then src.role = WD:GetRole(src_name) end
-    if dst and not dst.role then dst.role = WD:GetRole(dst_name) end
+    if src and not src.role then src.role = WD:GetRole(src_guid) end
+    if dst and not dst.role then dst.role = WD:GetRole(dst_guid) end
 
     if src then src.rt = WD:GetRaidTarget(src_raid_flags) end
     if dst then dst.rt = WD:GetRaidTarget(dst_raid_flags) end
@@ -267,7 +267,7 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
                     local p = rules[interrupter.role]["EV_CAST_INTERRUPTED"][target_spell_id][key].points
                     local dst_nameWithMark = unit.name
                     if unit.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(unit.rt).." "..unit.name end
-                    WDMF:AddSuccess(timestamp, interrupter.name, interrupter.rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
+                    WDMF:AddSuccess(timestamp, interrupter.guid, interrupter.rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
                 end
             end
         end
@@ -338,7 +338,7 @@ function WDMF:ProcessAuras(src, dst, ...)
                rules[dst.role]["EV_AURA"][spell_id]["apply"]
             then
                 local p = rules[dst.role]["EV_AURA"][spell_id]["apply"].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.guid, dst.rt, string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             end
         end
     end
@@ -353,7 +353,7 @@ function WDMF:ProcessAuras(src, dst, ...)
                rules[dst.role]["EV_AURA"][spell_id]["remove"]
             then
                 local p = rules[dst.role]["EV_AURA"][spell_id]["remove"].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.guid, dst.rt, string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             end
 
             -- potions
@@ -362,7 +362,7 @@ function WDMF:ProcessAuras(src, dst, ...)
             then
                 if WD.Spells.potions[spell_id] then
                     local p = rules[dst.role]["EV_POTIONS"].points
-                    self:AddSuccess(timestamp, dst.name, dst.rt, WD_RULE_POTIONS, p)
+                    self:AddSuccess(timestamp, dst.guid, dst.rt, WD_RULE_POTIONS, p)
                 end
             end
         end
@@ -377,10 +377,10 @@ function WDMF:ProcessAuras(src, dst, ...)
             local stacks = tonumber(arg[16])
             if rules[dst.role]["EV_AURA_STACKS"][spell_id][stacks] then
                 local p = rules[dst.role]["EV_AURA_STACKS"][spell_id][stacks].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_AURA_STACKS, stacks, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.guid, dst.rt, string.format(WD_RULE_AURA_STACKS, stacks, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             elseif rules[dst.role]["EV_AURA_STACKS"][spell_id][0] then
                 local p = rules[dst.role]["EV_AURA_STACKS"][spell_id][0].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.guid, dst.rt, string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             end
         end
     end
@@ -420,7 +420,7 @@ function WDMF:ProcessCasts(src, dst, ...)
                 if src.type ~= "player" then
                     self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST_START, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 else
-                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST_START, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                    self:AddSuccess(timestamp, src.guid, src.rt, string.format(WD_RULE_CAST_START, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 end
             end
         end
@@ -443,7 +443,7 @@ function WDMF:ProcessCasts(src, dst, ...)
                 if src.type ~= "player" then
                     self:AddSuccess(timestamp, "creature"..getNpcId(src.guid), src.rt, string.format(WD_RULE_CAST, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 else
-                    self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_CAST, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                    self:AddSuccess(timestamp, src.guid, src.rt, string.format(WD_RULE_CAST, WdLib:getShortCharacterName(src.name), WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                 end
             end
         end
@@ -490,15 +490,15 @@ function WDMF:ProcessDamage(src, dst, ...)
 
             if overkill > -1 and rules[dst.role]["EV_DEATH"] and rules[dst.role]["EV_DEATH"][spell_id] then
                 local p = rules[dst.role]["EV_DEATH"][spell_id].points
-                self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                self:AddFail(timestamp, dst.guid, dst.rt, string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
             else
                 if rules[dst.role]["EV_DAMAGETAKEN"] and rules[dst.role]["EV_DAMAGETAKEN"][spell_id] then
                     local damagetaken_rule = rules[dst.role]["EV_DAMAGETAKEN"][spell_id]
                     local p = damagetaken_rule.points
                     if damagetaken_rule.amount > 0 and total > damagetaken_rule.amount then
-                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                        self:AddFail(timestamp, dst.guid, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, damagetaken_rule.amount, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                     elseif damagetaken_rule.amount == 0 and total > 0 then
-                        self:AddFail(timestamp, dst.name, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
+                        self:AddFail(timestamp, dst.guid, dst.rt, string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(spell_id)), p)
                     end
                 end
             end
@@ -540,7 +540,7 @@ function WDMF:ProcessDeaths(src, dst, ...)
                 if dst.type ~= "player" then
                     self:AddSuccess(timestamp, "creature"..getNpcId(dst.guid), dst.rt, string.format(WD_RULE_DEATH_UNIT, dst_nameWithMark), p)
                 else
-                    self:AddSuccess(timestamp, dst.name, dst.rt, string.format(WD_RULE_DEATH_UNIT, dst_nameWithMark), p)
+                    self:AddSuccess(timestamp, dst.guid, dst.rt, string.format(WD_RULE_DEATH_UNIT, dst_nameWithMark), p)
                 end
             end
         end
@@ -562,14 +562,14 @@ function WDMF:ProcessDispels(src, dst, ...)
            rules[src.role]["EV_DISPEL"][target_spell_id]
         then
             local p = rules[src.role]["EV_DISPEL"][target_spell_id].points
-            self:AddSuccess(timestamp, src.name, src.rt, string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
+            self:AddSuccess(timestamp, src.guid, src.rt, string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
         end
     end
 end
 
-function WDMF:CheckConsumables(name, unit)
+function WDMF:CheckConsumables(guid, unit)
     local rules = self.encounter.rules
-    local role = WD:GetRole(name)
+    local role = WD:GetRole(guid)
     local noflask, nofood, norune = nil, nil, nil
     if rules[role] and rules[role]["EV_FLASKS"] then
         noflask = true
@@ -601,13 +601,13 @@ function WDMF:CheckConsumables(name, unit)
     end
 
     if noflask and noflask == true then
-        self:AddFail(time(), name, 0, WD_RULE_FLASKS, rules[role]["EV_FLASKS"].points)
+        self:AddFail(time(), guid, 0, WD_RULE_FLASKS, rules[role]["EV_FLASKS"].points)
     end
     if nofood and nofood == true then
-        self:AddFail(time(), name, 0, WD_RULE_FOOD, rules[role]["EV_FOOD"].points)
+        self:AddFail(time(), guid, 0, WD_RULE_FOOD, rules[role]["EV_FOOD"].points)
     end
     if norune and norune == true then
-        self:AddFail(time(), name, 0, WD_RULE_RUNES, rules[role]["EV_RUNES"].points)
+        self:AddFail(time(), guid, 0, WD_RULE_RUNES, rules[role]["EV_RUNES"].points)
     end
 end
 
@@ -624,16 +624,13 @@ end
 
 function WDMF:CreateRaidMember(unit, petUnit)
     local function createInternalEntity(unit)
-        local name, realm = UnitName(unit)
-        if not name then return nil end
         if not UnitIsVisible(unit) then return nil end
-        if not realm or realm == "" then
-            realm = WD.CurrentRealmName
-        end
+        local name = WdLib:getUnitName(unit)
+        if name == UNKNOWNOBJECT then return nil end
         local _,class = UnitClass(unit)
 
         local p = {}
-        p.name = name.."-"..realm
+        p.name = name
         p.unit = unit
         p.class = class
         p.guid = UnitGUID(p.unit)
@@ -646,7 +643,7 @@ function WDMF:CreateRaidMember(unit, petUnit)
 
     if player then
         if WD.cache.raidroster[player.name] then
-            player.specId = WD.cache.raidroster[player.name].specId
+            player.specId = WD.cache.raidroster[player.guid].specId
         elseif player.unit ~= "player" then
             NotifyInspect(player.unit)
         end

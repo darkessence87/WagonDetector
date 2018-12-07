@@ -663,3 +663,12 @@ function WdLib:getTimedDiffShort(startTime, endTime)
     local SEC = string.format("%02d", s)
     return MIN .. ":" .. SEC
 end
+
+function WdLib:getUnitName(unit)
+    local name, realm = UnitName(unit)
+    if not name then return UNKNOWNOBJECT end
+    if not realm or realm == "" then
+        realm = WD.CurrentRealmName
+    end
+    return name.."-"..realm
+end

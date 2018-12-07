@@ -94,7 +94,9 @@ local function saveFuckups()
     WD:RefreshGuildRosterFrame()
 end
 
-function WDMF:AddSuccess(timestamp, name, mark, msg, points)
+function WDMF:AddSuccess(timestamp, guid, mark, msg, points)
+    if not WD.cache.raidroster[guid] then return end
+    local name = WD.cache.raidroster[guid].name
     if self.encounter.deaths > WD.db.profile.maxDeaths then
         local t = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
         if mark > 0 then name = WdLib:getRaidTargetTextureLink(mark).." "..name end
@@ -110,7 +112,7 @@ function WDMF:AddSuccess(timestamp, name, mark, msg, points)
     niceBro.mark = mark
     niceBro.reason = msg
     niceBro.points = points
-    niceBro.role = WD:GetRole(niceBro.name)
+    niceBro.role = WD:GetRole(niceBro.guid)
     self.encounter.fuckers[#self.encounter.fuckers+1] = niceBro
 
     if self.isBlockedByAnother == 0 then
@@ -130,7 +132,9 @@ function WDMF:AddSuccess(timestamp, name, mark, msg, points)
     WD:RefreshLastEncounterFrame()
 end
 
-function WDMF:AddFail(timestamp, name, mark, msg, points)
+function WDMF:AddFail(timestamp, guid, mark, msg, points)
+    if not WD.cache.raidroster[guid] then return end
+    local name = WD.cache.raidroster[guid].name
     if self.encounter.deaths > WD.db.profile.maxDeaths then
         local t = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
         if mark > 0 then name = WdLib:getRaidTargetTextureLink(mark).." "..name end
@@ -146,7 +150,7 @@ function WDMF:AddFail(timestamp, name, mark, msg, points)
     fucker.mark = mark
     fucker.reason = msg
     fucker.points = points
-    fucker.role = WD:GetRole(fucker.name)
+    fucker.role = WD:GetRole(fucker.guid)
     self.encounter.fuckers[#self.encounter.fuckers+1] = fucker
 
     if self.isBlockedByAnother == 0 then

@@ -6,6 +6,8 @@ WD.cache.raidroster = {}
 WD.cache.raidrosterkeys = {}
 WD.cache.raidrosterinspected = {}
 
+local inspectProcessing = {}
+
 local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 
 local ClassSpecializations = {
@@ -116,6 +118,14 @@ local function getConsumables(unit)
     return flask, food, rune
 end
 
+local function requestInspect(p)
+    if WdLib:getShortCharacterName(p.name) == UNKNOWNOBJECT then return end
+    NotifyInspect(p.name)
+    WD.cache.raidrosterinspected[p.guid].lastTime = time()
+
+    inspectProcessing[p.guid] = {}
+end
+
 local function updateSpecialization(p)
     if not p then return end
 
@@ -126,12 +136,21 @@ local function updateSpecialization(p)
             p.specId = ClassSpecializations[p.class][specId]
         end
     else
+        local currTime = time()
         if WD.cache.raidrosterinspected[p.guid] then
-            p.specId = WD.cache.raidrosterinspected[p.guid]
+            p.specId = WD.cache.raidrosterinspected[p.guid].specId
+        else
+            WD.cache.raidrosterinspected[p.guid] = {}
+            WD.cache.raidrosterinspected[p.guid].lastTime = currTime - 5
+            WD.cache.raidrosterinspected[p.guid].specId = 0
         end
         if (not p.specId or p.specId == 0) and CanInspect(p.unit) then
-            print("NotifyInspect "..p.unit)
-            NotifyInspect(p.unit)
+            if (currTime - WD.cache.raidrosterinspected[p.guid].lastTime) > 2 then
+                if inspectProcessing[p.guid] then
+                    return
+                end
+                requestInspect(p)
+            end
         end
     end
 end
@@ -269,34 +288,35 @@ local function checkGroup(unitBase)
         local name = WdLib:getUnitName(unit)
         local _,class = UnitClass(unit)
 
-        local p = {}
-        p.name = name
-        p.unit = unit
-        p.class = class
-        p.guid = guid
-
-        if not WD.cache.raidroster[p.guid] then
+        if WD.cache.raidroster[guid] then
+            WD.cache.raidroster[guid].unit = unit
+            WD.cache.raidroster[guid].class = class
+        else
+            local p = {}
+            p.name = name
+            p.unit = unit
+            p.class = class
+            p.guid = guid
+            WD.cache.raidroster[p.guid] = p
             WD.cache.raidrosterkeys[#WD.cache.raidrosterkeys+1] = p.guid
         end
-        WD.cache.raidroster[p.guid] = p
-        updateSpecialization(WD.cache.raidroster[p.guid])
+        updateSpecialization(WD.cache.raidroster[guid])
     end
-    
-    for i=1,#WD.cache.raidrosterkeys do
-        local guid = WD.cache.raidrosterkeys[i]
+
+    local onCompare = function(i,guid)
         local v = WD.cache.raidroster[guid]
-        if unitBase == "raid" and UnitInRaid(v.unit) == nil then
-            WD.cache.raidroster[guid] = nil
-            WD.cache.raidrosterinspected[guid] = nil
-            table.remove(WD.cache.raidrosterkeys, i)
-            i = i - 1
-        elseif unitBase == "party" and UnitInParty(v.unit) == false then
-            WD.cache.raidrosterinspected[guid] = nil
-            WD.cache.raidroster[guid] = nil
-            table.remove(WD.cache.raidrosterkeys, i)
-            i = i - 1
-        end
+        local unitNotInRaid = unitBase == "raid" and UnitInRaid(v.unit) == nil
+        local unitNotInParty = unitBase == "party" and UnitInParty(v.unit) == false
+        local unitIsOutdated = UnitGUID(v.unit) ~= guid
+        if (unitNotInRaid and unitNotInParty) or unitIsOutdated then return true end
+        return nil
     end
+    local onErase = function(i,guid)
+        WD.cache.raidroster[guid] = nil
+        WD.cache.raidrosterinspected[guid] = nil
+        inspectProcessing[guid] = nil
+    end
+    WdLib:table_erase(WD.cache.raidrosterkeys, onCompare, onErase)
 end
 
 local function checkSolo()
@@ -317,6 +337,7 @@ end
 local function resetRaidRoster()
     WdLib:table_wipe(WD.cache.raidrosterkeys)
     WdLib:table_wipe(WD.cache.raidroster)
+    WdLib:table_wipe(inspectProcessing)
 end
 
 local function updateRaidRoster()
@@ -326,9 +347,10 @@ local function updateRaidRoster()
         checkGroup("party")
         checkSolo()
     else
+        resetRaidRoster()
         checkSolo()
     end
-    
+
     updateRaidOverviewFrame()
 end
 
@@ -369,25 +391,25 @@ function WD:InitRaidOverviewModule(parent)
             updateRaidRoster()
         elseif event == "UNIT_NAME_UPDATE" then
             local unit = ...
-            print("UNIT_NAME_UPDATE "..unit)
             for k,v in pairs(WD.cache.raidroster) do
                 if v.unit == unit then
                     WD.cache.raidroster[v.guid].name = WdLib:getUnitName(unit)
-                    print("UNIT_NAME_UPDATE updated")
+                    requestInspect(WD.cache.raidroster[v.guid])
                     break
                 end
             end
             updateRaidOverviewFrame()
         elseif event == "INSPECT_READY" then
             local guid = ...
-            print("INSPECT_READY "..guid)
-            if WD.cache.raidroster[guid] then
+            if WD.cache.raidroster[guid] and WD.cache.raidrosterinspected[guid] then
+                inspectProcessing[guid] = nil
+
                 local t = WD.cache.raidroster[guid]
-                WD.cache.raidrosterinspected[guid] = GetInspectSpecialization(t.unit)
+                WD.cache.raidrosterinspected[guid].specId = GetInspectSpecialization(t.unit)
+
                 updateSpecialization(WD.cache.raidroster[guid])
-                print("INSPECT_READY updated")
+                updateRaidOverviewFrame()
             end
-            updateRaidOverviewFrame()
         elseif event == "PLAYER_ENTERING_WORLD" then
             updateRaidRoster()
         elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
@@ -397,8 +419,6 @@ function WD:InitRaidOverviewModule(parent)
         end
     end)
     WDRO:SetScript("OnShow", function(self) updateRaidRoster() end)
-
-    --updateRaidRoster()
 
     function WDRO:OnUpdate()
         updateRaidRoster()
@@ -413,7 +433,6 @@ function WD:GetRole(guid)
 
     local specId = WD.cache.raidroster[guid].specId
     if specId == 0 then
-        NotifyInspect(WD.cache.raidroster[guid].unit)
         return role
     end
 

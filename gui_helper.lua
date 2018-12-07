@@ -1,6 +1,32 @@
 
 WdLib = {}
 
+function WdLib:CreateTimer(fn, delay, ...)
+    local function executeFn(self) self.fn(unpack(self.args)) end
+
+    local self = nil
+    if delay > 0 then
+        self = C_Timer_NewTicker(delay, executeFn, 1)
+    else
+        self = C_Timer_NewTicker(-delay, executeFn)
+    end
+    self.args = {...}
+    self.fn = fn
+
+    return self
+end
+
+function WdLib:StopTimer(self)
+    if self then
+        self:Cancel()
+    end
+end
+
+function WdLib:RestartTimer(self, fn, delay, ...)
+    WdLib:StopTimer(self)
+    WdLib:CreateTimer(fn, delay, ...)
+end
+
 local function table_val_to_str(v)
     if "string" == type(v) then
         v = string.gsub(v, "\n", "\\n")
@@ -57,6 +83,18 @@ end
 function WdLib:float_round_to(v, n)
     local mult = 10^n
     return math.floor(v * mult + 0.5) / mult
+end
+
+function WdLib:table_erase(t, predFn, resFn)
+    local r = 0
+    for i=1,#t do
+        local v = t[i-r]
+        if predFn(i,v) then
+            resFn(i,v)
+            table.remove(t, i-r)
+            r = r + 1
+        end
+    end
 end
 
 function WdLib:table_wipe(t)

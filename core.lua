@@ -112,7 +112,7 @@ function WDMF:AddSuccess(timestamp, guid, mark, msg, points)
     niceBro.mark = mark
     niceBro.reason = msg
     niceBro.points = points
-    niceBro.role = WD:GetRole(niceBro.guid)
+    niceBro.role = WD:GetRole(guid)
     self.encounter.fuckers[#self.encounter.fuckers+1] = niceBro
 
     if self.isBlockedByAnother == 0 then
@@ -150,7 +150,7 @@ function WDMF:AddFail(timestamp, guid, mark, msg, points)
     fucker.mark = mark
     fucker.reason = msg
     fucker.points = points
-    fucker.role = WD:GetRole(fucker.guid)
+    fucker.role = WD:GetRole(guid)
     self.encounter.fuckers[#self.encounter.fuckers+1] = fucker
 
     if self.isBlockedByAnother == 0 then
@@ -227,6 +227,7 @@ function WDMF:StartEncounter(encounterID, encounterName)
         self.isActive = 1
 
         self.encounter.id = encounterID
+        self.encounter.pullName = encounterName.."-"..pullId
         self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
         self.encounter.startTime = time()
         self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)

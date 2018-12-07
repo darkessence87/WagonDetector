@@ -102,3 +102,5 @@ WD_RULE_ERROR_OLD_VERSION = "Версия правила слишком стар
 
 WD_TRACKER_INTERRUPTED_BY = "Сбито %s's %s через %s сек"
 WD_TRACKER_CASTED_IN = "|cffff0000Каст через %s сек!|r"
+WD_TRACKER_QUALITY_DESC = "Чем позже сбивается каст, тем лучше. Число показывает, какой процент каста успел пройти. Таким образом, чем выше число, тем позже сбит каст"
+WD_TRACKER_BUTTON_CLEAR = "Очистить"

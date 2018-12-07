@@ -24,95 +24,7 @@ local function parseOfficerNote(note)
     return tonumber(points) or 0, tonumber(pulls) or 0, isAlt
 end
 
-local function updateGuildRosterFrame()
-    if #WD.cache.rosterkeys == 0 then
-        if #WDGR.members then
-            for i=1, #WDGR.members do
-                WDGR.members[i]:Hide()
-            end
-        end
-        return
-    end
-
-    local maxWidth = 30
-    local maxHeight = 545
-    for i=1,#WDGR.headers do
-        maxWidth = maxWidth + WDGR.headers[i]:GetWidth() + 1
-    end
-
-    local scroller = WDGR.scroller or WdLib:createScroller(WDGR, maxWidth, maxHeight, #WD.cache.rosterkeys)
-    if not WDGR.scroller then
-        WDGR.scroller = scroller
-    end
-
-    local x, y = 30, -51
-    for k=1,#WD.cache.rosterkeys do
-        local v = WD.cache.roster[WD.cache.rosterkeys[k]]
-        if not WDGR.members[k] then
-            local member = CreateFrame("Frame", nil, WDGR.scroller.scrollerChild)
-            member.info = v
-            member:SetSize(maxWidth, 20)
-            member:SetPoint("TOPLEFT", WDGR.scroller.scrollerChild, "TOPLEFT", x, y)
-            member.column = {}
-
-            local index = 1
-            WdLib:addNextColumn(WDGR, member, index, "LEFT", WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
-            member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, -1)
-            member.column[index]:EnableMouse(true)
-            member.column[index]:SetScript("OnEnter", function(self)
-                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                local tooltip = "Alts:\n"
-                for i=1,#v.alts do
-                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
-                end
-                if #v.alts > 0 then
-                    GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
-                    GameTooltip:Show()
-                end
-            end)
-            member.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
-
-            index = index + 1
-            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.rank)
-            index = index + 1
-            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.points)
-            index = index + 1
-            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.pulls)
-            index = index + 1
-            WdLib:addNextColumn(WDGR, member, index, "CENTER", v.coef)
-
-            table.insert(WDGR.members, member)
-        else
-            local member = WDGR.members[k]
-            member.column[1].txt:SetText(WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
-            member.column[1]:SetScript("OnEnter", function(self)
-                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                local tooltip = "Alts:\n"
-                for i=1,#v.alts do
-                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
-                end
-                if #v.alts > 0 then
-                    GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
-                    GameTooltip:Show()
-                end
-            end)
-            member.column[2].txt:SetText(v.rank)
-            member.column[3].txt:SetText(v.points)
-            member.column[4].txt:SetText(v.pulls)
-            member.column[5].txt:SetText(v.coef)
-            member:Show()
-            WdLib:updateScroller(WDGR.scroller.slider, #WD.cache.rosterkeys)
-        end
-
-        y = y - 21
-    end
-
-    if #WD.cache.rosterkeys < #WDGR.members then
-        for i=#WD.cache.rosterkeys+1, #WDGR.members do
-            WDGR.members[i]:Hide()
-        end
-    end
-
+local function updateClassStatistics()
     -- update class members numbers
     local classMembers = {}
     local total = 0
@@ -134,6 +46,83 @@ local function updateGuildRosterFrame()
             v.column[7].t:SetColorTexture(.5, .5, .5, 1)
         end
     end
+end
+
+local function updateGuildRosterFrame()
+    if #WD.cache.rosterkeys == 0 then
+        if #WDGR.members then
+            for i=1, #WDGR.members do
+                WDGR.members[i]:Hide()
+            end
+        end
+        return
+    end
+
+    local maxWidth = 30
+    local maxHeight = 545
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #WD.cache.rosterkeys
+    local columnsN = 5
+
+    local function createFn(parent, row, index)
+        local v = WD.cache.roster[WD.cache.rosterkeys[row]]
+        if index == 1 then
+            local f = WdLib:addNextColumn(WDGR, parent, index, "LEFT", WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -1)
+            f:EnableMouse(true)
+            f:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                local tooltip = "Alts:\n"
+                for i=1,#v.alts do
+                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
+                end
+                if #v.alts > 0 then
+                    GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+                    GameTooltip:Show()
+                end
+            end)
+            f:SetScript("OnLeave", function() GameTooltip_Hide() end)
+            return f
+        elseif index == 2 then
+            return WdLib:addNextColumn(WDGR, parent, index, "CENTER", v.rank)
+        elseif index == 3 then
+            return WdLib:addNextColumn(WDGR, parent, index, "CENTER", v.points)
+        elseif index == 4 then
+            return WdLib:addNextColumn(WDGR, parent, index, "CENTER", v.pulls)
+        elseif index == 5 then
+            return WdLib:addNextColumn(WDGR, parent, index, "CENTER", v.coef)
+        end
+    end
+
+    local function updateFn(frame, row, index)
+        local v = WD.cache.roster[WD.cache.rosterkeys[row]]
+        if index == 1 then
+            frame.txt:SetText(WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
+            frame:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                local tooltip = "Alts:\n"
+                for i=1,#v.alts do
+                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
+                end
+                if #v.alts > 0 then
+                    GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+                    GameTooltip:Show()
+                end
+            end)
+        elseif index == 2 then
+            frame.txt:SetText(v.rank)
+        elseif index == 3 then
+            frame.txt:SetText(v.points)
+        elseif index == 4 then
+            frame.txt:SetText(v.pulls)
+        elseif index == 5 then
+            frame.txt:SetText(v.coef)
+        end
+    end
+
+    WdLib:updateScrollableTable(WDGR, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+
+    updateClassStatistics()
 end
 
 local function initClassRoster()

@@ -33,17 +33,7 @@ function WD:OnInitialize()
     self:CreateGuiFrame()
     C_ChatInfo.RegisterAddonMessagePrefix("WDCM")
 
-    if self.mainFrame then
-        if WD.db.profile.isEnabled == true then
-            self.mainFrame:RegisterEvent("CHAT_MSG_ADDON")
-
-            if WD.db.profile.autoTrack == true then
-                self.mainFrame:StartPull()
-            end
-        end
-
-        self.mainFrame:SetScript("OnEvent", function(self, ...) self:OnEvent(...); end)
-    end
+    self:OnUpdate()
 end
 
 local function loadDefaultRules(self)
@@ -80,6 +70,7 @@ function WD:OnUpdate()
         self.guiFrame:OnUpdate()
     end
     if self.mainFrame then
+        self.mainFrame:SetScript("OnEvent", function(self, ...) self:OnEvent(...); end)
         self.mainFrame:OnUpdate()
     end
 end
@@ -98,9 +89,7 @@ function WD:LoadDefaults()
             encounters = {},
             autoTrack = true,
             tracker = {
-                npc = {},
-                pets = {},
-                players = {},
+                selected = 0,
             },
         }
     }

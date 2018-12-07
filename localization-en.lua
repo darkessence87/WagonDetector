@@ -98,3 +98,5 @@ WD_RULE_ERROR_OLD_VERSION = "Rule's version is too old: %s. Minimal version supp
 
 WD_TRACKER_INTERRUPTED_BY = "Interrupted by %s's %s in %s sec"
 WD_TRACKER_CASTED_IN = "|cffff0000Casted in %s sec!|r"
+WD_TRACKER_QUALITY_DESC = "Shows the number in percent how fast cast was interrupted. It is good to interrupt at the end of cast, so that higher number shows later moment of interruption"
+WD_TRACKER_BUTTON_CLEAR = "Clear"

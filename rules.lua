@@ -17,8 +17,8 @@ local function findDropDownFrameByName(parent, name)
     return nil
 end
 
-local function editRuleLine(data)
-    if not data then return end
+local function editRuleLine(rule)
+    if not rule then return end
     local r = WDRM.menus["new_rule"]
     if r:IsVisible() then r:Hide() return end
 
@@ -27,8 +27,6 @@ local function editRuleLine(data)
     local arg1_drop = r.hiddenMenus["arg1_drop"]
     local arg1_edit = r.hiddenMenus["arg1_edit"]
     local arg2_edit = r.hiddenMenus["arg2_edit"]
-
-    local rule = data.rule
 
     -- encounter
     local encounterName = WD.EncounterNames[rule.journalId]
@@ -274,18 +272,13 @@ local function shareEncounter(encounterName, rules)
 end
 
 local function updateRuleLines()
-    if not WDRM or not WDRM.rules then return end
+    if not WDRM or not WDRM.members then return end
 
     local maxWidth = 30
     local maxHeight = 545
-    for i=1,#WDRM.headers do
-        maxWidth = maxWidth + WDRM.headers[i]:GetWidth() + 1
-    end
-
-    local scroller = WDRM.scroller or WdLib:createScroller(WDRM, maxWidth, maxHeight, #WD.db.profile.rules)
-    if not WDRM.scroller then
-        WDRM.scroller = scroller
-    end
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #WD.db.profile.rules
+    local columnsN = 9
 
     -- sort by journalId > points > reason
     local func = function(a, b)
@@ -293,110 +286,89 @@ local function updateRuleLines()
         elseif a.journalId > b.journalId then return false
         elseif a.points > b.points then return true
         elseif a.points < b.points then return false
-        elseif a.arg0 and b.arg0 then
-            if tonumber(a.arg0) and tonumber(b.arg0) then return tonumber(a.arg0) < tonumber(b.arg0)
-            else return tostring(a.arg0) < tostring(b.arg0)
-            end
         else
-            return true
+            return getRuleDescription(a) < getRuleDescription(b)
         end
     end
     table.sort(WD.db.profile.rules, func)
 
-    local x, y = 30, -51
-    for k,v in pairs(WD.db.profile.rules) do
-        if not WDRM.rules[k] then
-            local ruleLine = CreateFrame("Frame", nil, WDRM.scroller.scrollerChild)
-            ruleLine.rule = v
-            ruleLine:SetSize(maxWidth, 20)
-            ruleLine:SetPoint("TOPLEFT", WDRM.scroller.scrollerChild, "TOPLEFT", x, y)
-            ruleLine.column = {}
-
-            local index = 1
-            ruleLine.column[index] = WdLib:createCheckButton(ruleLine)
-            ruleLine.column[index]:SetSize(18, 18)
-            ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine, "TOPLEFT", 1, -1)
-            ruleLine.column[index]:SetChecked(v.isActive)
-            ruleLine.column[index]:SetScript("OnClick", function() v.isActive = not v.isActive end)
-
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "LEFT", WD.EncounterNames[v.journalId])
-            ruleLine.column[index]:SetPoint("TOPLEFT", ruleLine.column[index-1], "TOPRIGHT", 2, 1)
+    local function createFn(parent, row, index)
+        local v = WD.db.profile.rules[row]
+        if index == 1 then
+            local f = WdLib:createCheckButton(parent)
+            f:SetSize(18, 18)
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
+            f:SetChecked(v.isActive)
+            f:SetScript("OnClick", function() v.isActive = not v.isActive end)
+            return f
+        elseif index == 2 then
+            local f = WdLib:addNextColumn(WDRM, parent, index, "LEFT", WD.EncounterNames[v.journalId])
+            f:SetPoint("TOPLEFT", parent.column[1], "TOPRIGHT", 2, 1)
             local instanceName = WD.FindInstanceByJournalId(v.journalId)
-            ruleLine.column[index]:SetScript("OnEnter", function(self)
-                if instanceName then
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetText(instanceName, nil, nil, nil, nil, true)
-                    GameTooltip:Show()
-                end
-            end)
-            ruleLine.column[index]:SetScript("OnLeave", function() GameTooltip_Hide() end)
-
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "LEFT", v.role)
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "LEFT", getRuleDescription(v))
-            WdLib:generateSpellHover(ruleLine.column[index], getRuleDescription(v))
-
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", v.points)
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EDIT)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
-            ruleLine.column[index].t:SetColorTexture(.2, 1, .2, .5)
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_DELETE)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() table.remove(WD.db.profile.rules, k); updateRuleLines(); end)
-            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_EXPORT)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
-            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
-            index = index + 1
-            WdLib:addNextColumn(WDRM, ruleLine, index, "CENTER", WD_BUTTON_SHARE)
-            ruleLine.column[index]:EnableMouse(true)
-            ruleLine.column[index]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
-            ruleLine.column[index].t:SetColorTexture(1, .2, .2, .5)
-
-            table.insert(WDRM.rules, ruleLine)
-        else
-            local ruleLine = WDRM.rules[k]
-            ruleLine.rule = v
-            ruleLine.column[1]:SetChecked(v.isActive)
-            ruleLine.column[1]:SetScript("OnClick", function() v.isActive = not v.isActive end)
-            ruleLine.column[2].txt:SetText(WD.EncounterNames[v.journalId])
-            local instanceName = WD.FindInstanceByJournalId(v.journalId)
-            ruleLine.column[2]:SetScript("OnEnter", function(self)
-                if instanceName then
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:SetText(instanceName, nil, nil, nil, nil, true)
-                    GameTooltip:Show()
-                end
-            end)
-            ruleLine.column[3].txt:SetText(v.role)
-            ruleLine.column[4].txt:SetText(getRuleDescription(v))
-            WdLib:generateSpellHover(ruleLine.column[4], getRuleDescription(v))
-
-            ruleLine.column[5].txt:SetText(v.points)
-            ruleLine.column[6]:SetScript("OnClick", function() editRuleLine(ruleLine); end)
-
-            ruleLine.column[8]:SetScript("OnClick", function() exportRule(ruleLine.rule); end)
-            ruleLine.column[9]:SetScript("OnClick", function() shareRule(ruleLine.rule); end)
-            ruleLine:Show()
-            WdLib:updateScroller(WDRM.scroller.slider, #WD.db.profile.rules)
-        end
-
-        y = y - 21
-    end
-
-    if #WD.db.profile.rules < #WDRM.rules then
-        for i=#WD.db.profile.rules+1, #WDRM.rules do
-            WDRM.rules[i]:Hide()
+            WdLib:generateHover(f, instanceName)
+            return f
+        elseif index == 3 then
+            return WdLib:addNextColumn(WDRM, parent, index, "LEFT", v.role)
+        elseif index == 4 then
+            local f = WdLib:addNextColumn(WDRM, parent, index, "LEFT", getRuleDescription(v))
+            WdLib:generateSpellHover(f, getRuleDescription(v))
+            return f
+        elseif index == 5 then
+            return WdLib:addNextColumn(WDRM, parent, index, "CENTER", v.points)
+        elseif index == 6 then
+            local f = WdLib:addNextColumn(WDRM, parent, index, "CENTER", WD_BUTTON_EDIT)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function() editRuleLine(v); end)
+            f.t:SetColorTexture(.2, 1, .2, .5)
+            return f
+        elseif index == 7 then
+            local f = WdLib:addNextColumn(WDRM, parent, index, "CENTER", WD_BUTTON_DELETE)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function() table.remove(WD.db.profile.rules, row); updateRuleLines(); end)
+            f.t:SetColorTexture(1, .2, .2, .5)
+            return f
+        elseif index == 8 then
+            local f = WdLib:addNextColumn(WDRM, parent, index, "CENTER", WD_BUTTON_EXPORT)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function() exportRule(v); end)
+            f.t:SetColorTexture(1, .2, .2, .5)
+            return f
+        elseif index == 9 then
+            local f = WdLib:addNextColumn(WDRM, parent, index, "CENTER", WD_BUTTON_SHARE)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function() shareRule(v); end)
+            f.t:SetColorTexture(1, .2, .2, .5)
+            return f
         end
     end
+
+    local function updateFn(frame, row, index)
+        local v = WD.db.profile.rules[row]
+        if index == 1 then
+            frame:SetChecked(v.isActive)
+            frame:SetScript("OnClick", function() v.isActive = not v.isActive end)
+        elseif index == 2 then
+            frame.txt:SetText(WD.EncounterNames[v.journalId])
+            local instanceName = WD.FindInstanceByJournalId(v.journalId)
+            WdLib:generateHover(frame, instanceName)
+        elseif index == 3 then
+            frame.txt:SetText(v.role)
+        elseif index == 4 then
+            frame.txt:SetText(getRuleDescription(v))
+            WdLib:generateSpellHover(frame, getRuleDescription(v))
+        elseif index == 5 then
+            frame.txt:SetText(v.points)
+        elseif index == 6 then
+            frame:SetScript("OnClick", function(self) editRuleLine(v); end)
+        elseif index == 7 then
+        elseif index == 8 then
+            frame:SetScript("OnClick", function() exportRule(v); end)
+        elseif index == 9 then
+            frame:SetScript("OnClick", function() shareRule(v); end)
+        end
+    end
+
+    WdLib:updateScrollableTable(WDRM, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end
 
 local function isDuplicate(rule)
@@ -1012,7 +984,7 @@ function WD:InitEncountersModule(parent)
 
     WDRM.menus = {}
     WDRM.buttons = {}
-    WDRM.rules = {}
+    WDRM.members = {}
 
     -- new rule button
     WDRM.buttons["add_rule"] = WdLib:createButton(WDRM)

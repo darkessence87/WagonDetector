@@ -454,7 +454,7 @@ end
 function WdLib:updateDropDownMenu(self, name, items, parent)
     self.selected = nil
     self.txt:SetText(name)
-    if #self.items > 0 then WdLib:table_wipe(self.items) end
+    if #self.items > 0 then WdLib:dropDownHide(self) WdLib:table_wipe(self.items) end
     if items then
         for k,v in pairs(items) do
             if v.items then
@@ -482,10 +482,17 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
     if #self.items > 1 then
         local width = self.items[1]:GetWidth() + 1
         local height = #self.items * self.items[1]:GetHeight()
-        self.bg = WdLib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
+        if not self.bg then
+            self.bg = WdLib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
+        end
         self.bg:SetSize(width, height)
         self.bg:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, 0)
         self.bg:Hide()
+    else
+        if self.bg then
+            self.bg:SetSize(0, 0)
+            self.bg:Hide()
+        end
     end
 
     WdLib:dropDownHide(self)
@@ -574,6 +581,7 @@ function WdLib:addNextColumn(self, parent, index, textOrientation, name)
     else
         parent.column[index].txt:SetAllPoints()
     end
+    return parent.column[index]
 end
 
 function WdLib:convertTypesToItems(t, fn)
@@ -709,4 +717,48 @@ function WdLib:getUnitName(unit)
         realm = WD.CurrentRealmName
     end
     return name.."-"..realm
+end
+
+function WdLib:updateScrollableTable(parent, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    for i=1,#parent.headers do
+        maxWidth = maxWidth + parent.headers[i]:GetWidth() + 1
+    end
+
+    local scroller = parent.scroller or WdLib:createScroller(parent, maxWidth, maxHeight, rowsN)
+    if not parent.scroller then
+        parent.scroller = scroller
+    end
+
+    for k=1,rowsN do
+        if not parent.members[k] then
+            local member = CreateFrame("Frame", nil, parent.scroller.scrollerChild)
+            member:SetSize(parent.headers[1]:GetSize())
+            member.column = {}
+            if k > 1 then
+                member:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
+            else
+                member:SetPoint("TOPLEFT", parent.scroller.scrollerChild, "TOPLEFT", topLeftPosition.x, topLeftPosition.y)
+            end
+
+            for index=1,columnsN do
+                member.column[index] = createFn(member, k, index)
+            end
+
+            table.insert(parent.members, member)
+        else
+            local member = parent.members[k]
+            for index=1,columnsN do
+                updateFn(member.column[index], k, index)
+            end
+            member:Show()
+        end
+    end
+
+    WdLib:updateScroller(parent.scroller.slider, rowsN)
+
+    if rowsN < #parent.members then
+        for i=rowsN+1, #parent.members do
+            parent.members[i]:Hide()
+        end
+    end
 end

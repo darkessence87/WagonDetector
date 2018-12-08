@@ -491,7 +491,7 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
                 end
             end
         end
-        if #items < #self.items then
+        if #items <= #self.items then
             for i=1, #items do
                 self.items[i].locked = nil
             end
@@ -529,6 +529,7 @@ end
 
 function WdLib:createDropDownMenu(parent, name, items, grandParent)
     local dropFrame = createListButton(parent, name)
+    dropFrame:SetFrameStrata("TOOLTIP")
     dropFrame:SetScript("OnClick", function(self)
         local parent = self:GetParent()
         if self.isVisible then

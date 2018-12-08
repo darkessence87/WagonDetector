@@ -81,6 +81,7 @@ function WD:LoadDefaults()
             isEnabled = false,
             isLocked = false,
             rules = {},
+            statRules = {},
             chat = "PRINT",
             history = {},
             sendFailImmediately = true,

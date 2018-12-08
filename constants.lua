@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.34"
+WD.Version = "v0.0.35"
 WD.TiersInfo = {}
 WD.MaxPullsToBeSaved = 25
 

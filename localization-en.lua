@@ -100,3 +100,8 @@ WD_TRACKER_INTERRUPTED_BY = "Interrupted by %s's %s in %s sec"
 WD_TRACKER_CASTED_IN = "|cffff0000Casted in %s sec!|r"
 WD_TRACKER_QUALITY_DESC = "Shows the number in percent how fast cast was interrupted. It is good to interrupt at the end of cast, so that higher number shows later moment of interruption"
 WD_TRACKER_BUTTON_CLEAR = "Clear"
+
+WD_TRACKER_QT_INTERRUPTS_DESC = "Interruptions quality < %s%% of %s"
+WD_TRACKER_QT_DISPELS_FULL_RANGE = "Dispels/steals quality in range [%s-%s] msec for %s"
+WD_TRACKER_QT_DISPELS_LEFT_RANGE = "Dispels/steals quality. Too early dispel (before %s msec) for %s"
+WD_TRACKER_QT_DISPELS_RIGHT_RANGE = "Dispels/steals quality. Too late dispel (after %s msec) for %s"

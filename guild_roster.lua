@@ -151,7 +151,7 @@ local function initClassRoster()
             member:SetPoint("TOPLEFT", prevFrame, "BOTTOMLEFT", 0, -1)
         else
             member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
-            member:SetPoint("TOPLEFT", WDGR.headers[d+1], "BOTTOMLEFT", 0, -1)
+            member:SetPoint("TOPLEFT", WDGR.headers[d+1], "BOTTOMLEFT", 0, -3)
         end
         member.column[index]:EnableMouse(false)
         member.column[index].txt:SetPoint("LEFT", 5, 0)

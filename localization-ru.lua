@@ -104,3 +104,8 @@ WD_TRACKER_INTERRUPTED_BY = "Сбито %s's %s через %s сек"
 WD_TRACKER_CASTED_IN = "|cffff0000Каст через %s сек!|r"
 WD_TRACKER_QUALITY_DESC = "Чем позже сбивается каст, тем лучше. Число показывает, какой процент каста успел пройти. Таким образом, чем выше число, тем позже сбит каст"
 WD_TRACKER_BUTTON_CLEAR = "Очистить"
+
+WD_TRACKER_QT_INTERRUPTS_DESC = "Качество сбиваний < %s%% для %s"
+WD_TRACKER_QT_DISPELS_FULL_RANGE = "Качество рассеиваний/краж в пределе[%s-%s] мсек для %s"
+WD_TRACKER_QT_DISPELS_LEFT_RANGE = "Качество рассеиваний/краж. Слишком быстро (до %s мсек) для %s"
+WD_TRACKER_QT_DISPELS_RIGHT_RANGE = "Качество рассеиваний/краж. Слишком долго (после %s мсек) для %s"

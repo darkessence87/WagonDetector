@@ -29,6 +29,203 @@ local statisticTypes = {
     "ST_SOURCE_INTERRUPTS",    -- arg1=range_rule_type                 collects interrupts done by units in event range related to those units
 }
 
+local function findDuplicate(rule)
+    local found = nil
+    for k,v in pairs(WD.db.profile.statRules) do
+        if v.journalId == rule.journalId and v.type == rule.type then
+            if ((v.arg0 and rule.arg0 and v.arg0 == rule.arg0) or (not v.arg0 and not rule.arg0)) and
+               ((v.arg1 and rule.arg1 and v.arg1 == rule.arg1) or (not v.arg1 and not rule.arg1)) and
+               ((v.arg2 and rule.arg2 and v.arg2 == rule.arg2) or (not v.arg2 and not rule.arg2)) and
+               ((v.arg3 and rule.arg3 and v.arg3 == rule.arg3) or (not v.arg3 and not rule.arg3))
+            then
+                found = v
+                break
+            end
+        end
+    end
+    return found
+end
+
+local function getRuleDescription(rule)
+    if rule.ruleType == "RL_QUALITY" then
+        if rule.arg0 == "QT_INTERRUPTS" then
+            return string.format(WD_TRACKER_QT_INTERRUPTS_DESC, rule.qualityPercent, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+        elseif rule.arg0 == "QT_DISPELS" then
+            if rule.earlyDispel > 0 and rule.lateDispel > 0 then
+                return string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, rule.earlyDispel, rule.lateDispel, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+            elseif rule.earlyDispel > 0 and rule.lateDispel == 0 then
+                return string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, rule.earlyDispel, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+            elseif rule.earlyDispel == 0 and rule.lateDispel > 0 then
+                return string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, rule.lateDispel, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+            end
+        end
+    end
+    return "Not yet implemented"
+end
+
+local function updateRulesListFrame()
+    if not WDRS or not WDRS.members then return end
+
+    local maxWidth = 30
+    local maxHeight = 545
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #WD.db.profile.statRules
+    local columnsN = 4
+
+    -- sort by journalId > points > reason
+    local func = function(a, b)
+        if a.journalId and b.journalId and a.journalId < b.journalId then return true
+        elseif a.journalId and b.journalId and a.journalId > b.journalId then return false
+        else
+            return getRuleDescription(a) < getRuleDescription(b)
+        end
+    end
+    table.sort(WD.db.profile.statRules, func)
+
+    local function createFn(parent, row, index)
+        local v = WD.db.profile.statRules[row]
+        if index == 1 then
+            local f = WdLib:createCheckButton(parent)
+            f:SetSize(18, 18)
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
+            f:SetChecked(v.isActive)
+            f:SetScript("OnClick", function() v.isActive = not v.isActive end)
+            return f
+        elseif index == 2 then
+            local f = WdLib:addNextColumn(WDRS, parent, index, "LEFT", WD.EncounterNames[v.journalId])
+            f:SetPoint("TOPLEFT", parent.column[1], "TOPRIGHT", 2, 1)
+            local instanceName = WD.FindInstanceByJournalId(v.journalId)
+            WdLib:generateHover(f, instanceName)
+            return f
+        elseif index == 3 then
+            local f = WdLib:addNextColumn(WDRS, parent, index, "LEFT", getRuleDescription(v))
+            WdLib:generateSpellHover(f, getRuleDescription(v))
+            return f
+        elseif index == 4 then
+            local f = WdLib:addNextColumn(WDRS, parent, index, "CENTER", WD_BUTTON_DELETE)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function() table.remove(WD.db.profile.statRules, row); updateRulesListFrame(); end)
+            f.t:SetColorTexture(1, .2, .2, .5)
+            return f
+        end
+    end
+
+    local function updateFn(frame, row, index)
+        local v = WD.db.profile.statRules[row]
+        if index == 1 then
+            frame:SetChecked(v.isActive)
+            frame:SetScript("OnClick", function() v.isActive = not v.isActive end)
+        elseif index == 2 then
+            frame.txt:SetText(WD.EncounterNames[v.journalId])
+            local instanceName = WD.FindInstanceByJournalId(v.journalId)
+            WdLib:generateHover(frame, instanceName)
+        elseif index == 3 then
+            frame.txt:SetText(getRuleDescription(v))
+            WdLib:generateSpellHover(frame, getRuleDescription(v))
+        elseif index == 4 then
+        end
+    end
+
+    WdLib:updateScrollableTable(WDRS, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+end
+
+local function saveRule()
+    local parent = WDRS.menus["new_rule"]
+    if not parent.menus["encounters"].selected then
+        print("Please select encounter")
+        return false
+    end
+    if not parent.menus["rule_types"].selected then
+        print("Please select rule type")
+        return false
+    end
+
+    local rule = {}
+    rule.journalId = parent.menus["encounters"].selected.data.journalId
+    rule.ruleType = parent.menus["rule_types"].selected:GetText()
+
+    if rule.ruleType == "RL_QUALITY" then
+        if not parent.hiddenMenus["arg0_drop"].selected then
+            print("Please select quality type")
+            return false
+        end
+        local qualityType = parent.hiddenMenus["arg0_drop"].selected:GetText()
+        if qualityType == "QT_INTERRUPTS" then
+            local targetSpellId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+            if not GetSpellInfo(targetSpellId) then
+                print("Please set correct target spell id")
+                return false
+            end
+            local qualityPercent = tonumber(parent.hiddenMenus["arg2_edit"]:GetText())
+            if not qualityPercent then
+                print("Please specify quality percent")
+                return false
+            end
+
+            rule.arg0 = qualityType
+            rule.arg1 = targetSpellId
+            rule.qualityPercent = qualityPercent
+        elseif qualityType == "QT_DISPELS" then
+            local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+            if not GetSpellInfo(auraId) then
+                print("Please set correct aura id")
+                return false
+            end
+            local time1 = tonumber(parent.hiddenMenus["arg2_edit"]:GetText())
+            if not time1 or time1 < 0 then
+                print("Please specify correct early dispel time")
+                return false
+            end
+            local time2 = tonumber(parent.hiddenMenus["arg3_edit"]:GetText())
+            if not time2 or time2 < 0 then
+                print("Please specify correct late dispel time")
+                return false
+            end
+            if time2 > 0 and time1 > time2 then
+                print("Early dispel time cannot be greater than late dispel time")
+                return false
+            elseif time1 == 0 and time2 == 0 then
+                print("Incorrect time range. Must be at least one value > 0")
+                return false
+            end
+
+            rule.arg0 = qualityType
+            rule.arg1 = auraId
+            rule.earlyDispel = time1
+            rule.lateDispel = time2
+        end
+    elseif rule.ruleType == "" then
+        local arg0_drop = parent.hiddenMenus["arg0_drop"].selected:GetText()
+        local arg0_edit = parent.hiddenMenus["arg0_edit"]:GetText()
+
+        local arg1_drop = parent.hiddenMenus["arg1_drop"].selected:GetText()
+        local arg1_edit = parent.hiddenMenus["arg1_edit"]:GetText()
+
+        local arg2_drop = parent.hiddenMenus["arg2_drop"].selected:GetText()
+        local arg2_edit = parent.hiddenMenus["arg2_edit"]:GetText()
+
+        local arg3_edit = parent.hiddenMenus["arg3_edit"]:GetText()
+    else
+        return false
+    end
+    --WD.db.profile.statRules
+
+    local duplicate = findDuplicate(rule)
+    if not duplicate then
+        --print("Saved: "..WdLib:table_tostring(rule))
+        WD.db.profile.statRules[#WD.db.profile.statRules+1] = rule
+    else
+        if rule.qualityPercent then duplicate.qualityPercent = rule.qualityPercent end
+        if rule.earlyDispel then duplicate.earlyDispel = rule.earlyDispel end
+        if rule.lateDispel then duplicate.lateDispel = rule.lateDispel end
+        --print("Updated: "..WdLib:table_tostring(duplicate))
+    end
+
+    updateRulesListFrame()
+
+    return true
+end
+
 local function showEventConfig(origin, name, rule)
 --[[
     "EV_AURA"               arg0=aura_id      arg1=apply or remove
@@ -402,7 +599,7 @@ local function initNewRuleWindow()
     r.buttons["save"] = WdLib:createButton(r)
     r.buttons["save"]:SetPoint("TOPLEFT", r.hiddenMenus["arg3_edit"], "BOTTOMLEFT", 1, -2)
     r.buttons["save"]:SetSize(xSize / 2 - 1, 20)
-    r.buttons["save"]:SetScript("OnClick", function() print('Not yet implemented'); r:Hide() end)
+    r.buttons["save"]:SetScript("OnClick", function() print('Not fully implemented yet'); local result = saveRule(); if result == true then r:Hide() end; end)
     r.buttons["save"].t:SetColorTexture(.2, .4, .2, 1)
     r.buttons["save"].txt = WdLib:createFont(r.buttons["save"], "CENTER", "Save")
     r.buttons["save"].txt:SetAllPoints()
@@ -445,7 +642,7 @@ function WD:InitRulesStatisticsModule(parent)
 
     WDRS.menus = {}
     WDRS.buttons = {}
-    WDRS.rules = {}
+    WDRS.members = {}
 
     -- new rule button
     WDRS.buttons["add_rule"] = WdLib:createButton(WDRS)
@@ -462,23 +659,22 @@ function WD:InitRulesStatisticsModule(parent)
     table.insert(WDRS.headers, h)
     h = WdLib:createTableHeader(WDRS, WD_BUTTON_ENCOUNTER, x + 21, y, 150, 20)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, WD_BUTTON_ROLE, 75, 20)
-    table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, WD_BUTTON_REASON, 300, 20)
-    table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, WD_BUTTON_POINTS_SHORT, 50, 20)
+    h = WdLib:createTableHeaderNext(WDRS, h, WD_BUTTON_REASON, 600, 20)
     table.insert(WDRS.headers, h)
     h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
+    --[[h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
     table.insert(WDRS.headers, h)
     h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
     table.insert(WDRS.headers, h)
     h = WdLib:createTableHeaderNext(WDRS, h, "", 70, 20)
-    table.insert(WDRS.headers, h)
+    table.insert(WDRS.headers, h)]]
 
     initNewRuleWindow()
 
+    updateRulesListFrame()
+
     function WDRS:OnUpdate()
+        updateRulesListFrame()
     end
 end

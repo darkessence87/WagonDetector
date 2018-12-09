@@ -165,10 +165,10 @@ local function updateDispelButtons()
 end
 
 local function initDispelButtons()
-    WDTO.dispels = {}
+    WDTO.dispels = CreateFrame("Frame", nil, WDTO)
     WDTO.dispels.headers = {}
     WDTO.dispels.members = {}
-    table.insert(WDTO.dispels.headers, WdLib:createTableHeader(WDTO, "Dispel info", 1, -330, 300, 20))
+    table.insert(WDTO.dispels.headers, WdLib:createTableHeader(WDTO, "Dispel info", 1, -300, 300, 20))
 end
 
 local function updateInterruptsInfo()
@@ -301,7 +301,7 @@ local function updateCreatureButtons()
 end
 
 local function initCreatureButtons()
-    WDTO.creatures = {}
+    WDTO.creatures = CreateFrame("Frame", nil, WDTO)
     WDTO.creatures.headers = {}
     WDTO.creatures.members = {}
     table.insert(WDTO.creatures.headers, WdLib:createTableHeader(WDTO, "Casts info", 1, -30, 300, 20))
@@ -409,6 +409,12 @@ function WD:RefreshTrackedDispels()
                     end
                 end
             end
+        elseif k == "players" then
+            for guid,raider in pairs(v) do
+                if isDispelledUnit(raider) then
+                    dispels[#dispels+1] = raider
+                end
+            end
         end
     end
 
@@ -417,57 +423,49 @@ function WD:RefreshTrackedDispels()
         updateDispelInfo()
     end
 
+    local maxWidth = 30
+    local maxHeight = 210
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #dispels
+    local columnsN = 1
+
     local func = function(a, b)
         return a.name < b.name
     end
     table.sort(dispels, func)
 
-    for k=1,#dispels do
-        local v = dispels[k]
-        if not WDTO.dispels.members[k] then
-            local member = CreateFrame("Frame", nil, WDTO.dispels.headers[1])
-            member.info = v
-            member:SetSize(WDTO.dispels.headers[1]:GetSize())
-            member.column = {}
-
-            local index = 1
-            local creatureName = v.name
-            if v.rt > 0 then creatureName = WdLib:getRaidTargetTextureLink(v.rt).." "..creatureName end
-            WdLib:addNextColumn(WDTO.dispels, member, index, "LEFT", creatureName)
-            if k > 1 then
-                member:SetPoint("TOPLEFT", WDTO.dispels.members[k - 1], "BOTTOMLEFT", 0, -1)
-                member.column[index]:SetPoint("TOPLEFT", WDTO.dispels.members[k - 1], "BOTTOMLEFT", 0, -1)
-            else
-                member:SetPoint("TOPLEFT", WDTO.dispels.headers[1], "BOTTOMLEFT", 0, -2)
-                member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
+    local function createFn(parent, row, index)
+        local v = dispels[row]
+        parent.info = v
+        if index == 1 then
+            local unitName = v.name
+            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            local f = WdLib:addNextColumn(WDTO.dispels, parent, index, "LEFT", unitName)
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function(self) WDTO.lastSelectedDispel = self; updateDispelButtons() end)
+            if v.type == "creature" then
+                WdLib:generateHover(f, "id: "..v.npc_id)
             end
-
-            member.column[index]:EnableMouse(true)
-            member.column[index]:SetScript("OnClick", function(self) WDTO.lastSelectedDispel = self; updateDispelButtons() end)
-            WdLib:generateHover(member.column[index], "id: "..v.npc_id)
-
-            table.insert(WDTO.dispels.members, member)
-        else
-            local member = WDTO.dispels.members[k]
-            if WDTO.lastSelectedDispel and WDTO.lastSelectedDispel:GetParent().info.guid == member.info.guid then
-                WDTO.lastSelectedDispel = member.column[1]
-            end
-            local creatureName = v.name
-            if v.rt > 0 then creatureName = WdLib:getRaidTargetTextureLink(v.rt).." "..creatureName end
-            member.column[1].txt:SetText(creatureName)
-            member.column[1]:SetScript("OnClick", function(self) WDTO.lastSelectedDispel = self; updateDispelButtons() end)
-            WdLib:generateHover(member.column[1], "id: "..v.npc_id)
-            member.info = v
-
-            member:Show()
+            return f
         end
     end
 
-    if #dispels < #WDTO.dispels.members then
-        for i=#dispels+1, #WDTO.dispels.members do
-            WDTO.dispels.members[i]:Hide()
+    local function updateFn(frame, row, index)
+        local v = dispels[row]
+        frame:GetParent().info = v
+        if index == 1 then
+            local unitName = v.name
+            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            frame.txt:SetText(unitName)
+            frame:SetScript("OnClick", function(self) WDTO.lastSelectedDispel = self; updateDispelButtons() end)
+            if v.type == "creature" then
+                WdLib:generateHover(frame, "id: "..v.npc_id)
+            end
         end
     end
+
+    WdLib:updateScrollableTable(WDTO.dispels, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)    
 
     if not WDTO.lastSelectedDispel and #dispels > 0 then
         WDTO.lastSelectedDispel = WDTO.dispels.members[1].column[1]
@@ -508,58 +506,46 @@ function WD:RefreshTrackedCreatures()
         WDTO.lastSelectedCreature = nil
         updateInterruptsInfo()
     end
+    
+    local maxWidth = 30
+    local maxHeight = 210
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #creatures
+    local columnsN = 1
 
     local func = function(a, b)
         return a.name < b.name
     end
     table.sort(creatures, func)
 
-    for k=1,#creatures do
-        local v = creatures[k]
-        if not WDTO.creatures.members[k] then
-            local member = CreateFrame("Frame", nil, WDTO.creatures.headers[1])
-            member.info = v
-            member:SetSize(WDTO.creatures.headers[1]:GetSize())
-            member.column = {}
-
-            local index = 1
-            local creatureName = v.name
-            if v.rt > 0 then creatureName = WdLib:getRaidTargetTextureLink(v.rt).." "..creatureName end
-            WdLib:addNextColumn(WDTO.creatures, member, index, "LEFT", creatureName)
-            if k > 1 then
-                member:SetPoint("TOPLEFT", WDTO.creatures.members[k - 1], "BOTTOMLEFT", 0, -1)
-                member.column[index]:SetPoint("TOPLEFT", WDTO.creatures.members[k - 1], "BOTTOMLEFT", 0, -1)
-            else
-                member:SetPoint("TOPLEFT", WDTO.creatures.headers[1], "BOTTOMLEFT", 0, -2)
-                member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
-            end
-
-            member.column[index]:EnableMouse(true)
-            member.column[index]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
-            WdLib:generateHover(member.column[index], "id: "..v.npc_id)
-
-            table.insert(WDTO.creatures.members, member)
-        else
-            local member = WDTO.creatures.members[k]
-            if WDTO.lastSelectedCreature and WDTO.lastSelectedCreature:GetParent().info.guid == member.info.guid then
-                WDTO.lastSelectedCreature = member.column[1]
-            end
-            local creatureName = v.name
-            if v.rt > 0 then creatureName = WdLib:getRaidTargetTextureLink(v.rt).." "..creatureName end
-            member.column[1].txt:SetText(creatureName)
-            member.column[1]:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
-            WdLib:generateHover(member.column[1], "id: "..v.npc_id)
-            member.info = v
-
-            member:Show()
+    local function createFn(parent, row, index)
+        local v = creatures[row]
+        parent.info = v
+        if index == 1 then
+            local unitName = v.name
+            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            local f = WdLib:addNextColumn(WDTO.creatures, parent, index, "LEFT", unitName)
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
+            WdLib:generateHover(f, "id: "..v.npc_id)
+            return f
         end
     end
 
-    if #creatures < #WDTO.creatures.members then
-        for i=#creatures+1, #WDTO.creatures.members do
-            WDTO.creatures.members[i]:Hide()
+    local function updateFn(frame, row, index)
+        local v = creatures[row]
+        frame:GetParent().info = v
+        if index == 1 then
+            local unitName = v.name
+            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            frame.txt:SetText(unitName)
+            frame:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
+            WdLib:generateHover(frame, "id: "..v.npc_id)
         end
     end
+
+    WdLib:updateScrollableTable(WDTO.creatures, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)    
 
     if not WDTO.lastSelectedCreature and #creatures > 0 then
         WDTO.lastSelectedCreature = WDTO.creatures.members[1].column[1]

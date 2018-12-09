@@ -388,26 +388,29 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
     for i=1, #unit.auras[target_aura_id] do
         local aura = unit.auras[target_aura_id][i]
         local diff = (timestamp - aura.applied) * 1000
-        aura.dispelledAt = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
-        aura.dispelledIn = WdLib:float_round_to(diff / 1000, 2)
-        aura.dispell_id = source_spell_id
-        aura.dispeller = dispeller.guid
+        diff = WdLib:float_round_to(diff / 1000, 2)
+        if diff <= aura.duration + 0.01 then
+            aura.dispelledAt = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+            aura.dispelledIn = diff
+            aura.dispell_id = source_spell_id
+            aura.dispeller = dispeller.guid
 
-        if dispeller then
-            local statRules = WDMF.encounter.statRules
-            if statRules["RL_QUALITY"] and
-               statRules["RL_QUALITY"]["QT_DISPELS"] and
-               statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id]
-            then
-                local earlyTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].earlyDispel
-                local lateTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].lateDispel
-                local dispelledIn = aura.dispelledIn * 1000
-                if earlyTime > 0 and lateTime > 0 and (dispelledIn < earlyTime or dispelledIn > lateTime) then
-                    self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, earlyTime, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
-                elseif earlyTime > 0 and lateTime == 0 and dispelledIn < earlyTime then
-                    self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, earlyTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
-                elseif earlyTime == 0 and lateTime > 0 and dispelledIn > lateTime then
-                    self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+            if dispeller then
+                local statRules = WDMF.encounter.statRules
+                if statRules["RL_QUALITY"] and
+                   statRules["RL_QUALITY"]["QT_DISPELS"] and
+                   statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id]
+                then
+                    local earlyTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].earlyDispel
+                    local lateTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].lateDispel
+                    local dispelledIn = aura.dispelledIn * 1000
+                    if earlyTime > 0 and lateTime > 0 and (dispelledIn < earlyTime or dispelledIn > lateTime) then
+                        self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, earlyTime, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                    elseif earlyTime > 0 and lateTime == 0 and dispelledIn < earlyTime then
+                        self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, earlyTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                    elseif earlyTime == 0 and lateTime > 0 and dispelledIn > lateTime then
+                        self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                    end
                 end
             end
         end
@@ -437,7 +440,7 @@ function WDMF:ProcessAuras(src, dst, ...)
     if event == "SPELL_AURA_APPLIED" then
         if dst then
             -- auras
-            dst.auras[spell_id] = {}
+            if not dst.auras[spell_id] then dst.auras[spell_id] = {} end
             if src then
                 dst.auras[spell_id][#dst.auras[spell_id]+1] = { caster = src.guid, applied = timestamp }
             else
@@ -469,7 +472,8 @@ function WDMF:ProcessAuras(src, dst, ...)
                 local aura = findActiveAuraByCaster(dst, spell_id, src)
                 if aura then
                     aura.removed = timestamp
-                    aura.duration = WdLib:float_round_to((aura.removed - aura.applied) / 1000, 2)
+                    local t = (aura.removed - aura.applied) / 1000
+                    aura.duration = WdLib:float_round_to(t * 1000, 2)
                 end
             end
 

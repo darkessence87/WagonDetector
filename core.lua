@@ -173,6 +173,10 @@ function WDMF:AddFail(timestamp, guid, mark, msg, points)
 end
 
 function WDMF:OnUpdate()
+    if #WD.db.profile.tracker > 0 and WD.db.profile.tracker.selected and WD.db.profile.tracker.selected > 0 then
+        WDMF.tracker = WD.db.profile.tracker[WD.db.profile.tracker.selected]
+    end
+
     if WD.db.profile.isEnabled == true then
         self:RegisterEvent("CHAT_MSG_ADDON")
 

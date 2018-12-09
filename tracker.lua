@@ -50,6 +50,15 @@ local function findNpc(guid)
     return nil
 end
 
+local function findPet(guid)
+    if not guid or not guid:match("Pet") then return nil end
+    for k,v in pairs(WDMF.tracker.pet) do
+        local index = findEntityIndex(v, guid)
+        if index then return v[index] end
+    end
+    return nil
+end
+
 local function findPlayer(guid)
     return WDMF.tracker.players[guid]
 end
@@ -202,14 +211,47 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
     return src, dst
 end
 
+local function findActiveAuras(unit, auraId)
+    if not unit.auras[auraId] or #unit.auras[auraId] == 0 then return {} end
+    local auras = {}
+    for i=1,#unit.auras[auraId] do
+        if not unit.auras[auraId][i].removed then
+            auras[#auras+1] = unit.auras[auraId][i]
+        end
+    end
+    return auras
+end
+
 local function hasAura(unit, auraId)
-    if unit.auras[auraId] then return true end
+    if #findActiveAuras(unit, auraId) > 0 then return true end
     return nil
 end
 
 local function hasAnyAura(unit, auras)
     for k,v in pairs(auras) do
         if hasAura(unit, k) then return true end
+    end
+    return nil
+end
+
+local function findActiveAuraByCaster(unit, auraId, caster)
+    local auras = findActiveAuras(unit, auraId)
+    if not caster then caster = "Environment" else caster = caster.guid end
+    for i=1,#auras do
+        if auras[i].caster == caster then
+            return auras[i]
+        end
+    end
+    return nil
+end
+
+local function findLastAuraByCaster(unit, auraId, caster)
+    if not unit.auras[auraId] or #unit.auras[auraId] == 0 then return {} end
+    if not caster then caster = "Environment" else caster = caster.guid end
+    for i=#unit.auras[auraId],1,-1 do
+        if unit.auras[auraId][i].caster == caster then
+            return unit.auras[auraId][i]
+        end
     end
     return nil
 end
@@ -250,7 +292,7 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
         unit.casts[target_spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
         unit.casts[target_spell_id][i].percent = WdLib:float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
-        unit.casts[target_spell_id][i].interrupter = interrupter
+        unit.casts[target_spell_id][i].interrupter = interrupter.guid
         unit.casts[target_spell_id][i].spell_id = source_spell_id
 
         if interrupter then
@@ -268,6 +310,18 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
                     local dst_nameWithMark = unit.name
                     if unit.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(unit.rt).." "..unit.name end
                     WDMF:AddSuccess(timestamp, interrupter.guid, interrupter.rt, string.format(WD_RULE_CAST_INTERRUPT, dst_nameWithMark, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
+                end
+            end
+
+            local statRules = WDMF.encounter.statRules
+            if statRules["RL_QUALITY"] and
+               statRules["RL_QUALITY"]["QT_INTERRUPTS"] and
+               statRules["RL_QUALITY"]["QT_INTERRUPTS"][target_spell_id]
+            then
+                local actualQuality = unit.casts[target_spell_id][i].percent
+                local expectedQuality = statRules["RL_QUALITY"]["QT_INTERRUPTS"][target_spell_id].qualityPercent
+                if actualQuality < expectedQuality then
+                    self:AddFail(timestamp, interrupter.guid, interrupter.rt, string.format(WD_TRACKER_QT_INTERRUPTS_DESC, expectedQuality, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), 0)
                 end
             end
         end
@@ -301,6 +355,67 @@ local function finishCast(self, unit, timestamp, spell_id, result)
     unit.casts.current_spell_id = 0
 end
 
+local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, target_aura_id, dispeller)
+    local parent = findParent(dispeller)
+    if parent then
+        dispeller = parent
+    end
+
+    if not unit.auras[target_aura_id] then
+        local aura = {}
+        aura.applied = self.encounter.startTime
+        aura.removed = timestamp
+        aura.caster = unit.guid
+        aura.dispelledAt = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+        aura.dispelledIn = WdLib:float_round_to(timestamp - aura.applied, 2)
+        aura.dispell_id = source_spell_id
+        aura.dispeller = dispeller.guid
+        unit.auras[target_aura_id] = {}
+        unit.auras[target_aura_id][1] = aura
+    end
+
+    if dispeller then
+        local rules = WDMF.encounter.rules
+        if rules[dispeller.role] and
+           rules[dispeller.role]["EV_DISPEL"] and
+           rules[dispeller.role]["EV_DISPEL"][target_aura_id]
+        then
+            local p = rules[dispeller.role]["EV_DISPEL"][target_aura_id].points
+            self:AddSuccess(timestamp, dispeller.guid, dispeller.rt, string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), p)
+        end
+    end
+
+    for i=1, #unit.auras[target_aura_id] do
+        local aura = unit.auras[target_aura_id][i]
+        local diff = (timestamp - aura.applied) * 1000
+        aura.dispelledAt = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+        aura.dispelledIn = WdLib:float_round_to(diff / 1000, 2)
+        aura.dispell_id = source_spell_id
+        aura.dispeller = dispeller.guid
+
+        if dispeller then
+            local statRules = WDMF.encounter.statRules
+            if statRules["RL_QUALITY"] and
+               statRules["RL_QUALITY"]["QT_DISPELS"] and
+               statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id]
+            then
+                local earlyTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].earlyDispel
+                local lateTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].lateDispel
+                local dispelledIn = aura.dispelledIn * 1000
+                if earlyTime > 0 and lateTime > 0 and (dispelledIn < earlyTime or dispelledIn > lateTime) then
+                    self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, earlyTime, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                elseif earlyTime > 0 and lateTime == 0 and dispelledIn < earlyTime then
+                    self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, earlyTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                elseif earlyTime == 0 and lateTime > 0 and dispelledIn > lateTime then
+                    self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                end
+            end
+        end
+    end
+
+    WD:RefreshTrackedDispels()
+end
+
 function WDMF:ProcessSummons(src, dst, ...)
     if not src then return end
     local arg = {...}
@@ -322,7 +437,12 @@ function WDMF:ProcessAuras(src, dst, ...)
     if event == "SPELL_AURA_APPLIED" then
         if dst then
             -- auras
-            dst.auras[spell_id] = src
+            dst.auras[spell_id] = {}
+            if src then
+                dst.auras[spell_id][#dst.auras[spell_id]+1] = { caster = src.guid, applied = timestamp }
+            else
+                dst.auras[spell_id][#dst.auras[spell_id]+1] = { caster = "Environment", applied = timestamp }
+            end
 
             -- interrupts
             if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
@@ -345,7 +465,13 @@ function WDMF:ProcessAuras(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_REMOVED" then
         if dst then
-            dst.auras[spell_id] = nil
+            if dst.auras[spell_id] then
+                local aura = findActiveAuraByCaster(dst, spell_id, src)
+                if aura then
+                    aura.removed = timestamp
+                    aura.duration = WdLib:float_round_to((aura.removed - aura.applied) / 1000, 2)
+                end
+            end
 
             if rules[dst.role] and
                rules[dst.role]["EV_AURA"] and
@@ -556,15 +682,42 @@ function WDMF:ProcessDispels(src, dst, ...)
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_DISPEL" or event == "SPELL_STOLEN" then
-        local target_spell_id = tonumber(arg[15])
-        if rules[src.role] and
-           rules[src.role]["EV_DISPEL"] and
-           rules[src.role]["EV_DISPEL"][target_spell_id]
-        then
-            local p = rules[src.role]["EV_DISPEL"][target_spell_id].points
-            self:AddSuccess(timestamp, src.guid, src.rt, string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), p)
-        end
+        local target_aura_id = tonumber(arg[15])
+        dispelAura(self, dst, dst_name, timestamp, spell_id, target_aura_id, src)
     end
+end
+
+function WDMF:LoadStatRules()
+    local function getActiveRules(encounterId)
+        -- search journalId for encounter
+        local journalId = WD.FindEncounterJournalIdByCombatId(encounterId)
+        if not journalId then
+            journalId = WD.FindEncounterJournalIdByName("ALL")
+            print("Unknown name for encounterId:"..encounterId)
+        end
+
+        local rules = {}
+        for i=1,#WD.db.profile.statRules do
+            local r = WD.db.profile.statRules[i]
+            if r.isActive == true and (r.journalId == journalId or r[i].journalId == -1) then
+                if not rules[r.ruleType] then rules[r.ruleType] = {} end
+                if not rules[r.ruleType][r.arg0] then rules[r.ruleType][r.arg0] = {} end
+                if not rules[r.ruleType][r.arg0][r.arg1] then rules[r.ruleType][r.arg0][r.arg1] = {} end
+                if r.ruleType == "RL_QUALITY" then
+                    if r.arg0 == "QT_INTERRUPTS" then
+                        rules["RL_QUALITY"]["QT_INTERRUPTS"][r.arg1].qualityPercent = r.qualityPercent
+                    elseif r.arg0 == "QT_DISPELS" then
+                        rules["RL_QUALITY"]["QT_DISPELS"][r.arg1].earlyDispel = r.earlyDispel
+                        rules["RL_QUALITY"]["QT_DISPELS"][r.arg1].lateDispel = r.lateDispel
+                    end
+                end
+            end
+        end
+
+        return rules
+    end
+
+    self.encounter.statRules = getActiveRules(self.encounter.id)
 end
 
 function WDMF:CheckConsumables(guid, unit)
@@ -662,7 +815,7 @@ function WDMF:CreateRaidMember(unit, petUnit)
         loadExistingPet(pet)
 
         if not player.pets then player.pets = {} end
-        player.pets[#player.pets+1] = pet
+        player.pets[#player.pets+1] = pet.guid
     end
 end
 
@@ -713,6 +866,7 @@ end
 function WDMF:Tracker_OnEvent(...)
     local _, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
     local src, dst = getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
+    self:LoadStatRules()
     if callbacks[event] then
         callbacks[event](self, src, dst, ...)
     end
@@ -744,4 +898,14 @@ function WD:GetRaidTarget(flags)
         end
     end
     return 0
+end
+
+function WD:FindEntityByGUID(guid)
+    local result = findPlayer(guid)
+    if result then return result end
+    result = findPet(guid)
+    if result then return result end
+    result = findNpc(guid)
+    if result then return result end
+    return nil
 end

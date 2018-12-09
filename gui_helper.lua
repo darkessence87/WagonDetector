@@ -199,7 +199,7 @@ end
 function WdLib:getSpellLinkByIdWithTexture(id)
     local name,_,icon = GetSpellInfo(id)
     if not name then return "Unknown" end
-    return "|cff71d5ff|Hspell:"..id.."|h "..WdLib:getTextureLinkByPath(icon, 20).." "..name.."|h|r"
+    return "|cff71d5ff|Hspell:"..id.."|h "..WdLib:getTextureLinkByPath(icon, 18).." "..name.."|h|r"
 end
 
 function WdLib:getTextureLinkByPath(path, sz)
@@ -561,6 +561,20 @@ function WdLib:createDropDownMenu(parent, name, items, grandParent)
     WdLib:resetDropDownMenu(dropFrame, name)
 
     return dropFrame
+end
+
+function WdLib:findDropDownFrameByName(parent, name)
+    for i=1,#parent.items do
+        if parent.items[i].txt:GetText() == name then
+            return parent.items[i]
+        end
+
+        if parent.items[i].items then
+            local frame = WdLib:findDropDownFrameByName(parent.items[i], name)
+            if frame then return frame end
+        end
+    end
+    return nil
 end
 
 function WdLib:createTableHeader(self, name, x, y, xSize, ySize, onClick)

@@ -3,20 +3,6 @@ local WDRM = nil
 
 local insertQueue = {}
 
-local function findDropDownFrameByName(parent, name)
-    for i=1,#parent.items do
-        if parent.items[i].txt:GetText() == name then
-            return parent.items[i]
-        end
-
-        if parent.items[i].items then
-            local frame = findDropDownFrameByName(parent.items[i], name)
-            if frame then return frame end
-        end
-    end
-    return nil
-end
-
 local function editRuleLine(rule)
     if not rule then return end
     local r = WDRM.menus["new_rule"]
@@ -30,7 +16,7 @@ local function editRuleLine(rule)
 
     -- encounter
     local encounterName = WD.EncounterNames[rule.journalId]
-    local frame = findDropDownFrameByName(r.menus["encounters"], encounterName)
+    local frame = WdLib:findDropDownFrameByName(r.menus["encounters"], encounterName)
     if frame then
         r.menus["encounters"].selected = frame
         r.menus["encounters"]:SetText(encounterName)
@@ -59,7 +45,7 @@ local function editRuleLine(rule)
         arg0_edit.label:SetText("Aura id:")
 
         WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
-        local frame = findDropDownFrameByName(arg1_drop, rule.arg1)
+        local frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1)
         if frame then
             arg1_drop.selected = frame
             arg1_drop:SetText(rule.arg1)

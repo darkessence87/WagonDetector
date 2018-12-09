@@ -32,7 +32,7 @@ local statisticTypes = {
 local function findDuplicate(rule)
     local found = nil
     for k,v in pairs(WD.db.profile.statRules) do
-        if v.journalId == rule.journalId and v.type == rule.type then
+        if v.journalId == rule.journalId and v.ruleType == rule.ruleType then
             if ((v.arg0 and rule.arg0 and v.arg0 == rule.arg0) or (not v.arg0 and not rule.arg0)) and
                ((v.arg1 and rule.arg1 and v.arg1 == rule.arg1) or (not v.arg1 and not rule.arg1)) and
                ((v.arg2 and rule.arg2 and v.arg2 == rule.arg2) or (not v.arg2 and not rule.arg2)) and
@@ -63,6 +63,97 @@ local function getRuleDescription(rule)
     return "Not yet implemented"
 end
 
+local function editEventConfigMenu(rule)
+end
+
+local function editRangeRuleMenu(ruleType, arg0)
+    local r = WDRS.menus["new_rule"].hiddenMenus["range_menu"]
+    for _,v in pairs(r.hiddenMenus) do v:Hide(); editEventConfigMenu(v); end
+    local arg0_edit = r.hiddenMenus["arg0_edit"]
+    local arg0_drop = r.hiddenMenus["arg0_drop"]
+    local arg1_drop = r.hiddenMenus["arg1_drop"]
+
+    r.label:SetText(ruleType)
+
+    if ruleType == "RT_UNIT_CASTING" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
+    elseif ruleType == "RT_AURA_EXISTS" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
+    end
+
+    r:Show()
+end
+
+local function editRule(rule)
+    if not rule then return end
+    local parent = WDRS.menus["new_rule"]
+    if parent:IsVisible() then parent:Hide() return end
+
+    for _,v in pairs(parent.hiddenMenus) do v:Hide() end
+    local arg0_edit = parent.hiddenMenus["arg0_edit"]
+    local arg0_drop = parent.hiddenMenus["arg0_drop"]
+    local arg1_drop = parent.hiddenMenus["arg1_drop"]
+    local arg1_edit = parent.hiddenMenus["arg1_edit"]
+    local arg2_edit = parent.hiddenMenus["arg2_edit"]
+    local arg3_edit = parent.hiddenMenus["arg3_edit"]
+
+    -- encounter
+    local encounterName = WD.EncounterNames[rule.journalId]
+    local frame = WdLib:findDropDownFrameByName(parent.menus["encounters"], encounterName)
+    if frame then
+        parent.menus["encounters"].selected = frame
+        parent.menus["encounters"]:SetText(encounterName)
+    end
+
+    -- rule
+    for i=1,#parent.menus["rule_types"].items do
+        if parent.menus["rule_types"].items[i].txt:GetText() == rule.ruleType then
+            parent.menus["rule_types"].selected = parent.menus["rule_types"].items[i]
+            parent.menus["rule_types"]:SetText(rule.ruleType)
+            break
+        end
+    end
+
+    if rule.ruleType == "RL_QUALITY" then
+        -- quality type
+        WdLib:updateDropDownMenu(arg0_drop, "Select quality:", WdLib:convertTypesToItems(qualityTypes, updateNewRuleHiddenMenu))
+        local frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0)
+        if frame then
+            arg0_drop.selected = frame
+            arg0_drop:SetText(rule.arg0)
+        end
+        arg0_drop.label:SetText("Select quality:")
+        arg0_drop:Show()
+
+        if rule.arg0 == "QT_INTERRUPTS" then
+            -- arg1
+            WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
+            arg1_edit.label:SetText("Range rule type:")
+            arg1_edit:EnableMouse(false)
+            editRangeRuleMenu("RT_UNIT_CASTING", rule.arg1)
+            -- arg2
+            WdLib:showHiddenEditBox(parent, "arg2_edit", rule.qualityPercent)
+            arg2_edit.label:SetText("Quality percent:")
+            -- arg3
+            arg3_edit:Hide()
+        elseif rule.arg0 == "QT_DISPELS" then
+            -- arg1
+            WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
+            arg1_edit.label:SetText("Range rule type:")
+            arg1_edit:EnableMouse(false)
+            editRangeRuleMenu("RT_AURA_EXISTS", rule.arg1)
+            -- arg2
+            WdLib:showHiddenEditBox(parent, "arg2_edit", rule.earlyDispel)
+            arg2_edit.label:SetText("Early dispel before (msec):")
+            -- arg3
+            WdLib:showHiddenEditBox(parent, "arg3_edit", rule.lateDispel)
+            arg3_edit.label:SetText("Late dispel after (msec):")
+       end
+    end
+
+    parent:Show()
+end
+
 local function updateRulesListFrame()
     if not WDRS or not WDRS.members then return end
 
@@ -70,7 +161,7 @@ local function updateRulesListFrame()
     local maxHeight = 545
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #WD.db.profile.statRules
-    local columnsN = 4
+    local columnsN = 5
 
     -- sort by journalId > points > reason
     local func = function(a, b)
@@ -102,6 +193,12 @@ local function updateRulesListFrame()
             WdLib:generateSpellHover(f, getRuleDescription(v))
             return f
         elseif index == 4 then
+            local f = WdLib:addNextColumn(WDRS, parent, index, "CENTER", WD_BUTTON_EDIT)
+            f:EnableMouse(true)
+            f:SetScript("OnClick", function() editRule(v); end)
+            f.t:SetColorTexture(.2, 1, .2, .5)
+            return f
+        elseif index == 5 then
             local f = WdLib:addNextColumn(WDRS, parent, index, "CENTER", WD_BUTTON_DELETE)
             f:EnableMouse(true)
             f:SetScript("OnClick", function() table.remove(WD.db.profile.statRules, row); updateRulesListFrame(); end)
@@ -123,6 +220,8 @@ local function updateRulesListFrame()
             frame.txt:SetText(getRuleDescription(v))
             WdLib:generateSpellHover(frame, getRuleDescription(v))
         elseif index == 4 then
+            frame:SetScript("OnClick", function(self) editRule(v); end)
+        elseif index == 5 then
         end
     end
 
@@ -206,19 +305,17 @@ local function saveRule()
 
         local arg3_edit = parent.hiddenMenus["arg3_edit"]:GetText()
     else
+        print('Not fully implemented yet!');
         return false
     end
-    --WD.db.profile.statRules
 
     local duplicate = findDuplicate(rule)
     if not duplicate then
-        --print("Saved: "..WdLib:table_tostring(rule))
         WD.db.profile.statRules[#WD.db.profile.statRules+1] = rule
     else
         if rule.qualityPercent then duplicate.qualityPercent = rule.qualityPercent end
         if rule.earlyDispel then duplicate.earlyDispel = rule.earlyDispel end
         if rule.lateDispel then duplicate.lateDispel = rule.lateDispel end
-        --print("Updated: "..WdLib:table_tostring(duplicate))
     end
 
     updateRulesListFrame()
@@ -599,7 +696,7 @@ local function initNewRuleWindow()
     r.buttons["save"] = WdLib:createButton(r)
     r.buttons["save"]:SetPoint("TOPLEFT", r.hiddenMenus["arg3_edit"], "BOTTOMLEFT", 1, -2)
     r.buttons["save"]:SetSize(xSize / 2 - 1, 20)
-    r.buttons["save"]:SetScript("OnClick", function() print('Not fully implemented yet'); local result = saveRule(); if result == true then r:Hide() end; end)
+    r.buttons["save"]:SetScript("OnClick", function() local result = saveRule(); if result == true then r:Hide() end; end)
     r.buttons["save"].t:SetColorTexture(.2, .4, .2, 1)
     r.buttons["save"].txt = WdLib:createFont(r.buttons["save"], "CENTER", "Save")
     r.buttons["save"].txt:SetAllPoints()
@@ -663,9 +760,9 @@ function WD:InitRulesStatisticsModule(parent)
     table.insert(WDRS.headers, h)
     h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
     table.insert(WDRS.headers, h)
-    --[[h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
-    table.insert(WDRS.headers, h)
     h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
+    table.insert(WDRS.headers, h)
+    --[[h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
     table.insert(WDRS.headers, h)
     h = WdLib:createTableHeaderNext(WDRS, h, "", 70, 20)
     table.insert(WDRS.headers, h)]]

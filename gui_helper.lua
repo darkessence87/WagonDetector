@@ -308,9 +308,9 @@ function WdLib:createSliderButton(parent, direction)
     button.t:SetAllPoints()
 
     if direction == "UP" then
-        button:SetPoint("TOP", parent, "TOP", 0, -2)
+        button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -2)
     elseif direction == "DOWN" then
-        button:SetPoint("BOTTOM", parent, "BOTTOM", 0, 2)
+        button:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 0, 2)
         button.t:SetRotation(3.14)
     end
 
@@ -334,19 +334,7 @@ function WdLib:createScroller(parent, width, height, lines)
     local maxV = deltaLines * 21
     if maxV < minV then maxV = minV end
 
-    local scroller = CreateFrame("ScrollFrame", nil, parent)
-    scroller.slider = CreateFrame("Slider", nil, scroller)
-    scroller.slider:SetOrientation("VERTICAL")
-    scroller.slider:SetValueStep(21)
-    scroller.slider.t = WdLib:createColorTexture(scroller.slider, "BACKGROUND", .2, .2, .2, .2)
-    scroller.slider.t:SetAllPoints()
-
-    scroller.slider.buttonUp = WdLib:createSliderButton(scroller.slider, "UP")
-    scroller.slider.buttonUp:SetScript("OnClick", function() scroller.slider:SetValue(scroller.slider:GetValue()-1) end)
-    scroller.slider.buttonDown = WdLib:createSliderButton(scroller.slider, "DOWN")
-    scroller.slider.buttonDown:SetScript("OnClick", function() scroller.slider:SetValue(scroller.slider:GetValue()+1) end)
-
-    scroller:SetScript("OnMouseWheel", function(self, delta)
+    local function scrollFn(self, delta)
         delta = delta * self.slider:GetValueStep()
         local min,max = self.slider:GetMinMaxValues()
         local val = self.slider:GetValue()
@@ -357,7 +345,23 @@ function WdLib:createScroller(parent, width, height, lines)
         else
             self.slider:SetValue(val - delta)
         end
-    end)
+    end
+
+    local scroller = CreateFrame("ScrollFrame", nil, parent)
+    scroller.slider = CreateFrame("Slider", nil, scroller)
+    scroller.slider:SetOrientation("VERTICAL")
+    scroller.slider:SetValueStep(21)
+    scroller.slider.t = WdLib:createColorTexture(scroller.slider, "BACKGROUND", .2, .2, .2, .2)
+    scroller.slider.t:SetAllPoints()
+
+    scroller.slider.buttonUp = WdLib:createSliderButton(scroller, "UP")
+    scroller.slider.buttonUp:SetScript("OnClick", function() scrollFn(scroller, 1) end)
+    scroller.slider.buttonUp:Show()
+    scroller.slider.buttonDown = WdLib:createSliderButton(scroller, "DOWN")
+    scroller.slider.buttonDown:SetScript("OnClick", function() scrollFn(scroller, -1) end)
+    scroller.slider.buttonDown:Show()
+
+    scroller:SetScript("OnMouseWheel", scrollFn)
     scroller.scrollerChild = CreateFrame("Frame", nil, scroller)
     scroller:SetScrollChild(scroller.scrollerChild)
     scroller:SetClipsChildren(true)

@@ -90,7 +90,6 @@ local function refreshHistoryFrame()
     if not WDHM then return end
     if not WDHM.members then WDHM.members = {} end
 
-    local maxWidth = 30
     local maxHeight = 545
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #WD.cache.history
@@ -155,7 +154,7 @@ local function refreshHistoryFrame()
         end
     end
 
-    WdLib:updateScrollableTable(WDHM, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib:updateScrollableTable(WDHM, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end
 
 local function matchFilter(str, filter)

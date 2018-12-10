@@ -32,7 +32,6 @@ function WD:RefreshLastEncounterFrame()
     if not core.encounter.fuckers then return end
     if not WDLE.members then WDLE.members = {} end
 
-    local maxWidth = 30
     local maxHeight = 545
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #core.encounter.fuckers
@@ -77,5 +76,5 @@ function WD:RefreshLastEncounterFrame()
         end
     end
 
-    WdLib:updateScrollableTable(WDLE, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib:updateScrollableTable(WDLE, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end

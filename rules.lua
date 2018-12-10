@@ -260,7 +260,6 @@ end
 local function updateRuleLines()
     if not WDRM or not WDRM.members then return end
 
-    local maxWidth = 30
     local maxHeight = 545
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #WD.db.profile.rules
@@ -354,7 +353,7 @@ local function updateRuleLines()
         end
     end
 
-    WdLib:updateScrollableTable(WDRM, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib:updateScrollableTable(WDRM, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end
 
 local function isDuplicate(rule)

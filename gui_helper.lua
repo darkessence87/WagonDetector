@@ -298,20 +298,19 @@ function WdLib:createButton(parent)
     return button
 end
 
-function WdLib:createSliderButton(parent, direction)
-    local button = CreateFrame("Button", nil, parent)
-    button:SetSize(16, 16)
-    button:EnableMouse(true)
-    button:RegisterForClicks("LeftButtonUp")
+function WdLib:createSliderButton(parent, direction, width)
+    local button = CreateFrame("Frame", nil, parent)
+    button:EnableMouse(false)
+    button:SetSize(width - 31, 12)
 
-    button.t = WdLib:createTexture(button, [[Interface\AddOns\WagonDetector\media\textures\scroll_arrow]], "ARTWORK")
+    button.t = WdLib:createTexture(button, [[Interface\AddOns\WagonDetector\media\textures\border]], "ARTWORK")
     button.t:SetAllPoints()
 
     if direction == "UP" then
-        button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -2)
+        button:SetPoint("TOPLEFT", parent, "TOPLEFT", 30, -1)
     elseif direction == "DOWN" then
-        button:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 0, 2)
-        button.t:SetRotation(3.14)
+        button:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 30, -1)
+        button.t:SetRotation(3.14159265359)
     end
 
     return button
@@ -323,6 +322,13 @@ function WdLib:updateScroller(self, lines)
     local deltaLines = lines - (self:GetHeight() - minV) / 21
     local maxV = deltaLines * 21
     if maxV < minV then maxV = minV end
+    if maxV - minV < 1 then
+        self.buttonUp:Hide()
+        self.buttonDown:Hide()
+    else
+        self.buttonUp:Show()
+        self.buttonDown:Show()
+    end
 
     self:SetMinMaxValues(minV, maxV)
 end
@@ -351,15 +357,9 @@ function WdLib:createScroller(parent, width, height, lines)
     scroller.slider = CreateFrame("Slider", nil, scroller)
     scroller.slider:SetOrientation("VERTICAL")
     scroller.slider:SetValueStep(21)
-    scroller.slider.t = WdLib:createColorTexture(scroller.slider, "BACKGROUND", .2, .2, .2, .2)
-    scroller.slider.t:SetAllPoints()
 
-    scroller.slider.buttonUp = WdLib:createSliderButton(scroller, "UP")
-    scroller.slider.buttonUp:SetScript("OnClick", function() scrollFn(scroller, 1) end)
-    scroller.slider.buttonUp:Show()
-    scroller.slider.buttonDown = WdLib:createSliderButton(scroller, "DOWN")
-    scroller.slider.buttonDown:SetScript("OnClick", function() scrollFn(scroller, -1) end)
-    scroller.slider.buttonDown:Show()
+    scroller.slider.buttonUp = WdLib:createSliderButton(scroller, "UP", width)
+    scroller.slider.buttonDown = WdLib:createSliderButton(scroller, "DOWN", width)
 
     scroller:SetScript("OnMouseWheel", scrollFn)
     scroller.scrollerChild = CreateFrame("Frame", nil, scroller)
@@ -384,6 +384,14 @@ function WdLib:createScroller(parent, width, height, lines)
     end)
 
     scroller.scrollerChild:SetSize(width, maxV)
+
+    if maxV - minV < 1 then
+        scroller.slider.buttonUp:Hide()
+        scroller.slider.buttonDown:Hide()
+    else
+        scroller.slider.buttonUp:Show()
+        scroller.slider.buttonDown:Show()
+    end
 
     return scroller
 end
@@ -626,6 +634,15 @@ function WdLib:addNextColumn(self, parent, index, textOrientation, name)
     return parent.column[index]
 end
 
+function WdLib:getTotalTableHeadersWidth(t, maxN)
+    if not t or not t.headers or #t.headers < maxN then return 0 end
+    local width = 0
+    for i=1,maxN do
+        width = width + t.headers[i]:GetWidth() + 1
+    end
+    return width - 1
+end
+
 function WdLib:convertTypesToItems(t, fn)
     local items = {}
     for i=1,#t do
@@ -761,10 +778,8 @@ function WdLib:getUnitName(unit)
     return name.."-"..realm
 end
 
-function WdLib:updateScrollableTable(parent, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
-    for i=1,#parent.headers do
-        maxWidth = maxWidth + parent.headers[i]:GetWidth() + 1
-    end
+function WdLib:updateScrollableTable(parent, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    local maxWidth = WdLib:getTotalTableHeadersWidth(parent, columnsN) + 30
 
     local scroller = parent.scroller or WdLib:createScroller(parent, maxWidth, maxHeight, rowsN)
     if not parent.scroller then

@@ -157,7 +157,6 @@ end
 local function updateRulesListFrame()
     if not WDRS or not WDRS.members then return end
 
-    local maxWidth = 30
     local maxHeight = 545
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #WD.db.profile.statRules
@@ -225,7 +224,7 @@ local function updateRulesListFrame()
         end
     end
 
-    WdLib:updateScrollableTable(WDRS, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib:updateScrollableTable(WDRS, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end
 
 local function saveRule()

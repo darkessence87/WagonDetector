@@ -6,8 +6,7 @@ local function getDispelledAuras(auras)
     for auraId,auraInfo in pairs(auras) do
         for i=1,#auraInfo do
             if auraInfo[i].dispell_id then
-                if not result[auraId] then result[auraId] = {} end
-                result[auraId][#result[auraId]+1] = auraInfo[i]
+                result[#result+1] = { N = i, id = auraId, data = auraInfo[i]
             end
         end
     end
@@ -44,91 +43,61 @@ end
 
 local function updateDispelInfo()
     local core = WD.mainFrame
-    local parent = WDTO.data["dispel"]
 
-    for _,v in pairs(parent.members) do
+    for _,v in pairs(WDTO.data["dispel"].members) do
         v:Hide()
     end
 
     if not WDTO.lastSelectedDispel then return end
     local v = WDTO.lastSelectedDispel:GetParent().info
 
-    local maxWidth = 30
-    local maxHeight = 210
-    for i=1,#parent.headers do
-        maxWidth = maxWidth + parent.headers[i]:GetWidth() + 1
-    end
-
     local auras = getDispelledAuras(v.auras)
-    local totalAuras = 0
-    for _,auraInfo in pairs(auras) do
-        if type(auraInfo) == "table" then
-            totalAuras = totalAuras + #auraInfo
+
+    local maxHeight = 210
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #auras
+    local columnsN = 4
+
+    local function createFn(parent, row, index)
+        local auraId = auras[row].id
+        local N = auras[row].N
+        local v = auras[row].data
+        if index == 1 then
+            local f = WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId))
+            return f
+        elseif index == 2 then
+            return WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "CENTER", v.dispelledAt)
+        elseif index == 3 then
+            return WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "CENTER", N)
+        elseif index == 4 then
+            local f = WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "LEFT", getDispelStatusText(v))
+            WdLib:generateSpellHover(f, getDispelStatusText(v))
+            return f
         end
     end
 
-    local scroller = parent.scroller or WdLib:createScroller(parent, maxWidth, maxHeight, totalAuras)
-    if not parent.scroller then
-        parent.scroller = scroller
-    end
-
-    local x, y = 30, -51
-    local n = 0
-    for auraId,auraInfo in pairs(auras) do
-        if type(auraInfo) == "table" then
-            for k=1,#auraInfo do
-                n = n + 1
-                local v = auraInfo[k]
-                if not parent.members[n] then
-                    local member = CreateFrame("Frame", nil, parent.scroller.scrollerChild)
-                    member:SetSize(parent.headers[1]:GetSize())
-                    member:SetPoint("TOPLEFT", parent.scroller.scrollerChild, "TOPLEFT", x, y)
-                    member.column = {}
-
-                    local index = 1
-                    WdLib:addNextColumn(parent, member, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
-                    if n > 1 then
-                        member.column[index]:SetPoint("TOPLEFT", parent.members[n - 1], "BOTTOMLEFT", 0, -1)
-                        member:SetPoint("TOPLEFT", parent.members[n - 1], "BOTTOMLEFT", 0, -1)
-                    else
-                        member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
-                    end
-                    WdLib:generateSpellHover(member.column[index], WdLib:getSpellLinkByIdWithTexture(auraId))
-
-                    index = index + 1
-                    WdLib:addNextColumn(parent, member, index, "CENTER", v.dispelledAt)
-                    index = index + 1
-                    WdLib:addNextColumn(parent, member, index, "CENTER", k)
-                    index = index + 1
-                    WdLib:addNextColumn(parent, member, index, "LEFT", getDispelStatusText(v))
-                    WdLib:generateSpellHover(member.column[index], getDispelStatusText(v))
-                    index = index + 1
-
-                    table.insert(parent.members, member)
-                else
-                    local member = parent.members[n]
-                    member.column[1].txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
-                    WdLib:generateSpellHover(member.column[1], WdLib:getSpellLinkByIdWithTexture(auraId))
-                    member.column[2].txt:SetText(v.dispelledAt)
-                    member.column[3].txt:SetText(k)
-                    member.column[4].txt:SetText(getDispelStatusText(v))
-                    WdLib:generateSpellHover(member.column[4], getDispelStatusText(v))
-
-                    member:Show()
-                end
-            end
+    local function updateFn(frame, row, index)
+        local auraId = auras[row].id
+        local N = auras[row].N
+        local v = auras[row].data
+        if index == 1 then
+            frame.txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
+            WdLib:generateSpellHover(frame, WdLib:getSpellLinkByIdWithTexture(auraId))
+        elseif index == 2 then
+            frame.txt:SetText(v.dispelledAt)
+        elseif index == 3 then
+            frame.txt:SetText(N)
+        elseif index == 4 then
+            frame.txt:SetText(getDispelStatusText(v))
+            WdLib:generateSpellHover(frame, getDispelStatusText(v))
         end
     end
 
-    WdLib:updateScroller(parent.scroller.slider, totalAuras)
+    WdLib:updateScrollableTable(WDTO.data["dispel"], maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
-    if totalAuras < #parent.members then
-        for i=totalAuras+1, #parent.members do
-            parent.members[i]:Hide()
-        end
-    end
-
-    parent:Show()
+    WDTO.data["dispel"]:Show()
 end
 
 local function initDispelInfoTable()
@@ -423,7 +392,6 @@ function WD:RefreshTrackedDispels()
         updateDispelInfo()
     end
 
-    local maxWidth = 30
     local maxHeight = 210
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #dispels
@@ -465,7 +433,7 @@ function WD:RefreshTrackedDispels()
         end
     end
 
-    WdLib:updateScrollableTable(WDTO.dispels, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)    
+    WdLib:updateScrollableTable(WDTO.dispels, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     if not WDTO.lastSelectedDispel and #dispels > 0 then
         WDTO.lastSelectedDispel = WDTO.dispels.members[1].column[1]
@@ -506,8 +474,7 @@ function WD:RefreshTrackedCreatures()
         WDTO.lastSelectedCreature = nil
         updateInterruptsInfo()
     end
-    
-    local maxWidth = 30
+
     local maxHeight = 210
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #creatures
@@ -545,7 +512,7 @@ function WD:RefreshTrackedCreatures()
         end
     end
 
-    WdLib:updateScrollableTable(WDTO.creatures, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)    
+    WdLib:updateScrollableTable(WDTO.creatures, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     if not WDTO.lastSelectedCreature and #creatures > 0 then
         WDTO.lastSelectedCreature = WDTO.creatures.members[1].column[1]

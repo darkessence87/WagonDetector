@@ -58,7 +58,6 @@ local function updateGuildRosterFrame()
         return
     end
 
-    local maxWidth = 30
     local maxHeight = 545
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #WD.cache.rosterkeys
@@ -120,7 +119,7 @@ local function updateGuildRosterFrame()
         end
     end
 
-    WdLib:updateScrollableTable(WDGR, maxWidth, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib:updateScrollableTable(WDGR, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     updateClassStatistics()
 end

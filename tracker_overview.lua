@@ -6,7 +6,7 @@ local function getDispelledAuras(auras)
     for auraId,auraInfo in pairs(auras) do
         for i=1,#auraInfo do
             if auraInfo[i].dispell_id then
-                result[#result+1] = { N = i, id = auraId, data = auraInfo[i]
+                result[#result+1] = { N = i, id = auraId, data = auraInfo[i] }
             end
         end
     end
@@ -142,93 +142,72 @@ end
 
 local function updateInterruptsInfo()
     local core = WD.mainFrame
-    local parent = WDTO.data["interrupts"]
 
-    for _,v in pairs(parent.members) do
+    for _,v in pairs(WDTO.data["interrupts"].members) do
         v:Hide()
     end
 
     if not WDTO.lastSelectedCreature then return end
     local v = WDTO.lastSelectedCreature:GetParent().info
 
-    local maxWidth = 30
-    local maxHeight = 210
-    for i=1,#parent.headers do
-        maxWidth = maxWidth + parent.headers[i]:GetWidth() + 1
-    end
-
-    local totalCasts = 0
-    for _,castInfo in pairs(v.casts) do
+    local casts = {}
+    for spellId,castInfo in pairs(v.casts) do
         if type(castInfo) == "table" then
-            totalCasts = totalCasts + #castInfo
-        end
-    end
-
-    local scroller = parent.scroller or WdLib:createScroller(parent, maxWidth, maxHeight, totalCasts)
-    if not parent.scroller then
-        parent.scroller = scroller
-    end
-
-    local x, y = 30, -51
-    local n = 0
-    for spell_id,castInfo in pairs(v.casts) do
-        if type(castInfo) == "table" then
-            for k=1,#castInfo do
-                n = n + 1
-                local v = castInfo[k]
-                if not parent.members[n] then
-                    local member = CreateFrame("Frame", nil, parent.scroller.scrollerChild)
-                    member:SetSize(parent.headers[1]:GetSize())
-                    member:SetPoint("TOPLEFT", parent.scroller.scrollerChild, "TOPLEFT", x, y)
-                    member.column = {}
-
-                    local index = 1
-                    WdLib:addNextColumn(parent, member, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(spell_id))
-                    if n > 1 then
-                        member.column[index]:SetPoint("TOPLEFT", parent.members[n - 1], "BOTTOMLEFT", 0, -1)
-                        member:SetPoint("TOPLEFT", parent.members[n - 1], "BOTTOMLEFT", 0, -1)
-                    else
-                        member.column[index]:SetPoint("TOPLEFT", member, "TOPLEFT", 0, 0)
-                    end
-                    WdLib:generateSpellHover(member.column[index], WdLib:getSpellLinkByIdWithTexture(spell_id))
-
-                    index = index + 1
-                    WdLib:addNextColumn(parent, member, index, "CENTER", v.timestamp)
-                    index = index + 1
-                    WdLib:addNextColumn(parent, member, index, "CENTER", k)
-                    index = index + 1
-                    WdLib:addNextColumn(parent, member, index, "LEFT", getInterruptStatusText(v))
-                    WdLib:generateSpellHover(member.column[index], getInterruptStatusText(v))
-                    index = index + 1
-                    local percent = v.percent or 0
-                    WdLib:addNextColumn(parent, member, index, "CENTER", percent)
-
-                    table.insert(parent.members, member)
-                else
-                    local member = parent.members[n]
-                    member.column[1].txt:SetText(WdLib:getSpellLinkByIdWithTexture(spell_id))
-                    WdLib:generateSpellHover(member.column[1], WdLib:getSpellLinkByIdWithTexture(spell_id))
-                    member.column[2].txt:SetText(v.timestamp)
-                    member.column[3].txt:SetText(k)
-                    member.column[4].txt:SetText(getInterruptStatusText(v))
-                    WdLib:generateSpellHover(member.column[4], getInterruptStatusText(v))
-                    local percent = v.percent or 0
-                    member.column[5].txt:SetText(percent)
-
-                    member:Show()
-                    WdLib:updateScroller(parent.scroller.slider, totalCasts)
-                end
+            for i=1,#castInfo do
+                casts[#casts+1] = { N = i, id = spellId, data = castInfo[i] }
             end
         end
     end
 
-    if totalCasts < #parent.members then
-        for i=totalCasts+1, #parent.members do
-            parent.members[i]:Hide()
+    local maxHeight = 210
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #casts
+    local columnsN = 5
+
+    local function createFn(parent, row, index)
+        local spellId = casts[row].id
+        local N = casts[row].N
+        local v = casts[row].data
+        if index == 1 then
+            local f = WdLib:addNextColumn(WDTO.data["interrupts"], parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(spellId))
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
+            return f
+        elseif index == 2 then
+            return WdLib:addNextColumn(WDTO.data["interrupts"], parent, index, "CENTER", v.timestamp)
+        elseif index == 3 then
+            return WdLib:addNextColumn(WDTO.data["interrupts"], parent, index, "CENTER", N)
+        elseif index == 4 then
+            local f = WdLib:addNextColumn(WDTO.data["interrupts"], parent, index, "LEFT", getInterruptStatusText(v))
+            WdLib:generateSpellHover(f, getInterruptStatusText(v))
+            return f
+        elseif index == 5 then
+            return WdLib:addNextColumn(WDTO.data["interrupts"], parent, index, "CENTER", v.percent or 0)
         end
     end
 
-    parent:Show()
+    local function updateFn(frame, row, index)
+        local spellId = casts[row].id
+        local N = casts[row].N
+        local v = casts[row].data
+        if index == 1 then
+            frame.txt:SetText(WdLib:getSpellLinkByIdWithTexture(spellId))
+            WdLib:generateSpellHover(frame, WdLib:getSpellLinkByIdWithTexture(spellId))
+        elseif index == 2 then
+            frame.txt:SetText(v.timestamp)
+        elseif index == 3 then
+            frame.txt:SetText(N)
+        elseif index == 4 then
+            frame.txt:SetText(getInterruptStatusText(v))
+            WdLib:generateSpellHover(frame, getInterruptStatusText(v))
+        elseif index == 5 then
+            frame.txt:SetText(v.percent or 0)
+        end
+    end
+
+    WdLib:updateScrollableTable(WDTO.data["interrupts"], maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+
+    WDTO.data["interrupts"]:Show()
 end
 
 local function initInterruptsInfoTable()

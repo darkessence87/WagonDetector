@@ -17,7 +17,7 @@ local rangeRuleTypes = {
     "RT_AURA_EXISTS",      -- arg0=aura_id
     "RT_AURA_NOT_EXISTS",  -- arg0=aura_id
     "RT_UNIT_CASTING",     -- arg0=target_spell_id
-    "RT_CUSTOM",           -- arg0=event_start,     arg1=event_result
+    "RT_CUSTOM",           -- arg0=event_start,     arg1=event_end
 }
 
 local statisticTypes = {
@@ -46,6 +46,53 @@ local function findDuplicate(rule)
     return found
 end
 
+local function getEventDescription(data)
+    local eventType = data[1]
+    local arg0 = data[2][1]
+    local arg1 = data[2][2]
+    if eventType == "EV_DAMAGETAKEN" then
+        if arg1 > 0 then
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
+        else
+            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(arg0))
+        end
+    elseif eventType == "EV_DEATH" then
+        return string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(arg0))
+    elseif eventType == "EV_AURA" then
+        if arg1 == "apply" then
+            return string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(arg0))
+        else
+            return string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(arg0))
+        end
+    elseif eventType == "EV_AURA_STACKS" then
+        if arg1 > 0 then
+            return string.format(WD_RULE_AURA_STACKS, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
+        else
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib:getSpellLinkByIdWithTexture(arg0))
+        end
+    elseif eventType == "EV_CAST_START" then
+        return string.format(WD_RULE_CAST_START, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
+    elseif eventType == "EV_CAST_END" then
+        return string.format(WD_RULE_CAST, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
+    elseif eventType == "EV_CAST_INTERRUPTED" then
+        return string.format(WD_RULE_CAST_INTERRUPT, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
+    elseif eventType == "EV_DISPEL" then
+        return string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(arg0))
+    elseif eventType == "EV_DEATH_UNIT" then
+        return string.format(WD_RULE_DEATH_UNIT, arg0)
+    elseif eventType == "EV_POTIONS" then
+        return string.format(WD_RULE_POTIONS)
+    elseif eventType == "EV_FLASKS" then
+        return string.format(WD_RULE_FLASKS)
+    elseif eventType == "EV_FOOD" then
+        return string.format(WD_RULE_FOOD)
+    elseif eventType == "EV_RUNES" then
+        return string.format(WD_RULE_RUNES)
+    end
+
+    return "Unsupported rule"
+end
+
 local function getRuleDescription(rule)
     if rule.ruleType == "RL_QUALITY" then
         if rule.arg0 == "QT_INTERRUPTS" then
@@ -59,16 +106,165 @@ local function getRuleDescription(rule)
                 return string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, rule.lateDispel, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
             end
         end
+    elseif rule.ruleType == "RL_RANGE_RULE" then
+        local eventMsg = getEventDescription(rule.arg1)
+        if rule.arg0[1] == "RT_AURA_EXISTS" then
+            local rangeMsg = string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
+            return eventMsg.." "..rangeMsg
+        elseif rule.arg0[1] == "RT_AURA_NOT_EXISTS" then
+            local rangeMsg = string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
+            return eventMsg.." "..rangeMsg
+        elseif rule.arg0[1] == "RT_UNIT_CASTING" then
+            local rangeMsg = string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
+            return eventMsg.." "..rangeMsg
+        elseif rule.arg0[1] == "RT_CUSTOM" then
+            return "Not yet implemented"
+        end
     end
     return "Not yet implemented"
 end
 
-local function editEventConfigMenu(rule)
+local function editEventConfig(eventFrame, eventName, args)
+    for _,v in pairs(eventFrame.hiddenMenus) do v:Hide() end
+
+    eventFrame.label:SetText(eventName)
+
+    local arg0_edit = eventFrame.hiddenMenus["arg0_edit"]
+    local arg1_edit = eventFrame.hiddenMenus["arg1_edit"]
+    local arg1_drop = eventFrame.hiddenMenus["arg1_drop"]
+
+    if eventName == "EV_AURA" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, args[2])
+        if arg1_frame then
+            arg1_drop.selected = arg1_frame
+            arg1_drop:SetText(args[2])
+        end
+        arg1_drop:Show()
+    elseif eventName == "EV_AURA_STACKS" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+    elseif eventName == "EV_DISPEL" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+    elseif eventName == "EV_CAST_START" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+    elseif eventName == "EV_CAST_INTERRUPTED" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+    elseif eventName == "EV_CAST_END" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+    elseif eventName == "EV_DAMAGETAKEN" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+    elseif eventName == "EV_DEATH" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+    elseif eventName == "EV_DEATH_UNIT" then
+        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+    end
+end
+
+local function editEventConfigMenu(frame, ...)
+    local parent = WDRS.menus["new_rule"]
+
+    local i = 1
+    local menu = parent.hiddenMenus["selected_rule_"..i]
+    while menu do
+        if not menu.origin or menu.origin == frame then
+            menu.origin = frame
+            editEventConfig(menu, ...)
+            menu:Show()
+            return
+        end
+        i = i + 1
+        menu = parent.hiddenMenus["selected_rule_"..i]
+    end
+
+    if selected then
+        print("There are no free frames for config event:"..selected.name)
+    end
+end
+
+local function showEventConfig(origin, menuId, rule)
+--[[
+    "EV_AURA"               arg0=aura_id            arg1=apply or remove
+    "EV_AURA_STACKS"        arg0=aura_id            arg1=stacks or 0
+    "EV_DISPEL"             arg0=aura_id
+    "EV_CAST_START"         arg0=spell_id           arg1=unit_name
+    "EV_CAST_INTERRUPTED"   arg0=target_spell_id    arg1=target_unit_name
+    "EV_CAST_END"           arg0=spell_id           arg1=unit_name
+    "EV_DAMAGETAKEN"        arg0=spell_id           arg1=amount or 0
+    "EV_DEATH"              arg0=spell_id
+    "EV_DEATH_UNIT"         arg0=unit_name
+]]
+    local parent = WDRS.menus["new_rule"]
+    local r = parent.hiddenMenus[menuId]
+    for _,v in pairs(r.hiddenMenus) do v:Hide() end
+    local arg0_edit = r.hiddenMenus["arg0_edit"]
+    local arg1_drop = r.hiddenMenus["arg1_drop"]
+    local arg1_edit = r.hiddenMenus["arg1_edit"]
+
+    r.label:SetText(rule)
+    r.origin = origin
+
+    if rule == "EV_AURA" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        arg1_drop:Show()
+    elseif rule == "EV_AURA_STACKS" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "stacks or 0 (if any)")
+    elseif rule == "EV_DISPEL" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+    elseif rule == "EV_CAST_START" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
+    elseif rule == "EV_CAST_INTERRUPTED" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "target name")
+    elseif rule == "EV_CAST_END" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
+    elseif rule == "EV_DAMAGETAKEN" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib:showHiddenEditBox(r, "arg1_edit", "amount or 0")
+    elseif rule == "EV_DEATH" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
+    elseif rule == "EV_DEATH_UNIT" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "unit name")
+    end
+
+    r:Show()
+end
+
+local function updateEventConfigMenu(frame, selected)
+    local parent = WDRS.menus["new_rule"]
+
+    local i = 1
+    local menu = parent.hiddenMenus["selected_rule_"..i]
+    while menu do
+        if selected and (not menu.origin or menu.origin == frame) then
+            showEventConfig(frame, "selected_rule_"..i, selected.name)
+            return
+        elseif not selected and menu.origin and menu.origin == frame then
+            menu:Hide()
+            menu.origin = nil
+            return
+        end
+        i = i + 1
+        menu = parent.hiddenMenus["selected_rule_"..i]
+    end
+
+    if selected then
+        print("There are no free frames for config event:"..selected.name)
+    end
 end
 
 local function editRangeRuleMenu(ruleType, arg0)
     local r = WDRS.menus["new_rule"].hiddenMenus["range_menu"]
-    for _,v in pairs(r.hiddenMenus) do v:Hide(); editEventConfigMenu(v); end
+    for _,v in pairs(r.hiddenMenus) do v:Hide(); updateEventConfigMenu(v); end
     local arg0_edit = r.hiddenMenus["arg0_edit"]
     local arg0_drop = r.hiddenMenus["arg0_drop"]
     local arg1_drop = r.hiddenMenus["arg1_drop"]
@@ -78,6 +274,8 @@ local function editRangeRuleMenu(ruleType, arg0)
     if ruleType == "RT_UNIT_CASTING" then
         WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
     elseif ruleType == "RT_AURA_EXISTS" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
+    elseif ruleType == "RT_AURA_NOT_EXISTS" then
         WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
     end
 
@@ -122,7 +320,7 @@ local function editRule(rule)
             arg0_drop.selected = frame
             arg0_drop:SetText(rule.arg0)
         end
-        arg0_drop.label:SetText("Select quality:")
+        arg0_drop.label:SetText("Quality type:")
         arg0_drop:Show()
 
         if rule.arg0 == "QT_INTERRUPTS" then
@@ -149,6 +347,27 @@ local function editRule(rule)
             WdLib:showHiddenEditBox(parent, "arg3_edit", rule.lateDispel)
             arg3_edit.label:SetText("Late dispel after (msec):")
        end
+    elseif rule.ruleType == "RL_RANGE_RULE" then
+        -- range rule type
+        WdLib:updateDropDownMenu(arg0_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        local arg0_frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0[1])
+        if arg0_frame then
+            arg0_drop.selected = arg0_frame
+            arg0_drop:SetText(rule.arg0[1])
+        end
+        arg0_drop.label:SetText("Range rule type:")
+        arg0_drop:Show()
+        editRangeRuleMenu(rule.arg0[1], rule.arg0[2])
+        -- arg1
+        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1[1])
+        if arg1_frame then
+            arg1_drop.selected = arg1_frame
+            arg1_drop:SetText(rule.arg1[1])
+        end
+        arg1_drop.label:SetText("Result event:")
+        arg1_drop:Show()
+        editEventConfigMenu(arg1_drop, rule.arg1[1], rule.arg1[2])
     end
 
     parent:Show()
@@ -227,6 +446,124 @@ local function updateRulesListFrame()
     WdLib:updateScrollableTable(WDRS, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end
 
+local function findEventConfigByOrigin(origin)
+    local parent = WDRS.menus["new_rule"]
+
+    local i = 1
+    local menu = parent.hiddenMenus["selected_rule_"..i]
+    while menu do
+        if menu.origin and menu.origin == origin then
+            return menu
+        end
+        i = i + 1
+        menu = parent.hiddenMenus["selected_rule_"..i]
+    end
+    return nil
+end
+
+local function getEventConfigDataForSave(eventName, eventFrame)
+    if eventName == "EV_AURA" then
+        local auraId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(auraId) then
+            print("Please set correct aura id in event config")
+            return false
+        end
+
+        if not eventFrame.hiddenMenus["arg1_drop"].selected then
+            print("Please select aura action in event config")
+            return false
+        end
+        local auraAction = eventFrame.hiddenMenus["arg1_drop"].selected:GetText()
+        return {tonumber(auraId), auraAction}
+    elseif eventName == "EV_AURA_STACKS" then
+        local auraId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(auraId) then
+            print("Please set correct aura id in event config")
+            return false
+        end
+
+        local stacks = eventFrame.hiddenMenus["arg1_edit"]:GetText()
+        if not tonumber(stacks) or tonumber(stacks) < 0 then
+            print("Please select correct number of stacks")
+            return false
+        end
+        return {tonumber(auraId), tonumber(stacks)}
+    elseif eventName == "EV_DISPEL" then
+        local auraId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(auraId) then
+            print("Please set correct aura id in event config")
+            return false
+        end
+        return {tonumber(auraId)}
+    elseif eventName == "EV_CAST_START" then
+        local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(spellId) then
+            print("Please set correct spell id in event config")
+            return false
+        end
+        local casterName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
+        if casterName:len() == 0 then
+            print("Please specify caster name")
+            return false
+        end
+        return {tonumber(auraId), casterName}
+    elseif eventName == "EV_CAST_INTERRUPTED" then
+        local targetSpellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(targetSpellId) then
+            print("Please set correct target spell id in event config")
+            return false
+        end
+        local targetName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
+        if targetName:len() == 0 then
+            print("Please specify target name")
+            return false
+        end
+        return {tonumber(targetSpellId), targetName}
+    elseif eventName == "EV_CAST_END" then
+        local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(spellId) then
+            print("Please set correct spell id in event config")
+            return false
+        end
+        local casterName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
+        if casterName:len() == 0 then
+            print("Please specify caster name")
+            return false
+        end
+        return {tonumber(auraId), casterName}
+    elseif eventName == "EV_DAMAGETAKEN" then
+        local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(spellId) then
+            print("Please set correct spell id in event config")
+            return false
+        end
+
+        local amount = eventFrame.hiddenMenus["arg1_edit"]:GetText()
+        if not tonumber(amount) or tonumber(amount) < 0 then
+            print("Please select correct amount number")
+            return false
+        end
+        return {tonumber(auraId), tonumber(amount)}
+    elseif eventName == "EV_DEATH" then
+        local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
+        if not GetSpellInfo(spellId) then
+            print("Please set correct spell id in event config")
+            return false
+        end
+        return {tonumber(spellId)}
+    elseif eventName == "EV_DEATH_UNIT" then
+        local unitName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
+        if unitName:len() == 0 then
+            print("Please specify unit name")
+            return false
+        end
+        return {unitName}
+    end
+
+    print("Unknown event: "..eventName)
+    return false
+end
+
 local function saveRule()
     local parent = WDRS.menus["new_rule"]
     if not parent.menus["encounters"].selected then
@@ -291,6 +628,62 @@ local function saveRule()
             rule.arg1 = auraId
             rule.earlyDispel = time1
             rule.lateDispel = time2
+        else
+            print("Unsupported quality type selected: "..qualityType)
+            return false
+        end
+    elseif rule.ruleType == "RL_RANGE_RULE" then        -- arg0=range_rule_type, arg1=event_result                  checks if event_result applied to unit during specified events range
+        -- arg0
+        if not parent.hiddenMenus["arg0_drop"].selected then
+            print("Please select range rule type")
+            return false
+        end
+
+        local rangeRule = parent.hiddenMenus["arg0_drop"].selected:GetText()
+        if rangeRule == "RT_AURA_EXISTS" then           -- arg0=aura_id
+            local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+            if not GetSpellInfo(auraId) then
+                print("Please set correct aura id in range rule type")
+                return false
+            end
+
+            rule.arg0 = {rangeRule, tonumber(auraId)}
+        elseif rangeRule == "RT_AURA_NOT_EXISTS" then   -- arg0=aura_id
+            local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+            if not GetSpellInfo(auraId) then
+                print("Please set correct aura id in range rule type")
+                return false
+            end
+
+            rule.arg0 = {rangeRule, tonumber(auraId)}
+        elseif rangeRule == "RT_UNIT_CASTING" then      -- arg0=target_spell_id
+            local spellId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+            if not GetSpellInfo(spellId) then
+                print("Please set correct target spell id in range rule type")
+                return false
+            end
+
+            rule.arg0 = {rangeRule, tonumber(spellId)}
+        elseif rangeRule == "RT_CUSTOM" then            -- arg0=event_start,     arg1=event_end
+            print("Not implemented yet: "..rangeRule)
+            return false
+        else
+            print("Unsupported range rule type selected: "..rangeRule)
+            return false
+        end
+
+        -- arg1
+        if not parent.hiddenMenus["arg1_drop"].selected then
+            print("Please select result event")
+            return false
+        end
+        local eventName = parent.hiddenMenus["arg1_drop"].selected:GetText()
+        local eventFrame = findEventConfigByOrigin(parent.hiddenMenus["arg1_drop"])
+        local data = getEventConfigDataForSave(eventName, eventFrame)
+        if data == false then
+            return false
+        else
+            rule.arg1 = {eventName, data}
         end
     elseif rule.ruleType == "" then
         local arg0_drop = parent.hiddenMenus["arg0_drop"].selected:GetText()
@@ -304,7 +697,7 @@ local function saveRule()
 
         local arg3_edit = parent.hiddenMenus["arg3_edit"]:GetText()
     else
-        print('Not fully implemented yet!');
+        print('Not implemented yet:'..rule.ruleType)
         return false
     end
 
@@ -320,81 +713,6 @@ local function saveRule()
     updateRulesListFrame()
 
     return true
-end
-
-local function showEventConfig(origin, name, rule)
---[[
-    "EV_AURA"               arg0=aura_id      arg1=apply or remove
-    "EV_AURA_STACKS"        arg0=aura_id      arg1=stacks or 0
-    "EV_DISPEL"             arg0=aura_id
-    "EV_CAST_START"         arg0=spell_id           arg1=unit_name
-    "EV_CAST_INTERRUPTED"   arg0=target_spell_id    arg1=target_unit_name
-    "EV_CAST_END"           arg0=spell_id           arg1=unit_name
-    "EV_DAMAGETAKEN"        arg0=spell_id           arg1=amount or 0
-    "EV_DEATH"              arg0=spell_id
-    "EV_DEATH_UNIT"         arg0=unit_name
-]]
-    local parent = WDRS.menus["new_rule"]
-    local r = parent.hiddenMenus[name]
-    for _,v in pairs(r.hiddenMenus) do v:Hide() end
-    local arg0_edit = r.hiddenMenus["arg0_edit"]
-    local arg1_drop = r.hiddenMenus["arg1_drop"]
-    local arg1_edit = r.hiddenMenus["arg1_edit"]
-
-    r.label:SetText(rule)
-    r.origin = origin
-
-    if rule == "EV_AURA" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
-        WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
-        arg1_drop:Show()
-    elseif rule == "EV_AURA_STACKS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "stacks or 0 (if any)")
-    elseif rule == "EV_DISPEL" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
-    elseif rule == "EV_CAST_START" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
-    elseif rule == "EV_CAST_INTERRUPTED" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "target name")
-    elseif rule == "EV_CAST_END" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
-    elseif rule == "EV_DAMAGETAKEN" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "amount or 0")
-    elseif rule == "EV_DEATH" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
-    elseif rule == "EV_DEATH_UNIT" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "unit name")
-    end
-
-    r:Show()
-end
-
-local function updateEventConfigMenu(frame, selected)
-    local parent = WDRS.menus["new_rule"]
-
-    local i = 1
-    local menu = parent.hiddenMenus["selected_rule_"..i]
-    while menu do
-        if selected and (not menu.origin or menu.origin == frame) then
-            showEventConfig(frame, "selected_rule_"..i, selected.name)
-            return
-        elseif not selected and menu.origin and menu.origin == frame then
-            menu:Hide()
-            menu.origin = nil
-            return
-        end
-        i = i + 1
-        menu = parent.hiddenMenus["selected_rule_"..i]
-    end
-
-    if selected then
-        print("There are no free frames for config event:"..selected.name)
-    end
 end
 
 local function updateRangeRuleMenu(frame, selected)
@@ -543,7 +861,7 @@ local function initSelectedRuleMenu()
     local m = math.floor(maxV / 2) + 1
     for i=1,maxV do
         local r = WdLib:createRuleWindow(parent)
-        r:SetFrameStrata("HIGH")
+        r:SetFrameStrata("TOOLTIP")
 
         if i == 1 then
             r:SetPoint("TOPLEFT", parent, "TOPRIGHT", 1, 0)
@@ -552,6 +870,8 @@ local function initSelectedRuleMenu()
         else
             r:SetPoint("TOPLEFT", parent.hiddenMenus["selected_rule_"..(i-1)], "TOPRIGHT", 0, 0)
         end
+
+        r:SetScript("OnHide", function(self) self.origin = nil end)
 
         parent.hiddenMenus["selected_rule_"..i] = r
     end

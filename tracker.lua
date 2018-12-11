@@ -705,15 +705,19 @@ function WDMF:LoadStatRules()
             local r = WD.db.profile.statRules[i]
             if r.isActive == true and (r.journalId == journalId or r[i].journalId == -1) then
                 if not rules[r.ruleType] then rules[r.ruleType] = {} end
-                if not rules[r.ruleType][r.arg0] then rules[r.ruleType][r.arg0] = {} end
-                if not rules[r.ruleType][r.arg0][r.arg1] then rules[r.ruleType][r.arg0][r.arg1] = {} end
                 if r.ruleType == "RL_QUALITY" then
+                    if not rules["RL_QUALITY"][r.arg0] then rules["RL_QUALITY"][r.arg0] = {} end
+                    if not rules["RL_QUALITY"][r.arg0][r.arg1] then rules["RL_QUALITY"][r.arg0][r.arg1] = {} end
                     if r.arg0 == "QT_INTERRUPTS" then
                         rules["RL_QUALITY"]["QT_INTERRUPTS"][r.arg1].qualityPercent = r.qualityPercent
                     elseif r.arg0 == "QT_DISPELS" then
                         rules["RL_QUALITY"]["QT_DISPELS"][r.arg1].earlyDispel = r.earlyDispel
                         rules["RL_QUALITY"]["QT_DISPELS"][r.arg1].lateDispel = r.lateDispel
                     end
+                --elseif r.ruleType == "RL_RANGE_RULE" then
+                --    if not rules["RL_RANGE_RULE"][r.arg0[1]] then rules["RL_RANGE_RULE"][r.arg0[1]] = {} end
+                --    if r.arg0[1] == "RT_AURA_EXISTS" then
+                --        rules["RL_RANGE_RULE"]["RT_AURA_EXISTS"][r.arg0[2]] = asd
                 end
             end
         end
@@ -854,6 +858,7 @@ function WDMF:Tracker_OnStartEncounter()
     WD.db.profile.tracker.selected = #WD.db.profile.tracker
 
     self:ProcessPull()
+    self:LoadStatRules()
 
     WD:RefreshTrackerPulls()
     WD:RefreshTrackedCreatures()
@@ -870,7 +875,6 @@ end
 function WDMF:Tracker_OnEvent(...)
     local _, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
     local src, dst = getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
-    self:LoadStatRules()
     if callbacks[event] then
         callbacks[event](self, src, dst, ...)
     end

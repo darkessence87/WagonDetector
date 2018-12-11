@@ -110,3 +110,6 @@ WD_TRACKER_QT_INTERRUPTS_DESC = "Качество сбивания < %s%% для
 WD_TRACKER_QT_DISPELS_FULL_RANGE = "Рассеивание/кража вне рамок [%s-%s] мсек для %s"
 WD_TRACKER_QT_DISPELS_LEFT_RANGE = "Слишком быстрое рассеивание/кража (до %s мсек) для %s"
 WD_TRACKER_QT_DISPELS_RIGHT_RANGE = "Слишком долгое рассеивание/кража (от %s мсек) для %s"
+WD_TRACKER_RT_AURA_EXISTS_DESC = "пока действует %s"
+WD_TRACKER_RT_AURA_NOT_EXISTS_DESC = "пока не действует %s"
+WD_TRACKER_RT_UNIT_CASTING_DESC = "во время каста %s"

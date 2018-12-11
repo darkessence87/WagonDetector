@@ -716,11 +716,23 @@ end
 
 function WdLib:generateSpellHover(frame, searchIn)
     frame:SetScript("OnEnter", function(self)
-        local _, _, spellId = string.find(searchIn, "|Hspell:(.+)|h ")
-        if spellId then
+        local spells = {}
+        for k in string.gmatch(searchIn, "|Hspell:(%d+)|h") do
+            spells[#spells+1] = k
+        end
+        if #spells > 0 then
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetHyperlink(WdLib:getSpellLinkById(spellId))
-            GameTooltip:AddLine('id: '..spellId, 1, 1, 1)
+
+            if #spells == 1 then
+                GameTooltip:SetHyperlink(WdLib:getSpellLinkById(spells[1]))
+                GameTooltip:AddLine("id: "..spells[1].." "..WdLib:getSpellLinkByIdWithTexture(spells[1]), 1, 1, 1)
+            else
+                GameTooltip:SetHyperlink(WdLib:getSpellLinkById(spells[1]))
+                for i=1,#spells do
+                    GameTooltip:AddLine("id"..i..": "..spells[i].." "..WdLib:getSpellLinkByIdWithTexture(spells[i]), 1, 1, 1)
+                end
+            end
+
             GameTooltip:Show()
         end
     end)

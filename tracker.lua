@@ -42,6 +42,7 @@ local function findEntityIndex(holder, guid)
 end
 
 local function findNpc(guid)
+    if not WDMF.tracker.npc then return nil end
     if not guid or not guid:match("Creature") then return nil end
     local npcId = getNpcId(guid)
     local holder = WDMF.tracker.npc[npcId]
@@ -51,7 +52,8 @@ local function findNpc(guid)
 end
 
 local function findPet(guid)
-    if not guid or not guid:match("Pet") then return nil end
+    if not WDMF.tracker.pet then return nil end
+    if not guid then return nil end
     for k,v in pairs(WDMF.tracker.pet) do
         local index = findEntityIndex(v, guid)
         if index then return v[index] end
@@ -60,6 +62,7 @@ local function findPet(guid)
 end
 
 local function findPlayer(guid)
+    if not WDMF.tracker.players then return nil end
     return WDMF.tracker.players[guid]
 end
 
@@ -89,6 +92,7 @@ local function loadNpc(guid, name)
         holder[#holder+1] = npc
         return npc
     end
+    holder[index].type = "creature"
     return holder[index]
 end
 
@@ -112,6 +116,7 @@ local function loadPet(guid, name, parentGuid, parentName)
     end
     if parentGuid then holder[index].parentGuid = parentGuid end
     if parentName then holder[index].parentName = parentName end
+    holder[index].type = "pet"
     return holder[index]
 end
 
@@ -129,12 +134,14 @@ local function loadExistingPet(pet)
         if #holder == 1 then
             holder[1].name = holder[1].name.."-1"
         end
+        pet = createExistingEntity(pet)
         pet.name = pet.name.."-"..(#holder + 1)
         holder[#holder+1] = pet
         return
     end
     if parentGuid then holder[index].parentGuid = pet.parentGuid end
     if parentName then holder[index].parentName = pet.parentName end
+    holder[index].type = "pet"
 end
 
 local function loadPlayer(guid, name)
@@ -157,17 +164,16 @@ local function loadEntity(guid, name, unit_type)
         --print('no name or no guid')
         return nil
     end
-    if name == UNKNOWNOBJECT then
-        --[[print('trying to find guid by name next time')
+    --[[if name == UNKNOWNOBJECT then
+        print('trying to find guid by name next time')
         if WDMF.tracker[UNKNOWNOBJECT] and WDMF.tracker[UNKNOWNOBJECT][guid] then
             WDMF.tracker[key] = WDMF.tracker[UNKNOWNOBJECT]
             WDMF.tracker[key][guid].name = name
             WDMF.tracker[UNKNOWNOBJECT] = nil
             return WDMF.tracker[key][guid]
         end
-        ]]
         return nil
-    end
+    end]]
 
     if unit_type == "creature" then
         return loadNpc(guid, name)
@@ -181,23 +187,27 @@ local function loadEntity(guid, name, unit_type)
 end
 
 local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
-    local src = nil
-    if WD:IsNpc(src_flags) then
-        src = loadEntity(src_guid, src_name, "creature")
-    elseif WD:IsPet(src_flags) then
-        src = loadEntity(src_guid, src_name, "pet")
-    elseif src_name then
-        src_name = WdLib:getFullCharacterName(src_name)
-        src = loadEntity(src_guid, src_name, "player")
+    local src = WD:FindEntityByGUID(src_guid)
+    if not src then
+        if WD:IsNpc(src_flags) then
+            src = loadEntity(src_guid, src_name, "creature")
+        elseif WD:IsPet(src_flags) then
+            src = loadEntity(src_guid, src_name, "pet")
+        elseif src_name then
+            src_name = WdLib:getFullCharacterName(src_name)
+            src = loadEntity(src_guid, src_name, "player")
+        end
     end
-    local dst = nil
-    if WD:IsNpc(dst_flags) then
-        dst = loadEntity(dst_guid, dst_name, "creature")
-    elseif WD:IsPet(dst_flags) then
-        dst = loadEntity(dst_guid, dst_name, "pet")
-    elseif dst_name then
-        dst_name = WdLib:getFullCharacterName(dst_name)
-        dst = loadEntity(dst_guid, dst_name, "player")
+    local dst = WD:FindEntityByGUID(dst_guid)
+    if not dst then
+        if WD:IsNpc(dst_flags) then
+            dst = loadEntity(dst_guid, dst_name, "creature")
+        elseif WD:IsPet(dst_flags) then
+            dst = loadEntity(dst_guid, dst_name, "pet")
+        elseif dst_name then
+            dst_name = WdLib:getFullCharacterName(dst_name)
+            dst = loadEntity(dst_guid, dst_name, "player")
+        end
     end
 
     local src_role, dst_role = "", ""
@@ -437,6 +447,10 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
         local aura = unit.auras[target_aura_id][i]
         local diff = (timestamp - aura.applied) * 1000
         diff = WdLib:float_round_to(diff / 1000, 2)
+        if not aura.duration then
+            local t = (timestamp - aura.applied) / 1000
+            aura.duration = WdLib:float_round_to(t * 1000, 2)
+        end
         if diff <= aura.duration + 0.01 then
             aura.dispelledAt = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
             aura.dispelledIn = diff
@@ -529,63 +543,58 @@ function WDMF:ProcessSummons(src, dst, ...)
 end
 
 function WDMF:ProcessAuras(src, dst, ...)
-    local rules = self.encounter.rules
+    if not dst then return end
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_APPLIED" then
-        if dst then
-            -- auras
-            if not dst.auras[spell_id] then dst.auras[spell_id] = {} end
-            if src then
-                dst.auras[spell_id][#dst.auras[spell_id]+1] = { caster = src.guid, applied = timestamp }
-            else
-                dst.auras[spell_id][#dst.auras[spell_id]+1] = { caster = "Environment", applied = timestamp }
-            end
+        -- auras
+        if not dst.auras[spell_id] then dst.auras[spell_id] = {} end
+        local auras = dst.auras[spell_id]
+        if src then
+            auras[#auras+1] = { caster = src.guid, applied = timestamp }
+        else
+            auras[#auras+1] = { caster = "Environment", applied = timestamp }
+        end
 
-            -- interrupts
-            if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
-                interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
-            end
-            if WD.Spells.controlEffects[spell_id] then
-                interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
-            end
+        -- interrupts
+        if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
+            interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
+        end
+        if WD.Spells.controlEffects[spell_id] then
+            interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
+        end
 
-            applyAura(self, dst, timestamp, spell_id, "apply")
+        applyAura(self, dst, timestamp, spell_id, "apply")
 
-            -- potions
-            local potionRule = findRuleByRole("EV_POTIONS", dst.role)
-            if potionRule then
-                if WD.Spells.potions[spell_id] then
-                    local msg = WD.GetEventDescription("EV_POTIONS")
-                    self:AddSuccess(timestamp, dst.guid, dst.rt, msg, potionRule.points)
-                end
+        -- potions
+        local potionRule = findRuleByRole("EV_POTIONS", dst.role)
+        if potionRule then
+            if WD.Spells.potions[spell_id] then
+                local msg = WD.GetEventDescription("EV_POTIONS")
+                self:AddSuccess(timestamp, dst.guid, dst.rt, msg, potionRule.points)
             end
         end
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_REMOVED" then
-        if dst then
-            if dst.auras[spell_id] then
-                local aura = findActiveAuraByCaster(dst, spell_id, src)
-                if aura then
-                    aura.removed = timestamp
-                    local t = (aura.removed - aura.applied) / 1000
-                    aura.duration = WdLib:float_round_to(t * 1000, 2)
-                end
+        if dst.auras[spell_id] then
+            local aura = findActiveAuraByCaster(dst, spell_id, src)
+            if aura then
+                aura.removed = timestamp
+                local t = (aura.removed - aura.applied) / 1000
+                aura.duration = WdLib:float_round_to(t * 1000, 2)
             end
-
-            applyAura(self, dst, timestamp, spell_id, "remove")
         end
+
+        applyAura(self, dst, timestamp, spell_id, "remove")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_APPLIED_DOSE" then
-        if dst then
-            local stacks = tonumber(arg[16])
-            applyAuraStack(self, dst, timestamp, spell_id, stacks)
-        end
+        local stacks = tonumber(arg[16])
+        applyAuraStack(self, dst, timestamp, spell_id, stacks)
     end
 end
 
@@ -706,19 +715,19 @@ function WDMF:ProcessDamage(src, dst, ...)
                 if overkill > -1 and deathRule and deathRule[spell_id] then
                     local p = deathRule[spell_id].points
                     local msg = WD.GetEventDescription("EV_DEATH", spell_id)
-                    if rule.range then
-                        msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
+                    if deathRule.range then
+                        msg = msg.." "..WD.GetRangeRuleDescription(deathRule.range[1], deathRule.range[2])
                     end
                     self:AddFail(timestamp, dst.guid, dst.rt, msg, p)
                 else
                     if damageTakenRule and damageTakenRule[spell_id] then
-                        local p = damageTakenRule.points
-                        if (damageTakenRule.amount > 0 and total > damageTakenRule.amount) or
-                           (damageTakenRule.amount == 0 and total > 0)
+                        local p = damageTakenRule[spell_id].points
+                        if (damageTakenRule[spell_id].amount > 0 and total > damageTakenRule[spell_id].amount) or
+                           (damageTakenRule[spell_id].amount == 0 and total > 0)
                         then
-                            local msg = WD.GetEventDescription("EV_DAMAGETAKEN", spell_id, damageTakenRule.amount)
-                            if rule.range then
-                                msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
+                            local msg = WD.GetEventDescription("EV_DAMAGETAKEN", spell_id, damageTakenRule[spell_id].amount)
+                            if damageTakenRule.range then
+                                msg = msg.." "..WD.GetRangeRuleDescription(damageTakenRule.range[1], damageTakenRule.range[2])
                             end
                             self:AddFail(timestamp, dst.guid, dst.rt, msg, p)
                         end
@@ -867,7 +876,7 @@ function WDMF:LoadRules()
         local rules = {}
         for i=1,#WD.db.profile.statRules do
             local r = WD.db.profile.statRules[i]
-            if r.isActive == true and (r.journalId == journalId or r[i].journalId == -1) then
+            if r.isActive == true and (r.journalId == journalId or r.journalId == -1) then
                 if not rules[r.ruleType] then rules[r.ruleType] = {} end
                 if r.ruleType == "RL_QUALITY" then
                     if not rules["RL_QUALITY"][r.arg0] then rules["RL_QUALITY"][r.arg0] = {} end

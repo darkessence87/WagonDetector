@@ -715,7 +715,7 @@ function WdLib:showHiddenEditBox(parent, name, txt)
     parent.hiddenMenus[name]:Show()
 end
 
-function WdLib:generateSpellHover(frame, searchIn)
+function WdLib:generateSpellHover(frame, searchIn, textLines)
     frame:SetScript("OnEnter", function(self)
         local spells = {}
         for k in string.gmatch(searchIn, "|Hspell:(%d+)|h") do
@@ -734,16 +734,30 @@ function WdLib:generateSpellHover(frame, searchIn)
                 end
             end
 
+            if type(textLines) == "table" then
+                for i=1,#textLines do
+                    GameTooltip:AddLine(textLines[i], 1, 1, 1)
+                end
+            else
+                GameTooltip:AddLine(textLines, 1, 1, 1)
+            end
+
             GameTooltip:Show()
         end
     end)
     frame:SetScript("OnLeave", function() GameTooltip_Hide() end)
 end
 
-function WdLib:generateHover(frame, text)
+function WdLib:generateHover(frame, textLines)
     frame:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(text, 1, 1, 1)
+        if type(textLines) == "table" then
+            for i=1,#textLines do
+                GameTooltip:AddLine(textLines[i], 1, 1, 1)
+            end
+        else
+            GameTooltip:AddLine(textLines, 1, 1, 1)
+        end
         GameTooltip:Show()
     end)
     frame:SetScript("OnLeave", function() GameTooltip_Hide() end)

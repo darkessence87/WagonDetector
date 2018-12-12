@@ -552,7 +552,7 @@ local function saveRule()
             end
 
             rule.arg0 = qualityType
-            rule.arg1 = targetSpellId
+            rule.arg1 = tonumber(targetSpellId)
             rule.qualityPercent = qualityPercent
         elseif qualityType == "QT_DISPELS" then
             local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
@@ -579,7 +579,7 @@ local function saveRule()
             end
 
             rule.arg0 = qualityType
-            rule.arg1 = auraId
+            rule.arg1 = tonumber(auraId)
             rule.earlyDispel = time1
             rule.lateDispel = time2
         else

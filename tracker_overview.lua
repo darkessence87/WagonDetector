@@ -15,13 +15,16 @@ end
 
 local function getInterruptStatusText(v)
     if v.status == "INTERRUPTED" then
-        local interrupter = nil
+        local interrupterName = UNKNOWNOBJECT
         if type(v.interrupter) == "table" then
-            interrupter = v.interrupter
+            interrupterName = WdLib:getColoredName(WdLib:getShortCharacterName(v.interrupter.name, "noRealm"), v.interrupter.class)
         else
-            interrupter = WD:FindEntityByGUID(v.interrupter)
+            local interrupter = WD:FindEntityByGUID(v.interrupter)
+            if interrupter then
+                interrupterName = WdLib:getColoredName(WdLib:getShortCharacterName(interrupter.name, "noRealm"), interrupter.class)
+            end
         end
-        return string.format(WD_TRACKER_INTERRUPTED_BY, WdLib:getColoredName(WdLib:getShortCharacterName(interrupter.name), interrupter.class), WdLib:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
+        return string.format(WD_TRACKER_INTERRUPTED_BY, interrupterName, WdLib:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
         return string.format(WD_TRACKER_CASTED_IN, v.timediff)
     end
@@ -38,7 +41,7 @@ local function getDispelStatusText(v)
         dispeller = WD:FindEntityByGUID(v.dispeller)
     end
     if not dispeller then return "Error" end
-    return string.format(WD_TRACKER_DISPELLED_BY, WdLib:getColoredName(WdLib:getShortCharacterName(dispeller.name), dispeller.class), WdLib:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
+    return string.format(WD_TRACKER_DISPELLED_BY, WdLib:getColoredName(WdLib:getShortCharacterName(dispeller.name, "noRealm"), dispeller.class), WdLib:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
 end
 
 local function updateDispelInfo()
@@ -65,7 +68,13 @@ local function updateDispelInfo()
         if index == 1 then
             local f = WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId))
+            local caster = WD:FindEntityByGUID(v.caster)
+            if caster then
+                caster = WdLib:getColoredName(WdLib:getShortCharacterName(caster.name, "noRealm"), caster.class)
+            else
+                caster = "|cffffff00Environment|r"
+            end
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "Casted by: "..caster)
             return f
         elseif index == 2 then
             return WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "CENTER", v.dispelledAt)
@@ -84,7 +93,13 @@ local function updateDispelInfo()
         local v = auras[row].data
         if index == 1 then
             frame.txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
-            WdLib:generateSpellHover(frame, WdLib:getSpellLinkByIdWithTexture(auraId))
+            local caster = WD:FindEntityByGUID(v.caster)
+            if caster then
+                caster = WdLib:getColoredName(WdLib:getShortCharacterName(caster.name, "noRealm"), caster.class)
+            else
+                caster = "|cffffff00Environment|r"
+            end
+            WdLib:generateSpellHover(frame, WdLib:getSpellLinkByIdWithTexture(auraId), "Casted by: "..caster)
         elseif index == 2 then
             frame.txt:SetText(v.dispelledAt)
         elseif index == 3 then

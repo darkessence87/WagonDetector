@@ -95,47 +95,7 @@ local function editRuleLine(rule)
 end
 
 local function getRuleDescription(rule)
-    if rule.type == "EV_DAMAGETAKEN" then
-        if rule.arg1 > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-        else
-            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-        end
-    elseif rule.type == "EV_DEATH" then
-        return string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-    elseif rule.type == "EV_AURA" then
-        if rule.arg1 == "apply" then
-            return string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-        else
-            return string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-        end
-    elseif rule.type == "EV_AURA_STACKS" then
-        if rule.arg1 > 0 then
-            return string.format(WD_RULE_AURA_STACKS, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-        else
-            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-        end
-    elseif rule.type == "EV_CAST_START" then
-        return string.format(WD_RULE_CAST_START, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-    elseif rule.type == "EV_CAST_END" then
-        return string.format(WD_RULE_CAST, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-    elseif rule.type == "EV_CAST_INTERRUPTED" then
-        return string.format(WD_RULE_CAST_INTERRUPT, rule.arg1, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-    elseif rule.type == "EV_DISPEL" then
-        return string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(rule.arg0))
-    elseif rule.type == "EV_DEATH_UNIT" then
-        return string.format(WD_RULE_DEATH_UNIT, rule.arg0)
-    elseif rule.type == "EV_POTIONS" then
-        return string.format(WD_RULE_POTIONS)
-    elseif rule.type == "EV_FLASKS" then
-        return string.format(WD_RULE_FLASKS)
-    elseif rule.type == "EV_FOOD" then
-        return string.format(WD_RULE_FOOD)
-    elseif rule.type == "EV_RUNES" then
-        return string.format(WD_RULE_RUNES)
-    end
-
-    return "Unsupported rule"
+    return WD.GetEventDescription(rule.type, rule.arg0, rule.arg1)
 end
 
 local function isValidRule(rule)

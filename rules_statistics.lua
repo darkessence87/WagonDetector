@@ -46,53 +46,6 @@ local function findDuplicate(rule)
     return found
 end
 
-local function getEventDescription(data)
-    local eventType = data[1]
-    local arg0 = data[2][1]
-    local arg1 = data[2][2]
-    if eventType == "EV_DAMAGETAKEN" then
-        if arg1 > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
-        else
-            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(arg0))
-        end
-    elseif eventType == "EV_DEATH" then
-        return string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(arg0))
-    elseif eventType == "EV_AURA" then
-        if arg1 == "apply" then
-            return string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(arg0))
-        else
-            return string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(arg0))
-        end
-    elseif eventType == "EV_AURA_STACKS" then
-        if arg1 > 0 then
-            return string.format(WD_RULE_AURA_STACKS, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
-        else
-            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib:getSpellLinkByIdWithTexture(arg0))
-        end
-    elseif eventType == "EV_CAST_START" then
-        return string.format(WD_RULE_CAST_START, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
-    elseif eventType == "EV_CAST_END" then
-        return string.format(WD_RULE_CAST, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
-    elseif eventType == "EV_CAST_INTERRUPTED" then
-        return string.format(WD_RULE_CAST_INTERRUPT, arg1, WdLib:getSpellLinkByIdWithTexture(arg0))
-    elseif eventType == "EV_DISPEL" then
-        return string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(arg0))
-    elseif eventType == "EV_DEATH_UNIT" then
-        return string.format(WD_RULE_DEATH_UNIT, arg0)
-    elseif eventType == "EV_POTIONS" then
-        return string.format(WD_RULE_POTIONS)
-    elseif eventType == "EV_FLASKS" then
-        return string.format(WD_RULE_FLASKS)
-    elseif eventType == "EV_FOOD" then
-        return string.format(WD_RULE_FOOD)
-    elseif eventType == "EV_RUNES" then
-        return string.format(WD_RULE_RUNES)
-    end
-
-    return "Unsupported rule"
-end
-
 local function getRuleDescription(rule)
     if rule.ruleType == "RL_QUALITY" then
         if rule.arg0 == "QT_INTERRUPTS" then
@@ -107,7 +60,8 @@ local function getRuleDescription(rule)
             end
         end
     elseif rule.ruleType == "RL_RANGE_RULE" then
-        local eventMsg = getEventDescription(rule.arg1)
+        local eventName, eventArg0, eventArg1 = rule.arg1[1], rule.arg1[2][1], rule.arg1[2][2]
+        local eventMsg = WD.GetEventDescription(eventName, eventArg0, eventArg1)
         if rule.arg0[1] == "RT_AURA_EXISTS" then
             local rangeMsg = string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
             return eventMsg.." "..rangeMsg
@@ -506,7 +460,7 @@ local function getEventConfigDataForSave(eventName, eventFrame)
             print("Please specify caster name")
             return false
         end
-        return {tonumber(auraId), casterName}
+        return {tonumber(spellId), casterName}
     elseif eventName == "EV_CAST_INTERRUPTED" then
         local targetSpellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(targetSpellId) then
@@ -530,7 +484,7 @@ local function getEventConfigDataForSave(eventName, eventFrame)
             print("Please specify caster name")
             return false
         end
-        return {tonumber(auraId), casterName}
+        return {tonumber(spellId), casterName}
     elseif eventName == "EV_DAMAGETAKEN" then
         local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(spellId) then
@@ -543,7 +497,7 @@ local function getEventConfigDataForSave(eventName, eventFrame)
             print("Please select correct amount number")
             return false
         end
-        return {tonumber(auraId), tonumber(amount)}
+        return {tonumber(spellId), tonumber(amount)}
     elseif eventName == "EV_DEATH" then
         local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(spellId) then

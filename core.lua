@@ -7,68 +7,6 @@ WDMF.encounter = {}
 
 local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 
-local function getActiveRulesForEncounter(encounterId)
-    -- search journalId for encounter
-    local journalId = WD.FindEncounterJournalIdByCombatId(encounterId)
-    if not journalId then
-        journalId = WD.FindEncounterJournalIdByName("ALL")
-        print("Unknown name for encounterId:"..encounterId)
-    end
-
-    local rules = {
-        ["EV_DAMAGETAKEN"] = {},    -- done
-        ["EV_DEATH"] = {},            -- done
-        ["EV_AURA"] = {{{}}},        -- done
-        ["EV_AURA_STACKS"] = {},    -- done
-        ["EV_CAST_START"] = {},        -- done
-        ["EV_CAST_END"] = {},            -- done
-        ["EV_CAST_INTERRUPTED"] = {},    -- done
-        ["EV_DEATH_UNIT"] = {},        -- done
-        ["EV_DISPEL"] = {},         -- done
-        ["EV_POTIONS"] = {},        -- done
-        ["EV_FLASKS"] = {},            -- done
-        ["EV_FOOD"] = {},            -- done
-        ["EV_RUNES"] = {},            -- done
-    }
-
-    for i=1,#WD.db.profile.rules do
-        if WD.db.profile.rules[i].isActive == true and (WD.db.profile.rules[i].journalId == journalId or WD.db.profile.rules[i].journalId == -1) then
-            local roles = WD:GetAllowedRoles(WD.db.profile.rules[i].role)
-            local rType = WD.db.profile.rules[i].type
-            local arg0 = WD.db.profile.rules[i].arg0
-            local arg1 = WD.db.profile.rules[i].arg1
-            local p = WD.db.profile.rules[i].points
-            for _,role in pairs(roles) do
-                if not rules[role] then rules[role] = {} end
-                if not rules[role][rType] then rules[role][rType] = {} end
-                if rType == "EV_DAMAGETAKEN" then
-                    rules[role][rType][arg0] = {}
-                    rules[role][rType][arg0].amount = arg1
-                    rules[role][rType][arg0].points = p
-                elseif rType == "EV_DEATH" or rType == "EV_DISPEL" then
-                    rules[role][rType][arg0] = {}
-                    rules[role][rType][arg0].points = p
-                elseif rType == "EV_DEATH_UNIT" then
-                    rules[role][rType].unit = arg0
-                    rules[role][rType].points = p
-                elseif rType == "EV_POTIONS" or rType == "EV_FLASKS" or rType == "EV_FOOD" or rType == "EV_RUNES" then
-                    rules[role][rType].points = p
-                else
-                    if not rules[role][rType][arg0] then
-                        rules[role][rType][arg0] = {}
-                    end
-                    if not rules[role][rType][arg0][arg1] then
-                        rules[role][rType][arg0][arg1] = {}
-                    end
-                    rules[role][rType][arg0][arg1].points = p
-                end
-            end
-        end
-    end
-
-    return rules
-end
-
 local function printFuckups()
     for _,v in pairs(WDMF.encounter.fuckers) do
         if v.points >= 0 then
@@ -111,7 +49,7 @@ function WDMF:AddSuccess(timestamp, guid, mark, msg, points)
     niceBro.name = WdLib:getFullCharacterName(name)
     niceBro.mark = mark
     niceBro.reason = msg
-    niceBro.points = points
+    niceBro.points = tonumber(points) or 0
     niceBro.role = WD:GetRole(guid)
     self.encounter.fuckers[#self.encounter.fuckers+1] = niceBro
 
@@ -149,7 +87,7 @@ function WDMF:AddFail(timestamp, guid, mark, msg, points)
     fucker.name = WdLib:getFullCharacterName(name)
     fucker.mark = mark
     fucker.reason = msg
-    fucker.points = points
+    fucker.points = tonumber(points) or 0
     fucker.role = WD:GetRole(guid)
     self.encounter.fuckers[#self.encounter.fuckers+1] = fucker
 
@@ -234,7 +172,6 @@ function WDMF:StartEncounter(encounterID, encounterName)
         self.encounter.pullName = encounterName.."-"..pullId
         self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
         self.encounter.startTime = time()
-        self.encounter.rules = getActiveRulesForEncounter(self.encounter.id)
 
         self:Tracker_OnStartEncounter()
     end
@@ -272,6 +209,7 @@ function WDMF:ResetEncounter()
     WdLib:table_wipe(self.encounter)
 
     self.encounter.rules = {}
+    self.encounter.statRules = {}
     self.encounter.fuckers = {}
     self.isActive = 0
 
@@ -280,7 +218,6 @@ function WDMF:ResetEncounter()
     self.encounter.endTime = 0
     self.encounter.deaths = 0
     self.encounter.interrupted = 0
-    self.isActive = 0
 end
 
 function WDMF:StartPull()

@@ -279,3 +279,62 @@ function WD.FindInstanceByJournalId(journalId)
     end
     return nil
 end
+
+function WD.GetEventDescription(eventName, ...)
+    local args = {...}
+    if eventName == "EV_DAMAGETAKEN" then
+        if args[2] > 0 then
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+        else
+            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        end
+    elseif eventName == "EV_DEATH" then
+        return string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_AURA" then
+        if args[2] == "apply" then
+            return string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        else
+            return string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        end
+    elseif eventName == "EV_AURA_STACKS" then
+        if args[2] > 0 then
+            return string.format(WD_RULE_AURA_STACKS, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+        else
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib:getSpellLinkByIdWithTexture(args[1]))
+        end
+    elseif eventName == "EV_CAST_START" then
+        return string.format(WD_RULE_CAST_START, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_CAST_END" then
+        return string.format(WD_RULE_CAST, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_CAST_INTERRUPTED" then
+        return string.format(WD_RULE_CAST_INTERRUPT, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_DISPEL" then
+        return string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_DEATH_UNIT" then
+        return string.format(WD_RULE_DEATH_UNIT, args[1])
+    elseif eventName == "EV_POTIONS" then
+        return string.format(WD_RULE_POTIONS)
+    elseif eventName == "EV_FLASKS" then
+        return string.format(WD_RULE_FLASKS)
+    elseif eventName == "EV_FOOD" then
+        return string.format(WD_RULE_FOOD)
+    elseif eventName == "EV_RUNES" then
+        return string.format(WD_RULE_RUNES)
+    end
+
+    return eventName..": unsupported rule"
+end
+
+function WD.GetRangeRuleDescription(ruleName, ...)
+    local args = {...}
+    if ruleName == "RT_AURA_EXISTS" then
+        return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif ruleName == "RT_AURA_NOT_EXISTS" then
+        return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif ruleName == "RT_UNIT_CASTING" then
+        return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(args[1]))
+    elseif ruleName == "RT_CUSTOM" then
+        return "Not yet implemented"
+    end
+    return ruleName..": not yet implemented"
+end

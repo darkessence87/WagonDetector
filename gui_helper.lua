@@ -127,6 +127,7 @@ function WdLib:string_totable(str)
 end
 
 function WdLib:table_tostring(tbl)
+    if not tbl then return "nil" end
     local result, done = {}, {}
     for k, v in ipairs(tbl) do
         table.insert(result, table_val_to_str(v))

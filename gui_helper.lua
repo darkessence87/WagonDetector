@@ -211,17 +211,17 @@ function WdLib:getRaidTargetTextureLink(rt)
     return WdLib:getTextureLinkByPath("Interface\\TargetingFrame\\UI-RaidTargetingIcon_"..rt, 20)
 end
 
-function WdLib:getFullCharacterName(name)
+function WdLib:getFullName(name)
     if not name then return nil end
-    if string.find(name, "%-") then
+    if string.find(name, "-[^-]*$") then
         return name;
     else
         return name .. "-" .. WD.CurrentRealmName;
     end
 end
 
-function WdLib:getShortCharacterName(name, noRealm)
-    local dashIndex = string.find(name, "%-")
+function WdLib:getShortName(name, noRealm)
+    local dashIndex = string.find(name, "-[^-]*$")
     if not dashIndex then
         return name
     end
@@ -231,6 +231,12 @@ function WdLib:getShortCharacterName(name, noRealm)
     else
         return name
     end
+end
+
+function WdLib:getUnitNumber(name)
+    local i = name:find("-[^-]*$")
+    if not i then return nil end
+    return tonumber(name:sub(i + 1))
 end
 
 function WdLib:createColorTexture(parent, level, r, g, b, a, blendMode)

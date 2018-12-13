@@ -119,7 +119,7 @@ local function getConsumables(unit)
 end
 
 local function requestInspect(p)
-    if WdLib:getShortCharacterName(p.name) == UNKNOWNOBJECT then return end
+    if WdLib:getShortName(p.name) == UNKNOWNOBJECT then return end
     NotifyInspect(p.name)
     WD.cache.raidrosterinspected[p.guid].lastTime = time()
 
@@ -185,7 +185,7 @@ local function updateRaidOverviewMember(data, parent)
             member.column = {}
 
             local index = 1
-            WdLib:addNextColumn(parent, member, index, "LEFT", WdLib:getColoredName(WdLib:getShortCharacterName(v.name, "noRealm"), v.class))
+            WdLib:addNextColumn(parent, member, index, "LEFT", WdLib:getColoredName(WdLib:getShortName(v.name, "noRealm"), v.class))
             if k > 1 then
                 member.column[index]:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
                 member:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
@@ -211,7 +211,7 @@ local function updateRaidOverviewMember(data, parent)
         else
             local member = parent.members[k]
             member.info = v
-            member.column[1].txt:SetText(WdLib:getColoredName(WdLib:getShortCharacterName(v.name, "noRealm"), v.class))
+            member.column[1].txt:SetText(WdLib:getColoredName(WdLib:getShortName(v.name, "noRealm"), v.class))
 
             -- update buff frames
             local flask, food, rune = getConsumables(v.unit)

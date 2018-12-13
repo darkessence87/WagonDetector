@@ -17,11 +17,11 @@ local function getInterruptStatusText(v)
     if v.status == "INTERRUPTED" then
         local interrupterName = UNKNOWNOBJECT
         if type(v.interrupter) == "table" then
-            interrupterName = WdLib:getColoredName(WdLib:getShortCharacterName(v.interrupter.name, "noRealm"), v.interrupter.class)
+            interrupterName = WdLib:getColoredName(WdLib:getShortName(v.interrupter.name, "noRealm"), v.interrupter.class)
         else
             local interrupter = WD:FindEntityByGUID(v.interrupter)
             if interrupter then
-                interrupterName = WdLib:getColoredName(WdLib:getShortCharacterName(interrupter.name, "noRealm"), interrupter.class)
+                interrupterName = WdLib:getColoredName(WdLib:getShortName(interrupter.name, "noRealm"), interrupter.class)
             end
         end
         return string.format(WD_TRACKER_INTERRUPTED_BY, interrupterName, WdLib:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
@@ -41,7 +41,7 @@ local function getDispelStatusText(v)
         dispeller = WD:FindEntityByGUID(v.dispeller)
     end
     if not dispeller then return "Error" end
-    return string.format(WD_TRACKER_DISPELLED_BY, WdLib:getColoredName(WdLib:getShortCharacterName(dispeller.name, "noRealm"), dispeller.class), WdLib:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
+    return string.format(WD_TRACKER_DISPELLED_BY, WdLib:getColoredName(WdLib:getShortName(dispeller.name, "noRealm"), dispeller.class), WdLib:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
 end
 
 local function updateDispelInfo()
@@ -70,7 +70,7 @@ local function updateDispelInfo()
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
             local caster = WD:FindEntityByGUID(v.caster)
             if caster then
-                caster = WdLib:getColoredName(WdLib:getShortCharacterName(caster.name, "noRealm"), caster.class)
+                caster = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
             else
                 caster = "|cffffff00Environment|r"
             end
@@ -87,26 +87,26 @@ local function updateDispelInfo()
         end
     end
 
-    local function updateFn(frame, row, index)
+    local function updateFn(f, row, index)
         local auraId = auras[row].id
         local N = auras[row].N
         local v = auras[row].data
         if index == 1 then
-            frame.txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
+            f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
             local caster = WD:FindEntityByGUID(v.caster)
             if caster then
-                caster = WdLib:getColoredName(WdLib:getShortCharacterName(caster.name, "noRealm"), caster.class)
+                caster = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
             else
                 caster = "|cffffff00Environment|r"
             end
-            WdLib:generateSpellHover(frame, WdLib:getSpellLinkByIdWithTexture(auraId), "Casted by: "..caster)
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "Casted by: "..caster)
         elseif index == 2 then
-            frame.txt:SetText(v.dispelledAt)
+            f.txt:SetText(v.dispelledAt)
         elseif index == 3 then
-            frame.txt:SetText(N)
+            f.txt:SetText(N)
         elseif index == 4 then
-            frame.txt:SetText(getDispelStatusText(v))
-            WdLib:generateSpellHover(frame, getDispelStatusText(v))
+            f.txt:SetText(getDispelStatusText(v))
+            WdLib:generateSpellHover(f, getDispelStatusText(v))
         end
     end
 
@@ -201,22 +201,22 @@ local function updateInterruptsInfo()
         end
     end
 
-    local function updateFn(frame, row, index)
+    local function updateFn(f, row, index)
         local spellId = casts[row].id
         local N = casts[row].N
         local v = casts[row].data
         if index == 1 then
-            frame.txt:SetText(WdLib:getSpellLinkByIdWithTexture(spellId))
-            WdLib:generateSpellHover(frame, WdLib:getSpellLinkByIdWithTexture(spellId))
+            f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(spellId))
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
         elseif index == 2 then
-            frame.txt:SetText(v.timestamp)
+            f.txt:SetText(v.timestamp)
         elseif index == 3 then
-            frame.txt:SetText(N)
+            f.txt:SetText(N)
         elseif index == 4 then
-            frame.txt:SetText(getInterruptStatusText(v))
-            WdLib:generateSpellHover(frame, getInterruptStatusText(v))
+            f.txt:SetText(getInterruptStatusText(v))
+            WdLib:generateSpellHover(f, getInterruptStatusText(v))
         elseif index == 5 then
-            frame.txt:SetText(v.percent or 0)
+            f.txt:SetText(v.percent or 0)
         end
     end
 
@@ -346,6 +346,44 @@ local function isDispelledUnit(v)
     return nil
 end
 
+local function getCastedCreatures()
+    local creatures = {}
+    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
+        if k == "npc" then
+            for npcId,data in pairs(v) do
+                for guid,npc in pairs(data) do
+                    if type(npc) == "table" then
+                        if isCastedNpc(npc) then
+                            local npcCopy = WdLib:table_deepcopy(npc)
+                            npcCopy.npc_id = npcId
+                            creatures[#creatures+1] = npcCopy
+                        end
+                    end
+                end
+            end
+        end
+        elseif k == "pets" then
+            for parentGuid,info in pairs(v) do
+                for npcId,data in pairs(info) do
+                    for guid,pet in pairs(data) do
+                        if type(pet) == "table" then
+                            if pet.parentGuid:match("Creature") then
+                                if isCastedNpc(pet) then
+                                    local petCopy = WdLib:table_deepcopy(pet)
+                                    petCopy.npc_id = npcId
+                                    petCopy.name = "[pet] "..petCopy.name
+                                    creatures[#creatures+1] = petCopy
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return creatures
+end
+
 function WD:RefreshTrackedDispels()
     if not WDTO then return end
 
@@ -413,16 +451,16 @@ function WD:RefreshTrackedDispels()
         end
     end
 
-    local function updateFn(frame, row, index)
+    local function updateFn(f, row, index)
         local v = dispels[row]
-        frame:GetParent().info = v
+        f:GetParent().info = v
         if index == 1 then
             local unitName = v.name
             if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
-            frame.txt:SetText(unitName)
-            frame:SetScript("OnClick", function(self) WDTO.lastSelectedDispel = self; updateDispelButtons() end)
+            f.txt:SetText(unitName)
+            f:SetScript("OnClick", function(self) WDTO.lastSelectedDispel = self; updateDispelButtons() end)
             if v.type == "creature" then
-                WdLib:generateHover(frame, "id: "..v.npc_id)
+                WdLib:generateHover(f, "id: "..v.npc_id)
             end
         end
     end
@@ -448,21 +486,7 @@ function WD:RefreshTrackedCreatures()
         return
     end
 
-    local creatures = {}
-    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
-        if k == "npc" then
-            for npcId,data in pairs(v) do
-                for guid,npc in pairs(data) do
-                    if type(npc) == "table" then
-                        if isCastedNpc(npc) then
-                            npc.npc_id = npcId
-                            creatures[#creatures+1] = npc
-                        end
-                    end
-                end
-            end
-        end
-    end
+    local creatures = getCastedCreatures()
 
     if WDTO.lastSelectedCreature and #creatures == 0 then
         WDTO.lastSelectedCreature = nil
@@ -489,20 +513,28 @@ function WD:RefreshTrackedCreatures()
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
             f:EnableMouse(true)
             f:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
-            WdLib:generateHover(f, "id: "..v.npc_id)
+            if v.parentName then
+                WdLib:generateHover(f, {"id: "..v.npc_id, "summoned by: |cffffff00"..v.parentName.."|r"})
+            else
+                WdLib:generateHover(f, "id: "..v.npc_id)
+            end
             return f
         end
     end
 
-    local function updateFn(frame, row, index)
+    local function updateFn(f, row, index)
         local v = creatures[row]
-        frame:GetParent().info = v
+        f:GetParent().info = v
         if index == 1 then
             local unitName = v.name
             if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
-            frame.txt:SetText(unitName)
-            frame:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
-            WdLib:generateHover(frame, "id: "..v.npc_id)
+            f.txt:SetText(unitName)
+            f:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
+            if v.parentName then
+                WdLib:generateHover(f, {"id: "..v.npc_id, "summoned by: |cffffff00"..v.parentName.."|r"})
+            else
+                WdLib:generateHover(f, "id: "..v.npc_id)
+            end
         end
     end
 

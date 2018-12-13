@@ -10,7 +10,7 @@ local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 local function printFuckups()
     for _,v in pairs(WDMF.encounter.fuckers) do
         if v.points >= 0 then
-            local fuckerName = WdLib:getShortCharacterName(v.name)
+            local fuckerName = WdLib:getShortName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             if v.points == 0 then
                 local msg = string.format(WD_PRINT_INFO, v.timestamp, fuckerName, v.reason)
@@ -46,7 +46,7 @@ function WDMF:AddSuccess(timestamp, guid, mark, msg, points)
     local niceBro = {}
     niceBro.encounter = self.encounter.name
     niceBro.timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
-    niceBro.name = WdLib:getFullCharacterName(name)
+    niceBro.name = WdLib:getFullName(name)
     niceBro.mark = mark
     niceBro.reason = msg
     niceBro.points = tonumber(points) or 0
@@ -56,7 +56,7 @@ function WDMF:AddSuccess(timestamp, guid, mark, msg, points)
     if self.isBlockedByAnother == 0 then
         if WD.db.profile.sendFailImmediately == true then
 
-            local broName = WdLib:getShortCharacterName(niceBro.name)
+            local broName = WdLib:getShortName(niceBro.name)
             if niceBro.mark > 0 then broName = WdLib:getRaidTargetTextureLink(niceBro.mark).." "..broName end
             if niceBro.points == 0 then
                 local txt = string.format(WD_PRINT_INFO, niceBro.timestamp, broName, niceBro.reason)
@@ -84,7 +84,7 @@ function WDMF:AddFail(timestamp, guid, mark, msg, points)
     local fucker = {}
     fucker.encounter = self.encounter.name
     fucker.timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
-    fucker.name = WdLib:getFullCharacterName(name)
+    fucker.name = WdLib:getFullName(name)
     fucker.mark = mark
     fucker.reason = msg
     fucker.points = tonumber(points) or 0
@@ -93,7 +93,7 @@ function WDMF:AddFail(timestamp, guid, mark, msg, points)
 
     if self.isBlockedByAnother == 0 then
         if WD.db.profile.sendFailImmediately == true then
-            local fuckerName = WdLib:getShortCharacterName(fucker.name)
+            local fuckerName = WdLib:getShortName(fucker.name)
             if fucker.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(fucker.mark).." "..fuckerName end
             if fucker.points == 0 then
                 local txt = string.format(WD_PRINT_INFO, fucker.timestamp, fuckerName, fucker.reason)
@@ -238,7 +238,7 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
     local cmd, data = string.match(msg, "^(.*):(.*)$")
     local receiver = playerName
 
-    sender = WdLib:getFullCharacterName(sender)
+    sender = WdLib:getFullName(sender)
 
     if WD:IsOfficer(receiver) == false then
         print("You are not officer to receive message")

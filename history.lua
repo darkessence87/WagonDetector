@@ -52,7 +52,7 @@ local function exportHistory()
             v.t = v.timestamp
             v.timestamp = nil
 
-            v.n = WdLib:getShortCharacterName(v.name)
+            v.n = WdLib:getShortName(v.name)
             v.name = nil
 
             v.rs = v.reason
@@ -104,7 +104,7 @@ local function refreshHistoryFrame()
         elseif index == 2 then
             return WdLib:addNextColumn(WDHM, parent, index, "LEFT", v.encounter)
         elseif index == 3 then
-            local fuckerName = WdLib:getShortCharacterName(v.name)
+            local fuckerName = WdLib:getShortName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             return WdLib:addNextColumn(WDHM, parent, index, "LEFT", fuckerName)
         elseif index == 4 then
@@ -137,7 +137,7 @@ local function refreshHistoryFrame()
         elseif index == 2 then
             frame.txt:SetText(v.encounter)
         elseif index == 3 then
-            local fuckerName = WdLib:getShortCharacterName(v.name)
+            local fuckerName = WdLib:getShortName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             frame.txt:SetText(fuckerName)
         elseif index == 4 then

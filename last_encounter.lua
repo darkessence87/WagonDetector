@@ -44,7 +44,7 @@ function WD:RefreshLastEncounterFrame()
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -1)
             return f
         elseif index == 2 then
-            local fuckerName = WdLib:getShortCharacterName(v.name)
+            local fuckerName = WdLib:getShortName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             return WdLib:addNextColumn(WDLE, parent, index, "LEFT", fuckerName)
         elseif index == 3 then
@@ -63,7 +63,7 @@ function WD:RefreshLastEncounterFrame()
         if index == 1 then
             frame.txt:SetText(v.timestamp)
         elseif index == 2 then
-            local fuckerName = WdLib:getShortCharacterName(v.name)
+            local fuckerName = WdLib:getShortName(v.name)
             if v.mark > 0 then fuckerName = WdLib:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             frame.txt:SetText(fuckerName)
         elseif index == 3 then

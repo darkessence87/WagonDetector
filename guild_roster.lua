@@ -15,7 +15,7 @@ local function parseOfficerNote(note)
 
     for i=1,GetNumGuildMembers() do
         local name, _, rankIndex = GetGuildRosterInfo(i)
-        if note == WdLib:getShortCharacterName(name) and rankIndex <= WD.db.profile.minGuildRank.id then
+        if note == WdLib:getShortName(name) and rankIndex <= WD.db.profile.minGuildRank.id then
             isAlt = "yes"
             break
         end
@@ -66,14 +66,14 @@ local function updateGuildRosterFrame()
     local function createFn(parent, row, index)
         local v = WD.cache.roster[WD.cache.rosterkeys[row]]
         if index == 1 then
-            local f = WdLib:addNextColumn(WDGR, parent, index, "LEFT", WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
+            local f = WdLib:addNextColumn(WDGR, parent, index, "LEFT", WdLib:getColoredName(WdLib:getShortName(v.name), v.class))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -1)
             f:EnableMouse(true)
             f:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
                 for i=1,#v.alts do
-                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
+                    tooltip = tooltip..WdLib:getShortName(v.alts[i]).."\n"
                 end
                 if #v.alts > 0 then
                     GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
@@ -96,12 +96,12 @@ local function updateGuildRosterFrame()
     local function updateFn(frame, row, index)
         local v = WD.cache.roster[WD.cache.rosterkeys[row]]
         if index == 1 then
-            frame.txt:SetText(WdLib:getColoredName(WdLib:getShortCharacterName(v.name), v.class))
+            frame.txt:SetText(WdLib:getColoredName(WdLib:getShortName(v.name), v.class))
             frame:SetScript("OnEnter", function(self)
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
                 local tooltip = "Alts:\n"
                 for i=1,#v.alts do
-                    tooltip = tooltip..WdLib:getShortCharacterName(v.alts[i]).."\n"
+                    tooltip = tooltip..WdLib:getShortName(v.alts[i]).."\n"
                 end
                 if #v.alts > 0 then
                     GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
@@ -298,7 +298,7 @@ function WD:OnGuildRosterUpdate()
     end
 
     for _,v in pairs(altInfos) do
-        mainName = WdLib:getFullCharacterName(v.main)
+        mainName = WdLib:getFullName(v.main)
         if WD.cache.roster[mainName] then
             table.insert(WD.cache.roster[mainName].alts, v.name)
         end
@@ -360,7 +360,7 @@ function WD:SavePullsToGuildRoster(v)
 end
 
 function WD:SavePenaltyPointsToGuildRoster(v, isRevert)
-    local name = self:FindMain(WdLib:getFullCharacterName(v.name))
+    local name = self:FindMain(WdLib:getFullName(v.name))
     if WD.cache.roster[name] then
         local info = WD.cache.roster[name]
         info.points = info.points + v.points

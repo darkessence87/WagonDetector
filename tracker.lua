@@ -17,6 +17,7 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     local v = {}
     v.guid = guid
     v.name = name
+    v.class = 0
     v.type = unit_type
     v.parentGuid = parentGuid
     v.parentName = parentName
@@ -52,11 +53,13 @@ local function findNpc(guid)
 end
 
 local function findPet(guid)
-    if not WDMF.tracker.pet then return nil end
+    if not WDMF.tracker.pets then return nil end
     if not guid then return nil end
-    for k,v in pairs(WDMF.tracker.pet) do
-        local index = findEntityIndex(v, guid)
-        if index then return v[index] end
+    for parentGuid,infoByNpcId in pairs(WDMF.tracker.pets) do
+        for name,infoByGuid in pairs(infoByNpcId) do
+            local index = findEntityIndex(infoByGuid, guid)
+            if index then return infoByGuid[index] end
+        end
     end
     return nil
 end
@@ -71,6 +74,19 @@ local function findParent(v)
     local parent = findPlayer(v.parentGuid)
     if parent then return parent end
     return findNpc(v.parentGuid)
+end
+
+local function updateName(unit, name)
+    if not unit or not name then return end
+    local currName = WdLib:getShortName(unit.name, "noRealm")
+    if currName == UNKNOWNOBJECT and name ~= UNKNOWNOBJECT then
+        local newName = name
+        local currId = WdLib:getUnitNumber(unit.name)
+        if currId then
+            newName = newName.."-"..currId
+        end
+        unit.name = newName
+    end
 end
 
 local function loadNpc(guid, name)
@@ -92,17 +108,26 @@ local function loadNpc(guid, name)
         holder[#holder+1] = npc
         return npc
     end
-    holder[index].type = "creature"
     return holder[index]
 end
 
 local function loadPet(guid, name, parentGuid, parentName)
-    local holder = WDMF.tracker.pets[name]
+    if not parentGuid then return nil end
+    local petNpcId = getNpcId(guid)
+    local holder = WDMF.tracker.pets[parentGuid]
     if not holder then
-        WDMF.tracker.pets[name] = {}
-        holder = WDMF.tracker.pets[name]
+        WDMF.tracker.pets[parentGuid] = {}
+        WDMF.tracker.pets[parentGuid][petNpcId] = {}
+        holder = WDMF.tracker.pets[parentGuid]][petNpcId]
         holder[#holder+1] = createEntity(guid, name, "pet", parentGuid, parentName)
         return holder[1]
+    elseif not holder[petNpcId] then
+        WDMF.tracker.pets[parentGuid][petNpcId] = {}
+        holder = WDMF.tracker.pets[parentGuid]][petNpcId]
+        holder[#holder+1] = createEntity(guid, name, "pet", parentGuid, parentName)
+        return holder[1]
+    else
+        holder = holder[petNpcId]
     end
 
     local index = findEntityIndex(holder, guid)
@@ -114,19 +139,26 @@ local function loadPet(guid, name, parentGuid, parentName)
         holder[#holder+1] = pet
         return pet
     end
-    if parentGuid then holder[index].parentGuid = parentGuid end
-    if parentName then holder[index].parentName = parentName end
-    holder[index].type = "pet"
     return holder[index]
 end
 
 local function loadExistingPet(pet)
-    local holder = WDMF.tracker.pets[pet.name]
+    if not pet or not pet.parentGuid then return end
+    local petNpcId = getNpcId(pet.guid)
+    local holder = WDMF.tracker.pets[pet.parentGuid]
     if not holder then
-        WDMF.tracker.pets[pet.name] = {}
-        holder = WDMF.tracker.pets[pet.name]
+        WDMF.tracker.pets[pet.parentGuid] = {}
+        WDMF.tracker.pets[pet.parentGuid][petNpcId] = {}
+        holder = WDMF.tracker.pets[pet.parentGuid][petNpcId]
         holder[#holder+1] = createExistingEntity(pet)
         return
+    elseif not holder[petNpcId] then
+        WDMF.tracker.pets[pet.parentGuid][petNpcId] = {}
+        holder = WDMF.tracker.pets[pet.parentGuid][petNpcId]
+        holder[#holder+1] = createExistingEntity(pet)
+        return
+    else
+        holder = holder[petNpcId]
     end
 
     local index = findEntityIndex(holder, pet.guid)
@@ -139,9 +171,6 @@ local function loadExistingPet(pet)
         holder[#holder+1] = pet
         return
     end
-    if parentGuid then holder[index].parentGuid = pet.parentGuid end
-    if parentName then holder[index].parentName = pet.parentName end
-    holder[index].type = "pet"
 end
 
 local function loadPlayer(guid, name)
@@ -194,9 +223,11 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
         elseif WD:IsPet(src_flags) then
             src = loadEntity(src_guid, src_name, "pet")
         elseif src_name then
-            src_name = WdLib:getFullCharacterName(src_name)
+            src_name = WdLib:getFullName(src_name)
             src = loadEntity(src_guid, src_name, "player")
         end
+    else
+        updateName(src, src_name)
     end
     local dst = WD:FindEntityByGUID(dst_guid)
     if not dst then
@@ -205,9 +236,11 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
         elseif WD:IsPet(dst_flags) then
             dst = loadEntity(dst_guid, dst_name, "pet")
         elseif dst_name then
-            dst_name = WdLib:getFullCharacterName(dst_name)
+            dst_name = WdLib:getFullName(dst_name)
             dst = loadEntity(dst_guid, dst_name, "player")
         end
+    else
+        updateName(dst, dst_name)
     end
 
     local src_role, dst_role = "", ""
@@ -341,7 +374,7 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
                 if rule and rule[target_spell_id] then
                     local key = getNpcId(unit.guid)
                     if not rule[target_spell_id][key] then
-                        key = WdLib:getShortCharacterName(unit_name, "ignoreRealm")
+                        key = WdLib:getShortName(unit_name, "ignoreRealm")
                     end
                     if rule[target_spell_id][key] then
                         local p = rule[target_spell_id][key].points
@@ -609,7 +642,7 @@ function WDMF:ProcessCasts(src, dst, ...)
     if src.type ~= "player" then
         local parent = findParent(src)
         if parent then
-            src_name = WdLib:getShortCharacterName(src.parentName)
+            src_name = WdLib:getShortName(src.parentName)
             src = parent
         end
     end
@@ -622,11 +655,11 @@ function WDMF:ProcessCasts(src, dst, ...)
             if rule and rule[spell_id] then
                 local key = getNpcId(src.guid)
                 if not rule[spell_id][key] then
-                    key = WdLib:getShortCharacterName(src_name)
+                    key = WdLib:getShortName(src_name)
                 end
                 if rule[spell_id][key] then
                     local p = rule[spell_id][key].points
-                    local msg = WD.GetEventDescription("EV_CAST_START", spell_id, WdLib:getShortCharacterName(src.name))
+                    local msg = WD.GetEventDescription("EV_CAST_START", spell_id, WdLib:getShortName(src.name))
                     if rule.range then
                         msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
                     end
@@ -653,11 +686,11 @@ function WDMF:ProcessCasts(src, dst, ...)
             if rule and rule[spell_id] then
                 local key = getNpcId(src.guid)
                 if not rule[spell_id][key] then
-                    key = WdLib:getShortCharacterName(src_name)
+                    key = WdLib:getShortName(src_name)
                 end
                 if rule[spell_id][key] then
                     local p = rule[spell_id][key].points
-                    local msg = WD.GetEventDescription("EV_CAST_END", spell_id, WdLib:getShortCharacterName(src.name))
+                    local msg = WD.GetEventDescription("EV_CAST_END", spell_id, WdLib:getShortName(src.name))
                     if rule.range then
                         msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
                     end
@@ -772,7 +805,7 @@ function WDMF:ProcessDeaths(src, dst, ...)
         local function processRule(rule)
             if rule then
                 local u = rule.unit
-                if (tonumber(u) and u == getNpcId(dst.guid)) or (u == WdLib:getShortCharacterName(dst_name)) then
+                if (tonumber(u) and u == getNpcId(dst.guid)) or (u == WdLib:getShortName(dst_name)) then
                     local p = rule.points
                     local dst_nameWithMark = dst.name
                     if dst.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(dst.rt).." "..dst.name end
@@ -996,7 +1029,7 @@ function WDMF:CreateRaidMember(unit, petUnit)
 
     if pet then
         pet.type = "pet"
-        pet.name = WdLib:getShortCharacterName(pet.name)
+        pet.name = WdLib:getShortName(pet.name)
         pet.parentGuid = player.guid
         pet.parentName = player.name
         loadExistingPet(pet)

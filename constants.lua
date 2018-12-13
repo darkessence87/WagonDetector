@@ -234,6 +234,10 @@ WD.Spells.knockbackEffects = {
      [51490] = "Shaman - thunderstorm",
 }
 
+WD.Spells.ignoreDispelEffects = {
+       [781] = "Hunter - disengage",
+}
+
 function WD.LoadTiers()
     for i=1,EJ_GetNumTiers() do
         WD.TiersInfo[i] = loadTier(i)

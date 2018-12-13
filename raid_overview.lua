@@ -289,6 +289,7 @@ local function checkGroup(unitBase)
         local _,class = UnitClass(unit)
 
         if WD.cache.raidroster[guid] then
+            WD.cache.raidroster[guid].name = name
             WD.cache.raidroster[guid].unit = unit
             WD.cache.raidroster[guid].class = class
         else

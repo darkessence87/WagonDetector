@@ -1,6 +1,46 @@
 
 local WDTO = nil
 
+local function findNpc(guid)
+    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected then return nil end
+    local t = WD.db.profile.tracker[WD.db.profile.tracker.selected]
+    if not guid or not guid:match("Creature") then return nil end
+    local npcId = WdLib:getNpcId(guid)
+    local holder = t.npc[npcId]
+    local index = WdLib:findEntityIndex(holder, guid)
+    if index then return holder[index] end
+    return nil
+end
+
+local function findPet(guid)
+    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected then return nil end
+    local t = WD.db.profile.tracker[WD.db.profile.tracker.selected]
+    if not guid then return nil end
+    for parentGuid,infoByNpcId in pairs(t.pets) do
+        for name,infoByGuid in pairs(infoByNpcId) do
+            local index = WdLib:findEntityIndex(infoByGuid, guid)
+            if index then return infoByGuid[index] end
+        end
+    end
+    return nil
+end
+
+local function findPlayer(guid)
+    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected then return nil end
+    local t = WD.db.profile.tracker[WD.db.profile.tracker.selected]
+    return t.players[guid]
+end
+
+local function findEntityByGUID(guid)
+    local result = findPlayer(guid)
+    if result then return result end
+    result = findPet(guid)
+    if result then return result end
+    result = findNpc(guid)
+    if result then return result end
+    return nil
+end
+
 local function getDispelledAuras(auras)
     local result = {}
     for auraId,auraInfo in pairs(auras) do
@@ -19,7 +59,7 @@ local function getInterruptStatusText(v)
         if type(v.interrupter) == "table" then
             interrupterName = WdLib:getColoredName(WdLib:getShortName(v.interrupter.name, "noRealm"), v.interrupter.class)
         else
-            local interrupter = WD:FindEntityByGUID(v.interrupter)
+            local interrupter = findEntityByGUID(v.interrupter)
             if interrupter then
                 interrupterName = WdLib:getColoredName(WdLib:getShortName(interrupter.name, "noRealm"), interrupter.class)
             end
@@ -33,15 +73,16 @@ local function getInterruptStatusText(v)
 end
 
 local function getDispelStatusText(v)
-    if not v.dispeller then return "Error" end
-    local dispeller = nil
+    local dispellerName = UNKNOWNOBJECT
     if type(v.dispeller) == "table" then
-        dispeller = v.dispeller
+        dispellerName = WdLib:getColoredName(WdLib:getShortName(v.dispeller.name, "noRealm"), v.dispeller.class)
     else
-        dispeller = WD:FindEntityByGUID(v.dispeller)
+        local dispeller = findEntityByGUID(v.dispeller)
+        if dispeller then
+            dispellerName = WdLib:getColoredName(WdLib:getShortName(dispeller.name, "noRealm"), dispeller.class)
+        end
     end
-    if not dispeller then return "Error" end
-    return string.format(WD_TRACKER_DISPELLED_BY, WdLib:getColoredName(WdLib:getShortName(dispeller.name, "noRealm"), dispeller.class), WdLib:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
+    return string.format(WD_TRACKER_DISPELLED_BY, dispellerName, WdLib:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
 end
 
 local function updateDispelInfo()
@@ -68,13 +109,13 @@ local function updateDispelInfo()
         if index == 1 then
             local f = WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            local caster = WD:FindEntityByGUID(v.caster)
+            local caster = findEntityByGUID(v.caster)
             if caster then
                 caster = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
             else
-                caster = "|cffffff00Environment|r"
+                caster = "|cffffffffEnvironment|r"
             end
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "Casted by: "..caster)
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "|cffffff00Casted by:|r "..caster)
             return f
         elseif index == 2 then
             return WdLib:addNextColumn(WDTO.data["dispel"], parent, index, "CENTER", v.dispelledAt)
@@ -93,13 +134,13 @@ local function updateDispelInfo()
         local v = auras[row].data
         if index == 1 then
             f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
-            local caster = WD:FindEntityByGUID(v.caster)
+            local caster = findEntityByGUID(v.caster)
             if caster then
                 caster = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
             else
-                caster = "|cffffff00Environment|r"
+                caster = "|cffffffffEnvironment|r"
             end
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "Casted by: "..caster)
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "|cffffff00Casted by:|r "..caster)
         elseif index == 2 then
             f.txt:SetText(v.dispelledAt)
         elseif index == 3 then
@@ -346,12 +387,44 @@ local function isDispelledUnit(v)
     return nil
 end
 
-local function getCastedCreatures()
-    local creatures = {}
+local function getDispelledUnits()
+    local units = {}
+    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
+        return units
+    end
     for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
         if k == "npc" then
             for npcId,data in pairs(v) do
                 for guid,npc in pairs(data) do
+                    if type(npc) == "table" then
+                        if isDispelledUnit(npc) then
+                            npc.npc_id = npcId
+                            units[#units+1] = npc
+                        end
+                    end
+                end
+            end
+        elseif k == "players" then
+            for guid,raider in pairs(v) do
+                if isDispelledUnit(raider) then
+                    units[#units+1] = raider
+                end
+            end
+        end
+    end
+    return units
+end
+
+local function getCastedCreatures()
+    local creatures = {}
+    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
+        return creatures
+    end
+
+    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
+        if k == "npc" then
+            for npcId,data in pairs(v) do
+                for _,npc in pairs(data) do
                     if type(npc) == "table" then
                         if isCastedNpc(npc) then
                             local npcCopy = WdLib:table_deepcopy(npc)
@@ -361,24 +434,32 @@ local function getCastedCreatures()
                     end
                 end
             end
-        end
         elseif k == "pets" then
             for parentGuid,info in pairs(v) do
-                for npcId,data in pairs(info) do
-                    for guid,pet in pairs(data) do
-                        if type(pet) == "table" then
-                            if pet.parentGuid:match("Creature") then
-                                if isCastedNpc(pet) then
-                                    local petCopy = WdLib:table_deepcopy(pet)
-                                    petCopy.npc_id = npcId
-                                    petCopy.name = "[pet] "..petCopy.name
-                                    creatures[#creatures+1] = petCopy
-                                end
+                if parentGuid:match("Creature") then
+                    for npcId,data in pairs(info) do
+                        for _,pet in pairs(data) do
+                            --print(WdLib:table_tostring(pet))
+                            if isCastedNpc(pet) then
+                                local petCopy = WdLib:table_deepcopy(pet)
+                                petCopy.npc_id = npcId
+                                petCopy.name = "[pet] "..petCopy.name
+                                creatures[#creatures+1] = petCopy
                             end
                         end
                     end
                 end
             end
+        --[[elseif k == "players" then
+            for guid,pl in pairs(v) do
+                if type(pl) == "table" then
+                    if isCastedNpc(pl) then
+                        local plCopy = WdLib:table_deepcopy(pl)
+                        plCopy.npc_id = "player"
+                        creatures[#creatures+1] = plCopy
+                    end
+                end
+            end]]
         end
     end
     return creatures
@@ -387,37 +468,7 @@ end
 function WD:RefreshTrackedDispels()
     if not WDTO then return end
 
-    if not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
-        WDTO.lastSelectedDispel = nil
-        updateDispelInfo()
-        for i=1, #WDTO.dispels.members do
-            WDTO.dispels.members[i]:Hide()
-        end
-        updateDispelButtons()
-        return
-    end
-
-    local dispels = {}
-    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
-        if k == "npc" then
-            for npcId,data in pairs(v) do
-                for guid,npc in pairs(data) do
-                    if type(npc) == "table" then
-                        if isDispelledUnit(npc) then
-                            npc.npc_id = npcId
-                            dispels[#dispels+1] = npc
-                        end
-                    end
-                end
-            end
-        elseif k == "players" then
-            for guid,raider in pairs(v) do
-                if isDispelledUnit(raider) then
-                    dispels[#dispels+1] = raider
-                end
-            end
-        end
-    end
+    local dispels = getDispelledUnits()
 
     if WDTO.lastSelectedDispel and #dispels == 0 then
         WDTO.lastSelectedDispel = nil
@@ -476,16 +527,6 @@ end
 function WD:RefreshTrackedCreatures()
     if not WDTO then return end
 
-    if not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
-        WDTO.lastSelectedCreature = nil
-        updateInterruptsInfo()
-        for i=1, #WDTO.creatures.members do
-            WDTO.creatures.members[i]:Hide()
-        end
-        updateCreatureButtons()
-        return
-    end
-
     local creatures = getCastedCreatures()
 
     if WDTO.lastSelectedCreature and #creatures == 0 then
@@ -514,7 +555,7 @@ function WD:RefreshTrackedCreatures()
             f:EnableMouse(true)
             f:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
             if v.parentName then
-                WdLib:generateHover(f, {"id: "..v.npc_id, "summoned by: |cffffff00"..v.parentName.."|r"})
+                WdLib:generateHover(f, {"id: "..v.npc_id, "Summoned by: |cffffff00"..v.parentName.."|r"})
             else
                 WdLib:generateHover(f, "id: "..v.npc_id)
             end
@@ -531,7 +572,7 @@ function WD:RefreshTrackedCreatures()
             f.txt:SetText(unitName)
             f:SetScript("OnClick", function(self) WDTO.lastSelectedCreature = self; updateCreatureButtons() end)
             if v.parentName then
-                WdLib:generateHover(f, {"id: "..v.npc_id, "summoned by: |cffffff00"..v.parentName.."|r"})
+                WdLib:generateHover(f, {"id: "..v.npc_id, "Summoned by: |cffffff00"..v.parentName.."|r"})
             else
                 WdLib:generateHover(f, "id: "..v.npc_id)
             end

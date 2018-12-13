@@ -811,6 +811,10 @@ function WdLib:getUnitName(unit)
     return name.."-"..realm
 end
 
+function WdLib:getNpcId(guid)
+    return select(6, strsplit("-", guid))
+end
+
 function WdLib:updateScrollableTable(parent, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
     local maxWidth = WdLib:getTotalTableHeadersWidth(parent, columnsN) + 30
 
@@ -851,4 +855,12 @@ function WdLib:updateScrollableTable(parent, maxHeight, topLeftPosition, rowsN, 
             parent.members[i]:Hide()
         end
     end
+end
+
+function WdLib:findEntityIndex(holder, guid)
+    if not holder then return nil end
+    for i=1,#holder do
+        if holder[i] and holder[i].guid == guid then return i end
+    end
+    return nil
 end

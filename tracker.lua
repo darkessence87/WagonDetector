@@ -1044,6 +1044,7 @@ function WDMF:Tracker_OnStartEncounter()
 end
 
 function WDMF:Tracker_OnStopEncounter()
+    if not WD.db.profile.tracker then return end
     local n = WD.db.profile.tracker[#WD.db.profile.tracker].pullName
     WD.db.profile.tracker[#WD.db.profile.tracker].pullName = n.." ("..WdLib:getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)..")"
 

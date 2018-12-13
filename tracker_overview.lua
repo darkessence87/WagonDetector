@@ -346,6 +346,44 @@ local function isDispelledUnit(v)
     return nil
 end
 
+local function getCastedCreatures()
+    local creatures = {}
+    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
+        if k == "npc" then
+            for npcId,data in pairs(v) do
+                for guid,npc in pairs(data) do
+                    if type(npc) == "table" then
+                        if isCastedNpc(npc) then
+                            local npcCopy = WdLib:table_deepcopy(npc)
+                            npcCopy.npc_id = npcId
+                            creatures[#creatures+1] = npcCopy
+                        end
+                    end
+                end
+            end
+        end
+        elseif k == "pets" then
+            for parentGuid,info in pairs(v) do
+                for npcId,data in pairs(info) do
+                    for guid,pet in pairs(data) do
+                        if type(pet) == "table" then
+                            if pet.parentGuid:match("Creature") then
+                                if isCastedNpc(pet) then
+                                    local petCopy = WdLib:table_deepcopy(pet)
+                                    petCopy.npc_id = npcId
+                                    petCopy.name = "[pet] "..petCopy.name
+                                    creatures[#creatures+1] = petCopy
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return creatures
+end
+
 function WD:RefreshTrackedDispels()
     if not WDTO then return end
 
@@ -448,40 +486,7 @@ function WD:RefreshTrackedCreatures()
         return
     end
 
-    local creatures = {}
-    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
-        if k == "npc" then
-            for npcId,data in pairs(v) do
-                for guid,npc in pairs(data) do
-                    if type(npc) == "table" then
-                        if isCastedNpc(npc) then
-                            local npcCopy = WdLib:table_deepcopy(npc)
-                            npcCopy.npc_id = npcId
-                            creatures[#creatures+1] = npcCopy
-                        end
-                    end
-                end
-            end
-        end
-        if k == "pets" then
-            for parentGuid,info in pairs(v) do
-                for npcId,data in pairs(info) do
-                    for guid,pet in pairs(data) do
-                        if type(pet) == "table" then
-                            if pet.parentGuid:match("Creature") then
-                                if isCastedNpc(pet) then
-                                    local petCopy = WdLib:table_deepcopy(pet)
-                                    petCopy.npc_id = npcId
-                                    petCopy.name = "[pet] "..petCopy.name
-                                    creatures[#creatures+1] = petCopy
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
+    local creatures = getCastedCreatures()
 
     if WDTO.lastSelectedCreature and #creatures == 0 then
         WDTO.lastSelectedCreature = nil

@@ -250,7 +250,15 @@ local function updateRuleLines()
             local f = WdLib:addNextColumn(WDRM, parent, index, "LEFT", WD.EncounterNames[v.journalId])
             f:SetPoint("TOPLEFT", parent.column[1], "TOPRIGHT", 2, 1)
             local instanceName = WD.FindInstanceByJournalId(v.journalId)
-            WdLib:generateHover(f, instanceName)
+            if instanceName then
+                local spells = WD.FindSpellsByJournalId(v.journalId)
+                local hover = {}
+                hover[#hover+1] = "|cffffff00Instance:|r "..instanceName
+                for _,v in pairs(spells) do
+                    hover[#hover+1] = v
+                end
+                WdLib:generateHover(f, hover)
+            end
             return f
         elseif index == 3 then
             return WdLib:addNextColumn(WDRM, parent, index, "LEFT", v.role)
@@ -287,29 +295,37 @@ local function updateRuleLines()
         end
     end
 
-    local function updateFn(frame, row, index)
+    local function updateFn(f, row, index)
         local v = WD.db.profile.rules[row]
         if index == 1 then
-            frame:SetChecked(v.isActive)
-            frame:SetScript("OnClick", function() v.isActive = not v.isActive end)
+            f:SetChecked(v.isActive)
+            f:SetScript("OnClick", function() v.isActive = not v.isActive end)
         elseif index == 2 then
-            frame.txt:SetText(WD.EncounterNames[v.journalId])
+            f.txt:SetText(WD.EncounterNames[v.journalId])
             local instanceName = WD.FindInstanceByJournalId(v.journalId)
-            WdLib:generateHover(frame, instanceName)
+            if instanceName then
+                local spells = WD.FindSpellsByJournalId(v.journalId)
+                local hover = {}
+                hover[#hover+1] = "|cffffff00Instance:|r "..instanceName
+                for _,v in pairs(spells) do
+                    hover[#hover+1] = v
+                end
+                WdLib:generateHover(f, hover)
+            end
         elseif index == 3 then
-            frame.txt:SetText(v.role)
+            f.txt:SetText(v.role)
         elseif index == 4 then
-            frame.txt:SetText(getRuleDescription(v))
-            WdLib:generateSpellHover(frame, getRuleDescription(v))
+            f.txt:SetText(getRuleDescription(v))
+            WdLib:generateSpellHover(f, getRuleDescription(v))
         elseif index == 5 then
-            frame.txt:SetText(v.points)
+            f.txt:SetText(v.points)
         elseif index == 6 then
-            frame:SetScript("OnClick", function(self) editRuleLine(v); end)
+            f:SetScript("OnClick", function(self) editRuleLine(v); end)
         elseif index == 7 then
         elseif index == 8 then
-            frame:SetScript("OnClick", function() exportRule(v); end)
+            f:SetScript("OnClick", function() exportRule(v); end)
         elseif index == 9 then
-            frame:SetScript("OnClick", function() shareRule(v); end)
+            f:SetScript("OnClick", function() shareRule(v); end)
         end
     end
 
@@ -1071,6 +1087,11 @@ function WD:CreateTierList(fn)
                 local encItem = {}
                 encItem.name = enc.name
                 encItem.journalId = enc.journalId
+                encItem.hover = {}
+                encItem.hover[#encItem.hover+1] = "|cffffff00JournalID:|r "..enc.journalId
+                for _,v in pairs(enc.spells) do
+                    encItem.hover[#encItem.hover+1] = v
+                end
                 if fn then encItem.func = function() fn(enc) end end
                 table.insert(instItem.items, encItem)
             end

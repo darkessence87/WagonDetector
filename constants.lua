@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.41"
+WD.Version = "v0.0.42"
 WD.TiersInfo = {}
 WD.MaxPullsToBeSaved = 25
 
@@ -8,16 +8,16 @@ WD.CurrentRealmName = string.gsub(GetRealmName(), "%s+", "")
 
 -- [encounterJournalId] = encounterCombatId, encounterName
 WD.EncountersMapping = {
-    [0]    = { journalId =    0, combatId = 0,    name = "Test"},
-    [-1]   = { journalId =   -1, combatId = -1,   name = "ALL"},
-    [2168] = { journalId = 2168, combatId = 2144, name = "UD_TALOC"},
-    [2167] = { journalId = 2167, combatId = 2141, name = "UD_MOTHER"},
-    [2169] = { journalId = 2169, combatId = 2136, name = "UD_ZEKVOZ"},
-    [2166] = { journalId = 2166, combatId = 2134, name = "UD_VECTIS"},
-    [2146] = { journalId = 2146, combatId = 2128, name = "UD_FETID"},
-    [2195] = { journalId = 2195, combatId = 2145, name = "UD_ZUL"},
-    [2194] = { journalId = 2194, combatId = 2135, name = "UD_MYTRAX"},
-    [2147] = { journalId = 2147, combatId = 2122, name = "UD_GHUUN"},
+       [0] = { journalId =    0, combatId =    0 },
+      [-1] = { journalId =   -1, combatId =   -1 },
+    [2168] = { journalId = 2168, combatId = 2144 },
+    [2167] = { journalId = 2167, combatId = 2141 },
+    [2169] = { journalId = 2169, combatId = 2136 },
+    [2166] = { journalId = 2166, combatId = 2134 },
+    [2146] = { journalId = 2146, combatId = 2128 },
+    [2195] = { journalId = 2195, combatId = 2145 },
+    [2194] = { journalId = 2194, combatId = 2135 },
+    [2147] = { journalId = 2147, combatId = 2122 },
 }
 
 WD.EncounterNames = {
@@ -25,13 +25,30 @@ WD.EncounterNames = {
     [-1] = "ALL"
 }
 
+local function loadSectionInfo(holder, sectionId)
+    local v = C_EncounterJournal.GetSectionInfo(sectionId)
+    if not v then return end
+    if v.spellID ~= 0 then
+        local str = "|cffffff00SpellID:|r "..v.spellID.." "..WdLib:getSpellLinkByIdWithTexture(v.spellID)
+        if not holder[v.spellID] then
+            holder[v.spellID] = str
+        end
+    end
+    if v.siblingSectionID then
+        loadSectionInfo(holder, v.siblingSectionID)
+    end
+    if v.firstChildSectionID then
+        loadSectionInfo(holder, v.firstChildSectionID)
+    end
+end
+
 local function loadEncounters(instanceId)
     local encounters = {}
 
     EJ_SelectInstance(instanceId)
 
     local i = 1
-    local encounterName, _, encounterJournalId = EJ_GetEncounterInfoByIndex(i, instanceId)
+    local encounterName, _, encounterJournalId, rootSectionId = EJ_GetEncounterInfoByIndex(i, instanceId)
     while encounterName do
         local enc = {}
         enc.journalId = encounterJournalId
@@ -41,13 +58,18 @@ local function loadEncounters(instanceId)
             enc.combatId = -1
         end
         enc.name = encounterName
+        enc.spells = {}
+
+        EJ_SelectEncounter(encounterJournalId)
+
+        loadSectionInfo(enc.spells, rootSectionId)
         encounters[#encounters+1] = enc
 
         -- cache
         WD.EncounterNames[encounterJournalId] = encounterName
 
         i = i + 1
-        encounterName, _, encounterJournalId = EJ_GetEncounterInfoByIndex(i, instanceId);
+        encounterName, _, encounterJournalId, rootSectionId = EJ_GetEncounterInfoByIndex(i, instanceId);
     end
 
     return encounters
@@ -262,21 +284,25 @@ function WD.FindEncounterJournalIdByName(name)
     return -1
 end
 
-function WD.FindEncounterJournalIdByNameMigration(name)
-    for _,v in pairs(WD.EncountersMapping) do
-        if v.name == name then
-            return v.journalId
-        end
-    end
-    return nil
-end
-
 function WD.FindInstanceByJournalId(journalId)
     for _,tier in pairs(WD.TiersInfo) do
         for _,inst in pairs(tier.instances) do
             for _,enc in pairs(inst.encounters) do
                 if enc.journalId == journalId then
                     return inst.name
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function WD.FindSpellsByJournalId(journalId)
+    for _,tier in pairs(WD.TiersInfo) do
+        for _,inst in pairs(tier.instances) do
+            for _,enc in pairs(inst.encounters) do
+                if enc.journalId == journalId then
+                    return enc.spells
                 end
             end
         end

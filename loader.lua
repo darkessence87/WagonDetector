@@ -57,7 +57,7 @@ function WD:OnUpdate()
     for i=1, #self.db.profile.rules do
         if not self.db.profile.rules[i].role then self.db.profile.rules[i].role = "ANY" end
         if not self.db.profile.rules[i].journalId or not tonumber(self.db.profile.rules[i].journalId) then
-            local journalId = WD.FindEncounterJournalIdByNameMigration(self.db.profile.rules[i].encounter) or -1
+            local journalId = -1
             self.db.profile.rules[i].journalId = journalId
             self.db.profile.rules[i].encounter = WD.EncounterNames[journalId]
         else

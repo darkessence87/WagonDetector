@@ -314,29 +314,69 @@ local function isCasting(unit, spell_id)
     return nil
 end
 
-local function findRuleInRange(eventType, unit)
+local function compareWithEvent(event, rType, arg0, arg1)
+    if not event then return nil end
+    if rType == "EV_DAMAGETAKEN" or rType == "EV_DEATH" or rType == "EV_DISPEL" then
+        if event[arg0] then return true end
+    elseif rType == "EV_DEATH_UNIT" then
+        if event.unit == arg0 then return true end
+    else
+        if arg0 and arg1 and event[arg0] and event[arg0][arg1] then
+            return true
+        end
+    end
+    return nil
+end
+
+local function findRulesInRange(eventType, unit, ...)
     local rules = WDMF.encounter.statRules
     if not unit then return nil end
 
+    local results = {}
+
     if rules["RL_RANGE_RULE"] and rules["RL_RANGE_RULE"]["RT_AURA_EXISTS"] then
         for auraId, eventRule in pairs(rules["RL_RANGE_RULE"]["RT_AURA_EXISTS"]) do
-            if hasAura(unit, auraId) then return eventRule[eventType] end
+            if hasAura(unit, auraId) then
+                results[#results+1] = eventRule[eventType]
+            end
         end
     end
 
     if rules["RL_RANGE_RULE"] and rules["RL_RANGE_RULE"]["RT_AURA_NOT_EXISTS"] then
         for auraId, eventRule in pairs(rules["RL_RANGE_RULE"]["RT_AURA_NOT_EXISTS"]) do
-            if not hasAura(unit, auraId) then return eventRule[eventType] end
+            if not hasAura(unit, auraId) then
+                results[#results+1] = eventRule[eventType]
+            end
         end
     end
 
     if rules["RL_RANGE_RULE"] and rules["RL_RANGE_RULE"]["RT_UNIT_CASTING"] then
         for spellId, eventRule in pairs(rules["RL_RANGE_RULE"]["RT_UNIT_CASTING"]) do
-            if isCasting(unit, spellId) then return eventRule[eventType] end
+            if isCasting(unit, spellId) then
+                results[#results+1] = eventRule[eventType]
+            end
         end
     end
 
-    return nil
+    if rules["RL_RANGE_RULE"] and rules["RL_RANGE_RULE"]["RT_CUSTOM"] then
+        for _,v in pairs(rules["RL_RANGE_RULE"]["RT_CUSTOM"]) do
+            -- register start range tracking
+            if compareWithEvent(v.startEv[eventType], eventType, ...) == true then
+                v.isActiveForGUID[unit.guid] = 1
+            end
+
+            -- register stop range tracking
+            if compareWithEvent(v.endEv[eventType], eventType, ...) == true then
+                v.isActiveForGUID[unit.guid] = nil
+            end
+
+            if v.isActiveForGUID[unit.guid] and v.isActiveForGUID[unit.guid] == 1 then
+                results[#results+1] = v.resultEv[eventType]
+            end
+        end
+    end
+
+    return results
 end
 
 local function findRuleByRole(eventType, role)
@@ -398,12 +438,17 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
                     end
                 end
             end
+            local function processRules(rules)
+                for _,v in pairs(rules) do
+                    processRule(v)
+                end
+            end
             -- regular rules
             local rule = findRuleByRole("EV_CAST_INTERRUPTED", interrupter.role)
             processRule(rule)
             -- range rules
-            local rangeRule = findRuleInRange("EV_CAST_INTERRUPTED", unit)
-            processRule(rangeRule)
+            local rangeRule = findRulesInRange("EV_CAST_INTERRUPTED", unit, target_spell_id, WdLib:getShortName(unit_name, "ignoreRealm"))
+            processRules(rangeRule)
 
             -- quality rules
             local statRules = WDMF.encounter.statRules
@@ -478,12 +523,17 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
                 self:AddSuccess(timestamp, dispeller.guid, dispeller.rt, msg, p)
             end
         end
+        local function processRules(rules)
+            for _,v in pairs(rules) do
+                processRule(v)
+            end
+        end
         -- regular rules
         local rule = findRuleByRole("EV_DISPEL", dispeller.role)
         processRule(rule)
         -- range rules
-        local rangeRule = findRuleInRange("EV_DISPEL", unit)
-        processRule(rangeRule)
+        local rangeRule = findRulesInRange("EV_DISPEL", unit, target_aura_id)
+        processRules(rangeRule)
     end
 
     for i=1, #unit.auras[target_aura_id] do
@@ -538,13 +588,18 @@ local function applyAura(self, unit, timestamp, spell_id, action)
             self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
         end
     end
+    local function processRules(rules)
+        for _,v in pairs(rules) do
+            processRule(v)
+        end
+    end
 
     -- regular rules
     local rule = findRuleByRole("EV_AURA", unit.role)
     processRule(rule)
     -- range rules
-    local rangeRule = findRuleInRange("EV_AURA", unit)
-    processRule(rangeRule)
+    local rangeRule = findRulesInRange("EV_AURA", unit, spell_id, action)
+    processRules(rangeRule)
 end
 
 local function applyAuraStack(self, unit, timestamp, spell_id, stacks)
@@ -565,13 +620,18 @@ local function applyAuraStack(self, unit, timestamp, spell_id, stacks)
             self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
         end
     end
+    local function processRules(rules)
+        for _,v in pairs(rules) do
+            processRule(v)
+        end
+    end
 
     -- regular rules
     local rule = findRuleByRole("EV_AURA_STACKS", unit.role)
     processRule(rule)
     -- range rules
-    local rangeRule = findRuleInRange("EV_AURA_STACKS", unit)
-    processRule(rangeRule)
+    local rangeRule = findRulesInRange("EV_AURA_STACKS", unit, spell_id, stacks)
+    processRules(rangeRule)
 end
 
 function WDMF:ProcessSummons(src, dst, ...)
@@ -673,12 +733,17 @@ function WDMF:ProcessCasts(src, dst, ...)
                 end
             end
         end
+        local function processRules(rules)
+            for _,v in pairs(rules) do
+                processRule(v)
+            end
+        end
         -- regular rules
         local rule = findRuleByRole("EV_CAST_START", src.role)
         processRule(rule)
         -- range rules
-        local rangeRule = findRuleInRange("EV_CAST_START", src)
-        processRule(rangeRule)
+        local rangeRule = findRulesInRange("EV_CAST_START", src, spell_id, WdLib:getShortName(src_name))
+        processRules(rangeRule)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
@@ -704,12 +769,17 @@ function WDMF:ProcessCasts(src, dst, ...)
                 end
             end
         end
+        local function processRules(rules)
+            for _,v in pairs(rules) do
+                processRule(v)
+            end
+        end
         -- regular rules
         local rule = findRuleByRole("EV_CAST_END", src.role)
         processRule(rule)
         -- range rules
-        local rangeRule = findRuleInRange("EV_CAST_END", src)
-        processRule(rangeRule)
+        local rangeRule = findRulesInRange("EV_CAST_END", src, spell_id, WdLib:getShortName(src_name))
+        processRules(rangeRule)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_MISS" then
@@ -770,15 +840,32 @@ function WDMF:ProcessDamage(src, dst, ...)
                 end
             end
         end
+        local function processRangeRules(deathRules, damageRules)
+            local pairedRulesByRange = {}
+            for _,v1 in pairs(deathRules) do
+                for _,v2 in pairs(damageRules) do
+                    if v1.range == v2.range then
+                        pairedRulesByRange[#pairedRulesByRange+1] = {v1,v2}
+                    else
+                        pairedRulesByRange[#pairedRulesByRange+1] = {v1,nil}
+                        pairedRulesByRange[#pairedRulesByRange+1] = {nil,v2}
+                    end
+                end
+            end
+            for i=1,#pairedRulesByRange do
+                local v = pairedRulesByRange[i]
+                processRules(v[1], v[2])
+            end
+        end
 
         -- regular rules
         local deathRule = findRuleByRole("EV_DEATH", dst.role)
         local damageTakenRule = findRuleByRole("EV_DAMAGETAKEN", dst.role)
         processRules(deathRule, damageTakenRule)
         -- range rules
-        local deathRangeRule = findRuleInRange("EV_DEATH", dst)
-        local damageTakenRangeRule = findRuleInRange("EV_DAMAGETAKEN", dst)
-        processRules(deathRangeRule, damageTakenRangeRule)
+        local deathRangeRules = findRulesInRange("EV_DEATH", dst, spell_id)
+        local damageTakenRangeRules = findRulesInRange("EV_DAMAGETAKEN", dst, spell_id)
+        processRangeRules(deathRangeRules, damageTakenRangeRules)
     end
 end
 
@@ -823,13 +910,18 @@ function WDMF:ProcessDeaths(src, dst, ...)
                 end
             end
         end
+        local function processRules(rules)
+            for _,v in pairs(rules) do
+                processRule(v)
+            end
+        end
 
         -- regular rules
         local rule = findRuleByRole("EV_DEATH_UNIT", dst.role)
         processRule(rule)
         -- range rules
-        local rangeRule = findRuleInRange("EV_DEATH_UNIT", dst)
-        processRule(rangeRule)
+        local rangeRule = findRulesInRange("EV_DEATH_UNIT", dst, WdLib:getShortName(dst_name))
+        processRules(rangeRule)
     end
 end
 
@@ -938,7 +1030,20 @@ function WDMF:LoadRules()
                         fillEventByType(eventData, eventType, r.arg1[2][1], r.arg1[2][2], 0)
                         eventData.range = {rangeType, spellId}
                     elseif rangeType == "RT_CUSTOM" then
-                        print(rangeType.." tracking not yet implemented")
+                        local data = rules["RL_RANGE_RULE"][rangeType]
+                        local eventData = { startEv = {}, endEv = {}, resultEv = {}, isActiveForGUID = {} }
+                        local sEvName, eEvName, rEvName = r.arg0[2].startEvent[1], r.arg0[2].endEvent[1], r.arg1[1]
+                        eventData.startEv[sEvName] = {}
+                        eventData.endEv[eEvName] = {}
+                        eventData.resultEv[rEvName] = {}
+                        fillEventByType(eventData.startEv[sEvName], sEvName, r.arg0[2].startEvent[2][1], r.arg0[2].startEvent[2][2], 0)
+                        fillEventByType(eventData.endEv[eEvName], eEvName, r.arg0[2].endEvent[2][1], r.arg0[2].endEvent[2][2], 0)
+                        fillEventByType(eventData.resultEv[rEvName], rEvName, r.arg1[2][1], r.arg1[2][2], 0)
+                        eventData.resultEv[rEvName].range = {rangeType, {
+                            {sEvName, r.arg0[2].startEvent[2][1], r.arg0[2].startEvent[2][2]},
+                            {eEvName, r.arg0[2].endEvent[2][1], r.arg0[2].endEvent[2][2]}
+                        }}
+                        data[#data+1] = eventData
                     end
                 end
             end

@@ -31,12 +31,35 @@ local statisticTypes = {
 
 local function findDuplicate(rule)
     local found = nil
+    local function compareArgs(arg1, arg2)
+        if not arg1 and not arg2 then
+            return true
+        end
+        if (arg1 and not arg2) or (not arg1 and arg2) then
+            return false
+        end
+        if type(arg1) ~= type(arg2) then
+            return false
+        end
+        if type(arg1) == "table" then
+            for k in pairs(arg1) do
+                if not arg2[k] then
+                    return false
+                elseif compareArgs(arg1[k], arg2[k]) == false then
+                    return false
+                end
+            end
+            return true
+        end
+        if arg1 ~= arg2 then
+            return false
+        end
+        return true
+    end
     for k,v in pairs(WD.db.profile.statRules) do
         if v.journalId == rule.journalId and v.ruleType == rule.ruleType then
-            if ((v.arg0 and rule.arg0 and v.arg0 == rule.arg0) or (not v.arg0 and not rule.arg0)) and
-               ((v.arg1 and rule.arg1 and v.arg1 == rule.arg1) or (not v.arg1 and not rule.arg1)) and
-               ((v.arg2 and rule.arg2 and v.arg2 == rule.arg2) or (not v.arg2 and not rule.arg2)) and
-               ((v.arg3 and rule.arg3 and v.arg3 == rule.arg3) or (not v.arg3 and not rule.arg3))
+            if compareArgs(v.arg0, rule.arg0) == true and
+               compareArgs(v.arg1, rule.arg1) == true
             then
                 found = v
                 break
@@ -78,7 +101,8 @@ local function getRuleDescription(rule)
             local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
             --print(startEventMsg)
             --print(endEventMsg)
-            return string.format(WD_TRACKER_RT_CUSTOM_DESC, eventMsg, startEventMsg, endEventMsg)
+            local rangeMsg = string.format(WD_TRACKER_RT_CUSTOM_DESC, startEventMsg, endEventMsg)
+            return eventMsg.." "..rangeMsg
         end
     end
     return "Not yet implemented"
@@ -791,6 +815,7 @@ local function saveRule()
     if not duplicate then
         WD.db.profile.statRules[#WD.db.profile.statRules+1] = rule
     else
+        print('Rule already exists')
         if rule.qualityPercent then duplicate.qualityPercent = rule.qualityPercent end
         if rule.earlyDispel then duplicate.earlyDispel = rule.earlyDispel end
         if rule.lateDispel then duplicate.lateDispel = rule.lateDispel end
@@ -1029,7 +1054,7 @@ local function initNewRuleWindow()
 
     r:EnableMouse(true)
     r:SetPoint("CENTER", WDRS, -80, 150)
-    r:SetSize(totalWidth, 7 * 21 + 3)
+    r:SetSize(totalWidth + 1, 7 * 21 + 3)
     r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 

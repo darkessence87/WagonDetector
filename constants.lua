@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.44"
+WD.Version = "v0.0.45"
 WD.TiersInfo = {}
 WD.MaxPullsToBeSaved = 25
 
@@ -364,7 +364,10 @@ function WD.GetRangeRuleDescription(ruleName, ...)
     elseif ruleName == "RT_UNIT_CASTING" then
         return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(args[1]))
     elseif ruleName == "RT_CUSTOM" then
-        return "Not yet implemented"
+        local startEvent, endEvent = args[1][1], args[1][2]
+        local startEventMsg = WD.GetEventDescription(startEvent[1], startEvent[2], startEvent[3])
+        local endEventMsg = WD.GetEventDescription(endEvent[1], endEvent[2], endEvent[3])
+        return string.format(WD_TRACKER_RT_CUSTOM_DESC, startEventMsg, endEventMsg)
     end
     return ruleName..": not yet implemented"
 end

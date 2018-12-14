@@ -236,6 +236,93 @@ local function editRangeRuleMenu(ruleType, arg0)
     r:Show()
 end
 
+local function updateRangeRuleMenu(frame, selected)
+    local r = WDRS.menus["new_rule"].hiddenMenus["range_menu"]
+    for _,v in pairs(r.hiddenMenus) do v:Hide(); updateEventConfigMenu(v); end
+    local arg0_edit = r.hiddenMenus["arg0_edit"]
+    local arg0_drop = r.hiddenMenus["arg0_drop"]
+    local arg1_drop = r.hiddenMenus["arg1_drop"]
+
+    local rule = selected.name
+    r.label:SetText(rule)
+
+    if rule == "RT_AURA_EXISTS" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+    elseif rule == "RT_AURA_NOT_EXISTS" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+    elseif rule == "RT_UNIT_CASTING" then
+        WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
+    elseif rule == "RT_CUSTOM" then
+        WdLib:updateDropDownMenu(arg0_drop, "Select start event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        arg0_drop:Show()
+        WdLib:updateDropDownMenu(arg1_drop, "Select end event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        arg1_drop:Show()
+    end
+
+    r:Show()
+end
+
+local function updateNewRuleHiddenMenu(frame, selected)
+    local parent = WDRS.menus["new_rule"]
+    local arg1_drop = parent.hiddenMenus["arg1_drop"]
+    local arg2_drop = parent.hiddenMenus["arg2_drop"]
+    local arg1_edit = parent.hiddenMenus["arg1_edit"]
+    local arg2_edit = parent.hiddenMenus["arg2_edit"]
+    local arg3_edit = parent.hiddenMenus["arg3_edit"]
+
+    for k,v in pairs(parent.hiddenMenus) do
+        if string.match(k, "selected_rule_") then
+            v:Hide()
+            v.origin = nil
+        end
+    end
+
+    local name = selected.name
+    if name == "QT_INTERRUPTS" then
+        -- arg1
+        WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
+        updateRangeRuleMenu(arg1_edit, {name = "RT_UNIT_CASTING"})
+        arg1_edit.label:SetText("Range rule type:")
+        arg1_edit:EnableMouse(false)
+        -- arg2
+        WdLib:showHiddenEditBox(parent, "arg2_edit", 50)
+        arg2_edit.label:SetText("Quality percent:")
+        -- arg3
+        arg3_edit:Hide()
+    elseif name == "QT_DISPELS" then
+        -- arg1
+        WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
+        updateRangeRuleMenu(arg1_edit, {name = "RT_AURA_EXISTS"})
+        arg1_edit.label:SetText("Range rule type:")
+        arg1_edit:EnableMouse(false)
+        -- arg2
+        WdLib:showHiddenEditBox(parent, "arg2_edit", 2000)
+        arg2_edit.label:SetText("Early dispel before (msec):")
+        -- arg3
+        WdLib:showHiddenEditBox(parent, "arg3_edit", 5000)
+        arg3_edit.label:SetText("Late dispel after (msec):")
+    elseif name == "ST_TARGET_DAMAGE"
+        or name == "ST_TARGET_HEALING"
+        or name == "ST_TARGET_INTERRUPTS"
+        or name == "ST_SOURCE_DAMAGE"
+        or name == "ST_SOURCE_HEALING"
+        or name == "ST_SOURCE_INTERRUPTS"
+    then
+        -- arg1
+        WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        arg1_drop.label:SetText("Range rule type:")
+        arg1_drop:Show()
+
+        -- arg2
+        if name == "ST_TARGET_DAMAGE" then
+            WdLib:showHiddenEditBox(parent, "arg2_edit", "unit name")
+            arg2_edit.label:SetText("Target unit name:")
+        else
+            arg2_edit:Hide()
+        end
+    end
+end
+
 local function editRule(rule)
     if not rule then return end
     local parent = WDRS.menus["new_rule"]
@@ -258,12 +345,10 @@ local function editRule(rule)
     end
 
     -- rule
-    for i=1,#parent.menus["rule_types"].items do
-        if parent.menus["rule_types"].items[i].txt:GetText() == rule.ruleType then
-            parent.menus["rule_types"].selected = parent.menus["rule_types"].items[i]
-            parent.menus["rule_types"]:SetText(rule.ruleType)
-            break
-        end
+    local ruleFrame = WdLib:findDropDownFrameByName(parent.menus["rule_types"], rule.ruleType)
+    if ruleFrame then
+        parent.menus["rule_types"].selected = ruleFrame
+        parent.menus["rule_types"]:SetText(rule.ruleType)
     end
 
     if rule.ruleType == "RL_QUALITY" then
@@ -667,93 +752,6 @@ local function saveRule()
     updateRulesListFrame()
 
     return true
-end
-
-local function updateRangeRuleMenu(frame, selected)
-    local r = WDRS.menus["new_rule"].hiddenMenus["range_menu"]
-    for _,v in pairs(r.hiddenMenus) do v:Hide(); updateEventConfigMenu(v); end
-    local arg0_edit = r.hiddenMenus["arg0_edit"]
-    local arg0_drop = r.hiddenMenus["arg0_drop"]
-    local arg1_drop = r.hiddenMenus["arg1_drop"]
-
-    local rule = selected.name
-    r.label:SetText(rule)
-
-    if rule == "RT_AURA_EXISTS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
-    elseif rule == "RT_AURA_NOT_EXISTS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
-    elseif rule == "RT_UNIT_CASTING" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
-    elseif rule == "RT_CUSTOM" then
-        WdLib:updateDropDownMenu(arg0_drop, "Select start event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
-        arg0_drop:Show()
-        WdLib:updateDropDownMenu(arg1_drop, "Select end event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
-        arg1_drop:Show()
-    end
-
-    r:Show()
-end
-
-local function updateNewRuleHiddenMenu(frame, selected)
-    local parent = WDRS.menus["new_rule"]
-    local arg1_drop = parent.hiddenMenus["arg1_drop"]
-    local arg2_drop = parent.hiddenMenus["arg2_drop"]
-    local arg1_edit = parent.hiddenMenus["arg1_edit"]
-    local arg2_edit = parent.hiddenMenus["arg2_edit"]
-    local arg3_edit = parent.hiddenMenus["arg3_edit"]
-
-    for k,v in pairs(parent.hiddenMenus) do
-        if string.match(k, "selected_rule_") then
-            v:Hide()
-            v.origin = nil
-        end
-    end
-
-    local name = selected.name
-    if name == "QT_INTERRUPTS" then
-        -- arg1
-        WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
-        updateRangeRuleMenu(arg1_edit, {name = "RT_UNIT_CASTING"})
-        arg1_edit.label:SetText("Range rule type:")
-        arg1_edit:EnableMouse(false)
-        -- arg2
-        WdLib:showHiddenEditBox(parent, "arg2_edit", 50)
-        arg2_edit.label:SetText("Quality percent:")
-        -- arg3
-        arg3_edit:Hide()
-    elseif name == "QT_DISPELS" then
-        -- arg1
-        WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
-        updateRangeRuleMenu(arg1_edit, {name = "RT_AURA_EXISTS"})
-        arg1_edit.label:SetText("Range rule type:")
-        arg1_edit:EnableMouse(false)
-        -- arg2
-        WdLib:showHiddenEditBox(parent, "arg2_edit", 2000)
-        arg2_edit.label:SetText("Early dispel before (msec):")
-        -- arg3
-        WdLib:showHiddenEditBox(parent, "arg3_edit", 5000)
-        arg3_edit.label:SetText("Late dispel after (msec):")
-    elseif name == "ST_TARGET_DAMAGE"
-        or name == "ST_TARGET_HEALING"
-        or name == "ST_TARGET_INTERRUPTS"
-        or name == "ST_SOURCE_DAMAGE"
-        or name == "ST_SOURCE_HEALING"
-        or name == "ST_SOURCE_INTERRUPTS"
-    then
-        -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
-        arg1_drop.label:SetText("Range rule type:")
-        arg1_drop:Show()
-
-        -- arg2
-        if name == "ST_TARGET_DAMAGE" then
-            WdLib:showHiddenEditBox(parent, "arg2_edit", "unit name")
-            arg2_edit.label:SetText("Target unit name:")
-        else
-            arg2_edit:Hide()
-        end
-    end
 end
 
 local function updateNewRuleMenuByTrackingRules(frame, selected)

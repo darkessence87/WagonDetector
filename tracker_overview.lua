@@ -92,10 +92,11 @@ local function updateDispelInfo()
         v:Hide()
     end
 
-    if not WDTO.lastSelectedDispel then return end
-    local v = WDTO.lastSelectedDispel:GetParent().info
-
-    local auras = getDispelledAuras(v.auras)
+    local auras = {}
+    if WDTO.lastSelectedDispel then
+        local v = WDTO.lastSelectedDispel:GetParent().info
+        auras = getDispelledAuras(v.auras)
+    end
 
     local maxHeight = 210
     local topLeftPosition = { x = 30, y = -51 }
@@ -203,14 +204,14 @@ local function updateInterruptsInfo()
         v:Hide()
     end
 
-    if not WDTO.lastSelectedCreature then return end
-    local v = WDTO.lastSelectedCreature:GetParent().info
-
     local casts = {}
-    for spellId,castInfo in pairs(v.casts) do
-        if type(castInfo) == "table" then
-            for i=1,#castInfo do
-                casts[#casts+1] = { N = i, id = spellId, data = castInfo[i] }
+    if WDTO.lastSelectedCreature then
+        local v = WDTO.lastSelectedCreature:GetParent().info
+        for spellId,castInfo in pairs(v.casts) do
+            if type(castInfo) == "table" then
+                for i=1,#castInfo do
+                    casts[#casts+1] = { N = i, id = spellId, data = castInfo[i] }
+                end
             end
         end
     end
@@ -345,7 +346,7 @@ local function initPullsMenu()
 
     -- select pull button
     WDTO.buttons["select_pull"] = WdLib:createDropDownMenu(WDTO, getPullName(), getPulls())
-    WDTO.buttons["select_pull"]:SetSize(150, 20)
+    WDTO.buttons["select_pull"]:SetSize(200, 20)
     WDTO.buttons["select_pull"]:SetPoint("TOPLEFT", WDTO, "TOPLEFT", 1, -5)
     WDTO.buttons["select_pull"]:SetScript("OnShow", function(self) self.txt:SetText(getPullName()) end)
     local frame = WDTO.buttons["select_pull"]

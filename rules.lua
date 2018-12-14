@@ -3,6 +3,38 @@ local WDRM = nil
 
 local insertQueue = {}
 
+local function isEncounterRuled(journalId)
+    for _,v in pairs(WD.db.profile.rules) do
+        if v.journalId == journalId then
+            return true
+        end
+    end
+    return nil
+end
+
+local function isEncounterActiveRuled(journalId)
+    for _,v in pairs(WD.db.profile.rules) do
+        if v.isActive == true and v.journalId == journalId then
+            return true
+        end
+    end
+    return nil
+end
+
+local function updateTierRuleMenus()
+    local r = WDRM.menus["notify_rule"].menus["encounters"]
+    WdLib:updateDropDownMenu(r, "Select encounter", WD:CreateTierList(r.callback, isEncounterActiveRuled))
+    WdLib:resetDropDownMenu(r, "Select encounter")
+
+    r = WDRM.menus["export_encounter"].menus["encounters"]
+    WdLib:updateDropDownMenu(r, "Select encounter", WD:CreateTierList(r.callback, isEncounterRuled))
+    WdLib:resetDropDownMenu(r, "Select encounter")
+
+    r = WDRM.menus["share_encounter"].menus["encounters"]
+    WdLib:updateDropDownMenu(r, "Select encounter", WD:CreateTierList(r.callback, isEncounterRuled))
+    WdLib:resetDropDownMenu(r, "Select encounter")
+end
+
 local function editRuleLine(rule)
     if not rule then return end
     local r = WDRM.menus["new_rule"]
@@ -23,21 +55,17 @@ local function editRuleLine(rule)
     end
 
     -- role
-    for i=1,#r.menus["roles"].items do
-        if r.menus["roles"].items[i].txt:GetText() == rule.role then
-            r.menus["roles"].selected = r.menus["roles"].items[i]
-            r.menus["roles"]:SetText(rule.role)
-            break
-        end
+    local roleFrame = WdLib:findDropDownFrameByName(r.menus["roles"], rule.role)
+    if roleFrame then
+        r.menus["roles"].selected = roleFrame
+        r.menus["roles"]:SetText(rule.role)
     end
 
     -- rule
-    for i=1,#r.menus["rule_types"].items do
-        if r.menus["rule_types"].items[i].txt:GetText() == rule.type then
-            r.menus["rule_types"].selected = r.menus["rule_types"].items[i]
-            r.menus["rule_types"]:SetText(rule.type)
-            break
-        end
+    local ruleFrame = WdLib:findDropDownFrameByName(r.menus["rule_types"], rule.type)
+    if ruleFrame then
+        r.menus["rule_types"].selected = ruleFrame
+        r.menus["rule_types"]:SetText(rule.type)
     end
 
     if rule.type == "EV_AURA" then
@@ -244,7 +272,7 @@ local function updateRuleLines()
             f:SetSize(18, 18)
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
             f:SetChecked(v.isActive)
-            f:SetScript("OnClick", function() v.isActive = not v.isActive end)
+            f:SetScript("OnClick", function() v.isActive = not v.isActive; updateTierRuleMenus() end)
             return f
         elseif index == 2 then
             local f = WdLib:addNextColumn(WDRM, parent, index, "LEFT", WD.EncounterNames[v.journalId])
@@ -299,7 +327,7 @@ local function updateRuleLines()
         local v = WD.db.profile.rules[row]
         if index == 1 then
             f:SetChecked(v.isActive)
-            f:SetScript("OnClick", function() v.isActive = not v.isActive end)
+            f:SetScript("OnClick", function() v.isActive = not v.isActive; updateTierRuleMenus() end)
         elseif index == 2 then
             f.txt:SetText(WD.EncounterNames[v.journalId])
             local instanceName = WD.FindInstanceByJournalId(v.journalId)
@@ -688,7 +716,7 @@ local function initNewRuleWindow()
 
     r:EnableMouse(true)
     r:SetPoint("CENTER", WDRM, -80, 150)
-    r:SetSize(totalWidth, 7 * 21 + 3)
+    r:SetSize(totalWidth + 1, 7 * 21 + 3)
     r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
@@ -696,7 +724,7 @@ local function initNewRuleWindow()
 end
 
 local function notifyEncounterRules(encounter)
-    print("encounter instance id: " .. encounter.id)
+    print("encounter instance id: " .. encounter.combatId)
     WdLib:sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter.name))
     for _,v in pairs(WD.db.profile.rules) do
         if WD.EncounterNames[v.journalId] == encounter.name and v.isActive == true then
@@ -722,6 +750,7 @@ local function initNotifyRuleWindow()
     end
 
     r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList(notifyRule))
+    r.menus["encounters"].callback = notifyRule
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -750,6 +779,7 @@ local function initExportEncounterWindow()
     end
 
     r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList(tryExportEncounter))
+    r.menus["encounters"].callback = tryExportEncounter
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -902,6 +932,7 @@ local function initShareEncounterWindow()
     end
 
     r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList(share))
+    r.menus["encounters"].callback = share
     r.menus["encounters"]:SetSize(150, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", 0, -1)
 
@@ -959,7 +990,7 @@ function WD:InitEncountersModule(parent)
     WDRM.buttons["notify"] = WdLib:createButton(WDRM)
     WDRM.buttons["notify"]:SetPoint("TOPLEFT", WDRM.buttons["add_rule"], "TOPRIGHT", 1, 0)
     WDRM.buttons["notify"]:SetSize(125, 20)
-    WDRM.buttons["notify"]:SetScript("OnClick", function() onMenuClick("notify_rule") end)
+    WDRM.buttons["notify"]:SetScript("OnClick", function() onMenuClick("notify_rule"); updateTierRuleMenus() end)
     WDRM.buttons["notify"].txt = WdLib:createFont(WDRM.buttons["notify"], "CENTER", WD_BUTTON_NOTIFY_RULES)
     WDRM.buttons["notify"].txt:SetAllPoints()
 
@@ -967,7 +998,7 @@ function WD:InitEncountersModule(parent)
     WDRM.buttons["export"] = WdLib:createButton(WDRM)
     WDRM.buttons["export"]:SetPoint("TOPLEFT", WDRM.buttons["notify"], "TOPRIGHT", 1, 0)
     WDRM.buttons["export"]:SetSize(125, 20)
-    WDRM.buttons["export"]:SetScript("OnClick", function() onMenuClick("export_encounter") end)
+    WDRM.buttons["export"]:SetScript("OnClick", function() onMenuClick("export_encounter"); updateTierRuleMenus() end)
     WDRM.buttons["export"].txt = WdLib:createFont(WDRM.buttons["export"], "CENTER", WD_BUTTON_EXPORT_ENCOUNTERS)
     WDRM.buttons["export"].txt:SetAllPoints()
 
@@ -983,7 +1014,7 @@ function WD:InitEncountersModule(parent)
     WDRM.buttons["share"] = WdLib:createButton(WDRM)
     WDRM.buttons["share"]:SetPoint("TOPLEFT", WDRM.buttons["import"], "TOPRIGHT", 1, 0)
     WDRM.buttons["share"]:SetSize(125, 20)
-    WDRM.buttons["share"]:SetScript("OnClick", function() onMenuClick("share_encounter") end)
+    WDRM.buttons["share"]:SetScript("OnClick", function() onMenuClick("share_encounter"); updateTierRuleMenus() end)
     WDRM.buttons["share"].txt = WdLib:createFont(WDRM.buttons["share"], "CENTER", WD_BUTTON_SHARE_ENCOUNTERS)
     WDRM.buttons["share"].txt:SetAllPoints()
 
@@ -1064,40 +1095,50 @@ function WD:GetAllowedRoles(role)
     return { role }
 end
 
-function WD:CreateTierList(fn)
+function WD:CreateTierList(fn, filterFn)
     local t = {}
 
-    local testItem = { name = "Test", id = 0, journalId = 0 }
+    local testItem = { name = "Test", combatId = 0, journalId = 0 }
     if fn then testItem.func = function() fn(testItem) end end
-    table.insert(t, testItem)
+    if not filterFn or (filterFn and filterFn(testItem.journalId)) then
+        table.insert(t, testItem)
+    end
 
-    local allItem = { name = "ALL", id = -1, journalId = -1 }
+    local allItem = { name = "ALL", combatId = -1, journalId = -1 }
     if fn then allItem.func = function() fn(allItem) end end
-    table.insert(t, allItem)
+    if not filterFn or (filterFn and filterFn(allItem.journalId)) then
+        table.insert(t, allItem)
+    end
 
     for _,tier in pairs(WD.TiersInfo) do
         local tierItem = {}
         tierItem.name = tier.name
         for _,inst in pairs(tier.instances) do
-            if not tierItem.items then tierItem.items = {} end
             local instItem = {}
             instItem.name = inst.name
             for _,enc in pairs(inst.encounters) do
-                if not instItem.items then instItem.items = {} end
-                local encItem = {}
-                encItem.name = enc.name
-                encItem.journalId = enc.journalId
-                encItem.hover = {}
-                encItem.hover[#encItem.hover+1] = "|cffffff00JournalID:|r "..enc.journalId
-                for _,v in pairs(enc.spells) do
-                    encItem.hover[#encItem.hover+1] = v
+                if not filterFn or (filterFn and filterFn(enc.journalId)) then
+                    local encItem = {}
+                    encItem.name = enc.name
+                    encItem.journalId = enc.journalId
+                    encItem.hover = {}
+                    encItem.hover[#encItem.hover+1] = "|cffffff00JournalID:|r "..enc.journalId
+                    for _,v in pairs(enc.spells) do
+                        encItem.hover[#encItem.hover+1] = v
+                    end
+                    if fn then encItem.func = function() fn(enc) end end
+                    if not instItem.items then instItem.items = {} end
+                    table.insert(instItem.items, encItem)
                 end
-                if fn then encItem.func = function() fn(enc) end end
-                table.insert(instItem.items, encItem)
             end
-            table.insert(tierItem.items, instItem)
+            if instItem.items then
+                if not tierItem.items then tierItem.items = {} end
+                table.insert(tierItem.items, instItem)
+            end
         end
-        table.insert(t, tierItem)
+        if tierItem.items then
+            table.insert(t, tierItem)
+        end
     end
     return t
 end

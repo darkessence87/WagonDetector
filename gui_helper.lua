@@ -442,7 +442,12 @@ function WdLib:dropDownShow(self)
     if not self.items then return end
     for _,v in pairs(self.items) do
         if not v.locked then
-            v:Show()
+            if v.item and not v.item.locked then
+                v.item:Show()
+            end
+            if v.drop and not v.drop.locked then
+                v.drop:Show()
+            end
         end
     end
     self.isVisible = true
@@ -455,10 +460,13 @@ end
 function WdLib:dropDownHide(self)
     if not self.items then return end
     for _,v in pairs(self.items) do
-        if v.items then
-            WdLib:dropDownHide(v)
+        if v.item then
+            v.item:Hide()
         end
-        v:Hide()
+        if v.drop then
+            WdLib:dropDownHide(v.drop)
+            v.drop:Hide()
+        end
     end
     self.isVisible = false
 
@@ -467,12 +475,20 @@ function WdLib:dropDownHide(self)
     end
 end
 
-function WdLib:onClickDropDown(self, item, onClick)
-    self.selected = item
-    self.txt:SetText(item.txt:GetText())
-    WdLib:dropDownHide(self)
-    if onClick then
-        onClick(self, item.data)
+function WdLib:onClickDropDown(self, v, onClick)
+    local function click(item)
+        self.selected = item
+        self.txt:SetText(item.txt:GetText())
+        WdLib:dropDownHide(self)
+        if onClick then
+            onClick(self, item.data)
+        end
+    end
+    if v.item and not v.item.locked then
+        click(v.item)
+    end
+    if v.drop and not v.drop.locked then
+        click(v.drop)
     end
 end
 
@@ -489,24 +505,32 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
         for i=1,#items do
             local v = items[i]
             if v.items then
-                if not self.items[i] then
+                if not self.items[i] or not self.items[i].drop then
                     local item = WdLib:createDropDownMenu(self, v.name, v.items, parent)
                     item:SetSize(175, 20)
                     item:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, (i - 1) * -21)
-                    self.items[i] = item
+                    self.items[i] = {}
+                    self.items[i].drop = item
                 else
-                    WdLib:updateDropDownMenu(self, v.name, v.items, parent)
+                    if self.items[i].item then self.items[i].item.locked = true end
+                    self.items[i].drop.locked = nil
+                    WdLib:updateDropDownMenu(self.items[i].drop, v.name, v.items, parent)
                 end
             else
-                if not self.items[i] then
+                if not self.items[i] or not self.items[i].item then
                     local item = WdLib:createListItemButton(self, v.name, i - 1)
-                    self.items[i] = item
+                    self.items[i] = {}
+                    self.items[i].item = item
                 end
-                self.items[i].data = v
-                self.items[i].txt:SetText(v.name)
-                self.items[i]:SetScript("OnClick", function() WdLib:onClickDropDown(parent or self, self.items[i], v.func) end)
+                if self.items[i].drop then self.items[i].drop.locked = true end
+                self.items[i].item.locked = nil
+                self.items[i].item.data = v
+                self.items[i].item.txt:SetText(v.name)
+                self.items[i].item:SetScript("OnClick", function() WdLib:onClickDropDown(parent or self, self.items[i], v.func) end)
                 if v.hover then
-                    WdLib:generateHover(self.items[i], v.hover)
+                    WdLib:generateHover(self.items[i].item, v.hover)
+                else
+                    WdLib:clearHover(self.items[i].item)
                 end
             end
         end
@@ -519,8 +543,9 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
             end
         end
 
-        local width = self.items[1]:GetWidth() + 2
-        local height = #items * self.items[1]:GetHeight() + #items + 1
+        local frame = self.items[1].item or self.items[1].drop
+        local width = frame:GetWidth() + 2
+        local height = #items * frame:GetHeight() + #items + 1
         if not self.bg then
             self.bg = WdLib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
         end
@@ -583,13 +608,19 @@ function WdLib:createDropDownMenu(parent, name, items, grandParent)
 end
 
 function WdLib:findDropDownFrameByName(parent, name)
+    local function getFrame(v)
+        if v.item and not v.item.locked then return v.item end
+        if v.drop and not v.drop.locked then return v.drop end
+        return nil
+    end
     for i=1,#parent.items do
-        if parent.items[i].txt:GetText() == name then
-            return parent.items[i]
+        local f = getFrame(parent.items[i])
+        if f and f.txt:GetText() == name then
+            return f
         end
 
-        if parent.items[i].items then
-            local frame = WdLib:findDropDownFrameByName(parent.items[i], name)
+        if f.items then
+            local frame = WdLib:findDropDownFrameByName(f, name)
             if frame then return frame end
         end
     end
@@ -767,6 +798,11 @@ function WdLib:generateHover(frame, textLines)
         GameTooltip:Show()
     end)
     frame:SetScript("OnLeave", function() GameTooltip_Hide() end)
+end
+
+function WdLib:clearHover(frame)
+    frame:SetScript("OnEnter", function() end)
+    frame:SetScript("OnLeave", function() end)
 end
 
 function WdLib:getColoredName(name, class)

@@ -72,7 +72,13 @@ local function getRuleDescription(rule)
             local rangeMsg = string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
             return eventMsg.." "..rangeMsg
         elseif rule.arg0[1] == "RT_CUSTOM" then
-            return "Not yet implemented"
+            local data = rule.arg0[2]
+            --print(WdLib:table_tostring(data))
+            local startEventMsg = WD.GetEventDescription(data.startEvent[1], data.startEvent[2][1], data.startEvent[2][2])
+            local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
+            --print(startEventMsg)
+            --print(endEventMsg)
+            return string.format(WD_TRACKER_RT_CUSTOM_DESC, eventMsg, startEventMsg, endEventMsg)
         end
     end
     return "Not yet implemented"
@@ -231,6 +237,25 @@ local function editRangeRuleMenu(ruleType, arg0)
         WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
     elseif ruleType == "RT_AURA_NOT_EXISTS" then
         WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
+    elseif ruleType == "RT_CUSTOM" then
+        -- arg0
+        WdLib:updateDropDownMenu(arg0_drop, "Select start event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg0_frame = WdLib:findDropDownFrameByName(arg0_drop, arg0.startEvent[1])
+        if arg0_frame then
+            arg0_drop.selected = arg0_frame
+            arg0_drop:SetText(arg0.startEvent[1])
+        end
+        arg0_drop:Show()
+        editEventConfigMenu(arg0_drop, arg0.startEvent[1], arg0.startEvent[2])
+        -- arg1
+        WdLib:updateDropDownMenu(arg1_drop, "Select end event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, arg0.endEvent[1])
+        if arg1_frame then
+            arg1_drop.selected = arg1_frame
+            arg1_drop:SetText(arg0.endEvent[1])
+        end
+        arg1_drop:Show()
+        editEventConfigMenu(arg1_drop, arg0.endEvent[1], arg0.endEvent[2])
     end
 
     r:Show()
@@ -397,6 +422,7 @@ local function editRule(rule)
         arg0_drop.label:SetText("Range rule type:")
         arg0_drop:Show()
         editRangeRuleMenu(rule.arg0[1], rule.arg0[2])
+
         -- arg1
         WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1[1])
@@ -434,7 +460,7 @@ local function updateRulesListFrame()
         local v = WD.db.profile.statRules[row]
         if index == 1 then
             local f = WdLib:createCheckButton(parent)
-            f:SetSize(18, 18)
+            f:SetSize(parent:GetHeight() - 2, parent:GetHeight() - 2)
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
             f:SetChecked(v.isActive)
             f:SetScript("OnClick", function() v.isActive = not v.isActive end)
@@ -591,7 +617,7 @@ local function getEventConfigDataForSave(eventName, eventFrame)
         end
         return {tonumber(spellId)}
     elseif eventName == "EV_DEATH_UNIT" then
-        local unitName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
+        local unitName = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if unitName:len() == 0 then
             print("Please specify unit name")
             return false
@@ -704,8 +730,29 @@ local function saveRule()
 
             rule.arg0 = {rangeRule, tonumber(spellId)}
         elseif rangeRule == "RT_CUSTOM" then            -- arg0=event_start,     arg1=event_end
-            print("Not implemented yet: "..rangeRule)
-            return false
+            local function getEventData(frameName)
+                local frame = parent.hiddenMenus["range_menu"].hiddenMenus[frameName]
+                if not frame.selected then
+                    return nil
+                end
+                local eventName = frame.selected:GetText()
+                local eventFrame = findEventConfigByOrigin(frame)
+                local data = getEventConfigDataForSave(eventName, eventFrame)
+                return {eventName, data}
+            end
+            local startData = getEventData("arg0_drop")
+            if not startData then
+                print("Please select start event")
+                return false
+            elseif startData[2] == false then return false
+            end
+            local endData = getEventData("arg1_drop")
+            if not endData then
+                print("Please select end event")
+                return false
+            elseif endData[2] == false then return false
+            end
+            rule.arg0 = { rangeRule, { startEvent = startData, endEvent = endData } }
         else
             print("Unsupported range rule type selected: "..rangeRule)
             return false
@@ -1022,16 +1069,17 @@ function WD:InitRulesStatisticsModule(parent)
 
     -- headers
     local x, y = 1, -30
+    local height = 20
     WDRS.headers = {}
-    local h = WdLib:createTableHeader(WDRS, "", x, y, 20, 20)
+    local h = WdLib:createTableHeader(WDRS, "", x, y, height, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeader(WDRS, WD_BUTTON_ENCOUNTER, x + 21, y, 150, 20)
+    h = WdLib:createTableHeader(WDRS, WD_BUTTON_ENCOUNTER, x + height + 1, y, 150, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, WD_BUTTON_REASON, 600, 20)
+    h = WdLib:createTableHeaderNext(WDRS, h, WD_BUTTON_REASON, 750, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
+    h = WdLib:createTableHeaderNext(WDRS, h, "", 50, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
+    h = WdLib:createTableHeaderNext(WDRS, h, "", 50, height)
     table.insert(WDRS.headers, h)
     --[[h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
     table.insert(WDRS.headers, h)

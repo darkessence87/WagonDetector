@@ -109,3 +109,4 @@ WD_TRACKER_QT_DISPELS_RIGHT_RANGE = "Too late dispel/steal (after %s msec) for %
 WD_TRACKER_RT_AURA_EXISTS_DESC = "while %s exists"
 WD_TRACKER_RT_AURA_NOT_EXISTS_DESC = "while %s not exists"
 WD_TRACKER_RT_UNIT_CASTING_DESC = "during %s cast"
+WD_TRACKER_RT_CUSTOM_DESC = "%s in between <%s> and <%s>"

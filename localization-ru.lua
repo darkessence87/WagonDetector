@@ -113,3 +113,4 @@ WD_TRACKER_QT_DISPELS_RIGHT_RANGE = "Слишком долгое рассеив�
 WD_TRACKER_RT_AURA_EXISTS_DESC = "пока действует %s"
 WD_TRACKER_RT_AURA_NOT_EXISTS_DESC = "пока не действует %s"
 WD_TRACKER_RT_UNIT_CASTING_DESC = "во время каста %s"
+WD_TRACKER_RT_CUSTOM_DESC = "%s между <%s> и <%s>"

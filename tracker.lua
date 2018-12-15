@@ -841,20 +841,30 @@ function WDMF:ProcessDamage(src, dst, ...)
             end
         end
         local function processRangeRules(deathRules, damageRules)
-            local pairedRulesByRange = {}
-            for _,v1 in pairs(deathRules) do
-                for _,v2 in pairs(damageRules) do
-                    if v1.range == v2.range then
-                        pairedRulesByRange[#pairedRulesByRange+1] = {v1,v2}
-                    else
-                        pairedRulesByRange[#pairedRulesByRange+1] = {v1,nil}
-                        pairedRulesByRange[#pairedRulesByRange+1] = {nil,v2}
+            if deathRules and #deathRules > 0 and damageRules and #damageRules > 0 then
+                local pairedRulesByRange = {}
+                for _,v1 in pairs(deathRules) do
+                    for _,v2 in pairs(damageRules) do
+                        if v1.range == v2.range then
+                            pairedRulesByRange[#pairedRulesByRange+1] = {v1,v2}
+                        else
+                            pairedRulesByRange[#pairedRulesByRange+1] = {v1,nil}
+                            pairedRulesByRange[#pairedRulesByRange+1] = {nil,v2}
+                        end
                     end
                 end
-            end
-            for i=1,#pairedRulesByRange do
-                local v = pairedRulesByRange[i]
-                processRules(v[1], v[2])
+                for i=1,#pairedRulesByRange do
+                    local v = pairedRulesByRange[i]
+                    processRules(v[1], v[2])
+                end
+            elseif deathRules and #deathRules > 0 then
+                for _,v in pairs(deathRules) do
+                    processRules(v, nil)
+                end
+            elseif damageRules and #damageRules > 0 then
+                for _,v in pairs(damageRules) do
+                    processRules(nil, v)
+                end
             end
         end
 

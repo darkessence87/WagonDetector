@@ -376,6 +376,28 @@ local function findRulesInRange(eventType, unit, ...)
         end
     end
 
+    if rules["RL_DEPENDENCY"] then
+        local function expireDependency(rule, guid)
+            rule.isActiveForGUID[guid] = nil
+        end
+        for _,v in pairs(rules["RL_DEPENDENCY"]) do
+            -- register start and stop range tracking
+            if compareWithEvent(v.reasonEv[eventType], eventType, ...) == true then
+                v.isActiveForGUID[unit.guid] = 1
+                local timeoutInSec = v.timeout / 1000
+                if v.timer then
+                    v.timer = WdLib:RestartTimer(v.timer, expireDependency, timeoutInSec, v, unit.guid)
+                else
+                    v.timer = WdLib:CreateTimer(expireDependency, timeoutInSec, v, unit.guid)
+                end
+            end
+
+            if v.isActiveForGUID[unit.guid] and v.isActiveForGUID[unit.guid] == 1 and v.resultEv[eventType] then
+                results[#results+1] = v.resultEv[eventType]
+            end
+        end
+    end
+
     return results
 end
 
@@ -383,6 +405,114 @@ local function findRuleByRole(eventType, role)
     local rules = WDMF.encounter.rules
     if rules[role] then return rules[role][eventType] end
     return nil
+end
+
+local function updateByRangeDescription(rule, originMsg)
+    if not rule then return originMsg end
+    if rule.range then
+        originMsg = originMsg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
+    elseif rule.reason then
+        local reasonName, reasonArg0, reasonArg1 = rule.reason[1], rule.reason[2], rule.reason[3]
+        local reasonMsg = WD.GetEventDescription(reasonName, reasonArg0, reasonArg1)
+        originMsg = string.format(WD_TRACKER_RT_DEPENDENCY_DESC_SHORT, originMsg, reasonMsg)
+    end
+    return originMsg
+end
+
+local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
+    if not rule or not unit then return end
+    local args = {...}
+    if eventType == "EV_AURA" then
+        local spell_id, action = args[1], args[2]
+        if rule[spell_id] and rule[spell_id][action] then
+            local p = rule[spell_id][action].points
+            local msg = WD.GetEventDescription(eventType, spell_id, action)
+            msg = updateByRangeDescription(rule, msg)
+            WDMF:AddFail(timestamp, unit.guid, unit.rt, msg, p)
+        end
+    elseif eventType == "EV_AURA_STACKS" then
+        local spell_id, stacks = args[1], args[2]
+        if rule[spell_id] and rule[spell_id][stacks] then
+            local p = rule[spell_id][stacks].points
+            local msg = WD.GetEventDescription(eventType, spell_id, stacks)
+            msg = updateByRangeDescription(rule, msg)
+            self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
+        elseif rule[spell_id] and rule[spell_id][0] then
+            local p = rule[spell_id][0].points
+            local msg = string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib:getSpellLinkByIdWithTexture(spell_id))
+            if rule.range then
+                msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
+            end
+            self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
+        end
+    elseif eventType == "EV_CAST_START" or eventType == "EV_CAST_END" then
+        local spell_id, unit_name = args[1], args[2]
+        if rule[spell_id] then
+            local key = WdLib:getNpcId(unit.guid)
+            if not rule[spell_id][key] then
+                key = unit_name
+            end
+            if rule[spell_id][key] then
+                local p = rule[spell_id][key].points
+                local msg = WD.GetEventDescription(eventType, spell_id, unit_name)
+                msg = updateByRangeDescription(rule, msg)
+                if unit.type ~= "player" then
+                    self:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
+                else
+                    self:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
+                end
+            end
+        end
+    elseif eventType == "EV_CAST_INTERRUPTED" then
+        local target_spell_id, target, target_name = args[1], args[2], args[3]
+        if rule[target_spell_id] then
+            local key = WdLib:getNpcId(target.guid)
+            if not rule[target_spell_id][key] then
+                key = target_name
+            end
+            if rule[target_spell_id][key] then
+                local p = rule[target_spell_id][key].points
+                local dst_nameWithMark = target.name
+                if target.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(target.rt).." "..target.name end
+                local msg = WD.GetEventDescription(eventType, target_spell_id, dst_nameWithMark)
+                msg = updateByRangeDescription(rule, msg)
+                WDMF:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
+            end
+        end
+    elseif eventType == "EV_DISPEL" then
+        local target_aura_id = args[1]
+        if rule[target_aura_id] then
+            local p = rule[target_aura_id].points
+            local msg = WD.GetEventDescription(eventType, target_aura_id)
+            msg = updateByRangeDescription(rule, msg)
+            self:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
+        end
+    elseif eventType == "EV_UNIT_DEATH" then
+        local u = rule.unit
+        local unit_name = args[1]
+        if (tonumber(u) and u == WdLib:getNpcId(unit.guid)) or (u == unit_name) then
+            local p = rule.points
+            local dst_nameWithMark = unit.name
+            if unit.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(dst.rt).." "..unit.name end
+            local msg = WD.GetEventDescription("EV_DEATH_UNIT", dst_nameWithMark)
+            msg = updateByRangeDescription(rule, msg)
+            if unit.type ~= "player" then
+                self:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
+            else
+                self:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
+            end
+        end
+    end
+end
+
+local function processRulesByEventType(timestamp, unit, eventType, ...)
+    if not unit then return end
+    local rule = findRuleByRole(eventType, unit.role)
+    processRuleByEvent(rule, timestamp, unit, eventType, ...)
+    local rangeRules = findRulesInRange(eventType, unit, ...)
+    for _,v in pairs(rangeRules) do
+        processRuleByEvent(v, timestamp, unit, eventType, ...)
+    end
 end
 
 local function startCast(unit, timestamp, spell_id)
@@ -420,36 +550,14 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
         unit.casts[target_spell_id][i].spell_id = source_spell_id
 
         if interrupter then
-            local function processRule(rule)
-                if rule and rule[target_spell_id] then
-                    local key = WdLib:getNpcId(unit.guid)
-                    if not rule[target_spell_id][key] then
-                        key = WdLib:getShortName(unit_name, "ignoreRealm")
-                    end
-                    if rule[target_spell_id][key] then
-                        local p = rule[target_spell_id][key].points
-                        local dst_nameWithMark = unit.name
-                        if unit.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(unit.rt).." "..unit.name end
-                        local msg = WD.GetEventDescription("EV_CAST_INTERRUPTED", target_spell_id, dst_nameWithMark)
-                        if rule.range then
-                            msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-                        end
-                        WDMF:AddSuccess(timestamp, interrupter.guid, interrupter.rt, msg, p)
-                    end
-                end
-            end
-            local function processRules(rules)
-                for _,v in pairs(rules) do
-                    processRule(v)
-                end
-            end
             -- regular rules
             local rule = findRuleByRole("EV_CAST_INTERRUPTED", interrupter.role)
-            processRule(rule)
+            processRuleByEvent(rule, timestamp, interrupter, "EV_CAST_INTERRUPTED", target_spell_id, unit, WdLib:getShortName(unit_name, "ignoreRealm"))
             -- range rules
-            local rangeRule = findRulesInRange("EV_CAST_INTERRUPTED", unit, target_spell_id, WdLib:getShortName(unit_name, "ignoreRealm"))
-            processRules(rangeRule)
-
+            local rangeRules = findRulesInRange("EV_CAST_INTERRUPTED", unit, target_spell_id, WdLib:getShortName(unit_name, "ignoreRealm"))
+            for _,v in pairs(rangeRules) do
+                processRuleByEvent(v, timestamp, interrupter, "EV_CAST_INTERRUPTED", target_spell_id, unit, WdLib:getShortName(unit_name, "ignoreRealm"))
+            end
             -- quality rules
             local statRules = WDMF.encounter.statRules
             if statRules["RL_QUALITY"] and
@@ -513,27 +621,14 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
     end
 
     if dispeller then
-        local function processRule(rule)
-            if rule and rule[target_aura_id] then
-                local p = rule[target_aura_id].points
-                local msg = WD.GetEventDescription("EV_DISPEL", target_aura_id)
-                if rule.range then
-                    msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-                end
-                self:AddSuccess(timestamp, dispeller.guid, dispeller.rt, msg, p)
-            end
-        end
-        local function processRules(rules)
-            for _,v in pairs(rules) do
-                processRule(v)
-            end
-        end
         -- regular rules
         local rule = findRuleByRole("EV_DISPEL", dispeller.role)
-        processRule(rule)
+        processRuleByEvent(rule, timestamp, dispeller, "EV_DISPEL", target_aura_id)
         -- range rules
-        local rangeRule = findRulesInRange("EV_DISPEL", unit, target_aura_id)
-        processRules(rangeRule)
+        local rangeRules = findRulesInRange("EV_DISPEL", unit, target_aura_id)
+        for _,v in pairs(rangeRules) do
+            processRuleByEvent(v, timestamp, dispeller, "EV_DISPEL", target_aura_id)
+        end
     end
 
     for i=1, #unit.auras[target_aura_id] do
@@ -575,65 +670,6 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
     WD:RefreshTrackedDispels()
 end
 
-local function applyAura(self, unit, timestamp, spell_id, action)
-    if action ~= "apply" and action ~= "remove" then return end
-
-    local function processRule(rule)
-        if rule and rule[spell_id] and rule[spell_id][action] then
-            local p = rule[spell_id][action].points
-            local msg = WD.GetEventDescription("EV_AURA", spell_id, action)
-            if rule.range then
-                msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-            end
-            self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
-        end
-    end
-    local function processRules(rules)
-        for _,v in pairs(rules) do
-            processRule(v)
-        end
-    end
-
-    -- regular rules
-    local rule = findRuleByRole("EV_AURA", unit.role)
-    processRule(rule)
-    -- range rules
-    local rangeRule = findRulesInRange("EV_AURA", unit, spell_id, action)
-    processRules(rangeRule)
-end
-
-local function applyAuraStack(self, unit, timestamp, spell_id, stacks)
-    local function processRule(rule)
-        if rule and rule[spell_id] and rule[spell_id][stacks] then
-            local p = rule[spell_id][stacks].points
-            local msg = WD.GetEventDescription("EV_AURA_STACKS", spell_id, stacks)
-            if rule.range then
-                msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-            end
-            self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
-        elseif rule and rule[spell_id] and rule[spell_id][0] then
-            local p = rule[spell_id][0].points
-            local msg = string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib:getSpellLinkByIdWithTexture(spell_id))
-            if rule.range then
-                msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-            end
-            self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
-        end
-    end
-    local function processRules(rules)
-        for _,v in pairs(rules) do
-            processRule(v)
-        end
-    end
-
-    -- regular rules
-    local rule = findRuleByRole("EV_AURA_STACKS", unit.role)
-    processRule(rule)
-    -- range rules
-    local rangeRule = findRulesInRange("EV_AURA_STACKS", unit, spell_id, stacks)
-    processRules(rangeRule)
-end
-
 function WDMF:ProcessSummons(src, dst, ...)
     if not src then return end
     local arg = {...}
@@ -670,7 +706,7 @@ function WDMF:ProcessAuras(src, dst, ...)
             interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
         end
 
-        applyAura(self, dst, timestamp, spell_id, "apply")
+        processRulesByEventType(timestamp, dst, "EV_AURA", spell_id, "apply")
 
         -- potions
         local potionRule = findRuleByRole("EV_POTIONS", dst.role)
@@ -692,12 +728,12 @@ function WDMF:ProcessAuras(src, dst, ...)
             end
         end
 
-        applyAura(self, dst, timestamp, spell_id, "remove")
+        processRulesByEventType(timestamp, dst, "EV_AURA", spell_id, "remove")
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_APPLIED_DOSE" then
         local stacks = tonumber(arg[16])
-        applyAuraStack(self, dst, timestamp, spell_id, stacks)
+        processRulesByEventType(timestamp, dst, "EV_AURA_STACKS", spell_id, stacks)
     end
 end
 
@@ -712,74 +748,12 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_START" then
         startCast(src, timestamp, spell_id)
-
-        local function processRule(rule)
-            if rule and rule[spell_id] then
-                local key = WdLib:getNpcId(src.guid)
-                if not rule[spell_id][key] then
-                    key = WdLib:getShortName(src_name)
-                end
-                if rule[spell_id][key] then
-                    local p = rule[spell_id][key].points
-                    local msg = WD.GetEventDescription("EV_CAST_START", spell_id, WdLib:getShortName(src.name))
-                    if rule.range then
-                        msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-                    end
-                    if src.type ~= "player" then
-                        self:AddSuccess(timestamp, "creature"..WdLib:getNpcId(src.guid), src.rt, msg, p)
-                    else
-                        self:AddSuccess(timestamp, src.guid, src.rt, msg, p)
-                    end
-                end
-            end
-        end
-        local function processRules(rules)
-            for _,v in pairs(rules) do
-                processRule(v)
-            end
-        end
-        -- regular rules
-        local rule = findRuleByRole("EV_CAST_START", src.role)
-        processRule(rule)
-        -- range rules
-        local rangeRule = findRulesInRange("EV_CAST_START", src, spell_id, WdLib:getShortName(src_name))
-        processRules(rangeRule)
+        processRulesByEventType(timestamp, src, "EV_CAST_START", spell_id, WdLib:getShortName(src_name))
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
         finishCast(self, src, timestamp, spell_id, "SUCCESS")
-
-        local function processRule(rule)
-            if rule and rule[spell_id] then
-                local key = WdLib:getNpcId(src.guid)
-                if not rule[spell_id][key] then
-                    key = WdLib:getShortName(src_name)
-                end
-                if rule[spell_id][key] then
-                    local p = rule[spell_id][key].points
-                    local msg = WD.GetEventDescription("EV_CAST_END", spell_id, WdLib:getShortName(src.name))
-                    if rule.range then
-                        msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-                    end
-                    if src.type ~= "player" then
-                        self:AddSuccess(timestamp, "creature"..WdLib:getNpcId(src.guid), src.rt, msg, p)
-                    else
-                        self:AddSuccess(timestamp, src.guid, src.rt, msg, p)
-                    end
-                end
-            end
-        end
-        local function processRules(rules)
-            for _,v in pairs(rules) do
-                processRule(v)
-            end
-        end
-        -- regular rules
-        local rule = findRuleByRole("EV_CAST_END", src.role)
-        processRule(rule)
-        -- range rules
-        local rangeRule = findRulesInRange("EV_CAST_END", src, spell_id, WdLib:getShortName(src_name))
-        processRules(rangeRule)
+        processRulesByEventType(timestamp, src, "EV_CAST_END", spell_id, WdLib:getShortName(src_name))
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_MISS" then
@@ -820,9 +794,7 @@ function WDMF:ProcessDamage(src, dst, ...)
                 if overkill > -1 and deathRule and deathRule[spell_id] then
                     local p = deathRule[spell_id].points
                     local msg = WD.GetEventDescription("EV_DEATH", spell_id)
-                    if deathRule.range then
-                        msg = msg.." "..WD.GetRangeRuleDescription(deathRule.range[1], deathRule.range[2])
-                    end
+                    msg = updateByRangeDescription(deathRule, msg)
                     self:AddFail(timestamp, dst.guid, dst.rt, msg, p)
                 else
                     if damageTakenRule and damageTakenRule[spell_id] then
@@ -831,9 +803,7 @@ function WDMF:ProcessDamage(src, dst, ...)
                            (damageTakenRule[spell_id].amount == 0 and total > 0)
                         then
                             local msg = WD.GetEventDescription("EV_DAMAGETAKEN", spell_id, damageTakenRule[spell_id].amount)
-                            if damageTakenRule.range then
-                                msg = msg.." "..WD.GetRangeRuleDescription(damageTakenRule.range[1], damageTakenRule.range[2])
-                            end
+                            msg = updateByRangeDescription(damageTakenRule, msg)
                             self:AddFail(timestamp, dst.guid, dst.rt, msg, p)
                         end
                     end
@@ -901,37 +871,7 @@ function WDMF:ProcessDeaths(src, dst, ...)
             end
         end
 
-        local function processRule(rule)
-            if rule then
-                local u = rule.unit
-                if (tonumber(u) and u == WdLib:getNpcId(dst.guid)) or (u == WdLib:getShortName(dst_name)) then
-                    local p = rule.points
-                    local dst_nameWithMark = dst.name
-                    if dst.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(dst.rt).." "..dst.name end
-                    local msg = WD.GetEventDescription("EV_DEATH_UNIT", dst_nameWithMark)
-                    if rule.range then
-                        msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-                    end
-                    if dst.type ~= "player" then
-                        self:AddSuccess(timestamp, "creature"..WdLib:getNpcId(dst.guid), dst.rt, msg, p)
-                    else
-                        self:AddSuccess(timestamp, dst.guid, dst.rt, msg, p)
-                    end
-                end
-            end
-        end
-        local function processRules(rules)
-            for _,v in pairs(rules) do
-                processRule(v)
-            end
-        end
-
-        -- regular rules
-        local rule = findRuleByRole("EV_DEATH_UNIT", dst.role)
-        processRule(rule)
-        -- range rules
-        local rangeRule = findRulesInRange("EV_DEATH_UNIT", dst, WdLib:getShortName(dst_name))
-        processRules(rangeRule)
+        processRulesByEventType(timestamp, dst, "EV_DEATH_UNIT", WdLib:getShortName(dst_name))
     end
 end
 
@@ -944,8 +884,8 @@ function WDMF:ProcessDispels(src, dst, ...)
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_DISPEL" or event == "SPELL_STOLEN" then
-        if WD.Spells.ignoreDispelEffects[spell_id] then return end
         local target_aura_id = tonumber(arg[15])
+        if WD.Spells.ignoreDispelEffects[target_aura_id] then return end
         dispelAura(self, dst, dst_name, timestamp, spell_id, target_aura_id, src)
     end
 end
@@ -1055,6 +995,17 @@ function WDMF:LoadRules()
                         }}
                         data[#data+1] = eventData
                     end
+                elseif r.ruleType == "RL_DEPENDENCY" then
+                    local data = rules["RL_DEPENDENCY"]
+                    local reasonName, reasonArg0, reasonArg1 = r.arg0[1], r.arg0[2][1], r.arg0[2][2]
+                    local resultName, resultArg0, resultArg1 = r.arg1[1], r.arg1[2][1], r.arg1[2][2]
+                    local eventData = { reasonEv = {}, resultEv = {}, timeout = r.timeout, isActiveForGUID = {} }
+                    eventData.reasonEv[reasonName] = {}
+                    eventData.resultEv[resultName] = {}
+                    fillEventByType(eventData.reasonEv[reasonName], reasonName, reasonArg0, reasonArg1, 0)
+                    fillEventByType(eventData.resultEv[resultName], resultName, resultArg0, resultArg1, 0)
+                    eventData.resultEv[resultName].reason = {reasonName, reasonArg0, reasonArg1}
+                    data[#data+1] = eventData
                 end
             end
         end

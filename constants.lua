@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.46"
+WD.Version = "v0.0.47"
 WD.TiersInfo = {}
 WD.MaxPullsToBeSaved = 25
 
@@ -257,7 +257,7 @@ WD.Spells.knockbackEffects = {
 }
 
 WD.Spells.ignoreDispelEffects = {
-       [781] = "Hunter - disengage",
+    [166646] = "Windwalking",
 }
 
 function WD.LoadTiers()

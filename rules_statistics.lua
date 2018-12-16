@@ -96,14 +96,17 @@ local function getRuleDescription(rule)
             return eventMsg.." "..rangeMsg
         elseif rule.arg0[1] == "RT_CUSTOM" then
             local data = rule.arg0[2]
-            --print(WdLib:table_tostring(data))
             local startEventMsg = WD.GetEventDescription(data.startEvent[1], data.startEvent[2][1], data.startEvent[2][2])
             local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
-            --print(startEventMsg)
-            --print(endEventMsg)
             local rangeMsg = string.format(WD_TRACKER_RT_CUSTOM_DESC, startEventMsg, endEventMsg)
             return eventMsg.." "..rangeMsg
         end
+    elseif rule.ruleType == "RL_DEPENDENCY" then
+        local reasonName, reasonArg0, reasonArg1 = rule.arg0[1], rule.arg0[2][1], rule.arg0[2][2]
+        local reasonMsg = WD.GetEventDescription(reasonName, reasonArg0, reasonArg1)
+        local resultName, resultArg0, resultArg1 = rule.arg1[1], rule.arg1[2][1], rule.arg1[2][2]
+        local resultMsg = WD.GetEventDescription(resultName, resultArg0, resultArg1)
+        return string.format(WD_TRACKER_RT_DEPENDENCY_DESC, resultMsg, rule.timeout, reasonMsg)
     end
     return "Not yet implemented"
 end
@@ -457,6 +460,30 @@ local function editRule(rule)
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
         editEventConfigMenu(arg1_drop, rule.arg1[1], rule.arg1[2])
+    elseif rule.ruleType == "RL_DEPENDENCY" then
+        -- arg0
+        WdLib:updateDropDownMenu(arg0_drop, "Select reason event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg0_frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0[1])
+        if arg0_frame then
+            arg0_drop.selected = arg0_frame
+            arg0_drop:SetText(rule.arg0[1])
+        end
+        arg0_drop.label:SetText("Reason event:")
+        arg0_drop:Show()
+        editEventConfigMenu(arg0_drop, rule.arg0[1], rule.arg0[2])
+        -- arg1
+        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1[1])
+        if arg1_frame then
+            arg1_drop.selected = arg1_frame
+            arg1_drop:SetText(rule.arg1[1])
+        end
+        arg1_drop.label:SetText("Result event:")
+        arg1_drop:Show()
+        editEventConfigMenu(arg1_drop, rule.arg1[1], rule.arg1[2])
+        -- arg2
+        WdLib:showHiddenEditBox(parent, "arg2_edit", rule.timeout)
+        arg2_edit.label:SetText("Timeout (in msec):")
     end
 
     parent:Show()
@@ -795,17 +822,43 @@ local function saveRule()
         else
             rule.arg1 = {eventName, data}
         end
-    elseif rule.ruleType == "" then
-        local arg0_drop = parent.hiddenMenus["arg0_drop"].selected:GetText()
-        local arg0_edit = parent.hiddenMenus["arg0_edit"]:GetText()
+    elseif rule.ruleType == "RL_DEPENDENCY" then        -- arg0=event_reason,    arg1=event_result,   arg2=timeout  checks if event_result occured (or not) after event_reason during specified time
+        local function getEventData(frameName)
+            local frame = parent.hiddenMenus[frameName]
+            if not frame.selected then
+                return nil
+            end
+            local eventName = frame.selected:GetText()
+            local eventFrame = findEventConfigByOrigin(frame)
+            local data = getEventConfigDataForSave(eventName, eventFrame)
+            return {eventName, data}
+        end
 
-        local arg1_drop = parent.hiddenMenus["arg1_drop"].selected:GetText()
-        local arg1_edit = parent.hiddenMenus["arg1_edit"]:GetText()
+        -- arg0
+        local reasonData = getEventData("arg0_drop")
+        if not reasonData then
+            print("Please select reason event")
+            return false
+        elseif reasonData[2] == false then return false
+        end
+        rule.arg0 = reasonData
 
-        local arg2_drop = parent.hiddenMenus["arg2_drop"].selected:GetText()
-        local arg2_edit = parent.hiddenMenus["arg2_edit"]:GetText()
+        -- arg1
+        local resultData = getEventData("arg1_drop")
+        if not resultData then
+            print("Please select result event")
+            return false
+        elseif resultData[2] == false then return false
+        end
+        rule.arg1 = resultData
 
-        local arg3_edit = parent.hiddenMenus["arg3_edit"]:GetText()
+        --arg2
+        local timeout = tonumber(parent.hiddenMenus["arg2_edit"]:GetText())
+        if not timeout or timeout == 0 then
+            print("Please specify correct timeout")
+            return false
+        end
+        rule.timeout = tonumber(timeout)
     else
         print('Not implemented yet:'..rule.ruleType)
         return false
@@ -815,10 +868,11 @@ local function saveRule()
     if not duplicate then
         WD.db.profile.statRules[#WD.db.profile.statRules+1] = rule
     else
-        print('Rule already exists')
+        print('Rule has been updated')
         if rule.qualityPercent then duplicate.qualityPercent = rule.qualityPercent end
         if rule.earlyDispel then duplicate.earlyDispel = rule.earlyDispel end
         if rule.lateDispel then duplicate.lateDispel = rule.lateDispel end
+        if rule.timeout then duplicate.timeout = rule.timeout end
     end
 
     updateRulesListFrame()

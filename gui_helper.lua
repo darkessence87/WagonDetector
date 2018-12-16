@@ -6,12 +6,7 @@ WdLib.MAX_DROP_DOWN_MENUS = 25
 function WdLib:CreateTimer(fn, delay, ...)
     local function executeFn(self) self.fn(unpack(self.args)) end
 
-    local self = nil
-    if delay > 0 then
-        self = C_Timer_NewTicker(delay, executeFn, 1)
-    else
-        self = C_Timer_NewTicker(-delay, executeFn)
-    end
+    local self = C_Timer.NewTimer(math.max(delay, 0.01), executeFn)
     self.args = {...}
     self.fn = fn
 
@@ -26,7 +21,7 @@ end
 
 function WdLib:RestartTimer(self, fn, delay, ...)
     WdLib:StopTimer(self)
-    WdLib:CreateTimer(fn, delay, ...)
+    return WdLib:CreateTimer(fn, delay, ...)
 end
 
 local function table_val_to_str(v)

@@ -400,6 +400,7 @@ end
 
 function WdLib:createXButton(parent, xOffset)
     local xButton = WdLib:createButton(parent)
+    xButton:SetFrameStrata("FULLSCREEN_DIALOG")
     xButton:SetPoint("TOPRIGHT", parent, "TOPRIGHT", xOffset, 0)
     xButton:SetSize(15, 15)
     xButton:SetScript("OnClick", function() parent:Hide() end)
@@ -545,7 +546,7 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
             self.bg = WdLib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
         end
         self.bg:SetSize(width, height)
-        self.bg:SetPoint("TOPLEFT", self, "TOPRIGHT", 0, 1)
+        self.bg:SetPoint("TOPLEFT", frame, "TOPLEFT", -1, 1)
         self.bg:Hide()
     else
         for i=1, #self.items do

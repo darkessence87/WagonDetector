@@ -436,14 +436,14 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
             local p = rule[spell_id][stacks].points
             local msg = WD.GetEventDescription(eventType, spell_id, stacks)
             msg = updateByRangeDescription(rule, msg)
-            self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
+            WDMF:AddFail(timestamp, unit.guid, unit.rt, msg, p)
         elseif rule[spell_id] and rule[spell_id][0] then
             local p = rule[spell_id][0].points
             local msg = string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib:getSpellLinkByIdWithTexture(spell_id))
             if rule.range then
                 msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
             end
-            self:AddFail(timestamp, unit.guid, unit.rt, msg, p)
+            WDMF:AddFail(timestamp, unit.guid, unit.rt, msg, p)
         end
     elseif eventType == "EV_CAST_START" or eventType == "EV_CAST_END" then
         local spell_id, unit_name = args[1], args[2]
@@ -457,9 +457,9 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
                 local msg = WD.GetEventDescription(eventType, spell_id, unit_name)
                 msg = updateByRangeDescription(rule, msg)
                 if unit.type ~= "player" then
-                    self:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
+                    WDMF:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
                 else
-                    self:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
+                    WDMF:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
                 end
             end
         end
@@ -485,7 +485,7 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
             local p = rule[target_aura_id].points
             local msg = WD.GetEventDescription(eventType, target_aura_id)
             msg = updateByRangeDescription(rule, msg)
-            self:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
+            WDMF:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
         end
     elseif eventType == "EV_UNIT_DEATH" then
         local u = rule.unit
@@ -497,9 +497,9 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
             local msg = WD.GetEventDescription("EV_DEATH_UNIT", dst_nameWithMark)
             msg = updateByRangeDescription(rule, msg)
             if unit.type ~= "player" then
-                self:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
+                WDMF:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
             else
-                self:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
+                WDMF:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
             end
         end
     end
@@ -567,7 +567,7 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
                 local actualQuality = unit.casts[target_spell_id][i].percent
                 local expectedQuality = statRules["RL_QUALITY"]["QT_INTERRUPTS"][target_spell_id].qualityPercent
                 if actualQuality < expectedQuality then
-                    self:AddFail(timestamp, interrupter.guid, interrupter.rt, string.format(WD_TRACKER_QT_INTERRUPTS_DESC, expectedQuality, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), 0)
+                    WDMF:AddFail(timestamp, interrupter.guid, interrupter.rt, string.format(WD_TRACKER_QT_INTERRUPTS_DESC, expectedQuality, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), 0)
                 end
             end
         end
@@ -656,11 +656,11 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
                     local lateTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].lateDispel
                     local dispelledIn = aura.dispelledIn * 1000
                     if earlyTime > 0 and lateTime > 0 and (dispelledIn < earlyTime or dispelledIn > lateTime) then
-                        self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, earlyTime, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, earlyTime, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
                     elseif earlyTime > 0 and lateTime == 0 and dispelledIn < earlyTime then
-                        self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, earlyTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, earlyTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
                     elseif earlyTime == 0 and lateTime > 0 and dispelledIn > lateTime then
-                        self:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
                     end
                 end
             end
@@ -713,7 +713,7 @@ function WDMF:ProcessAuras(src, dst, ...)
         if potionRule then
             if WD.Spells.potions[spell_id] then
                 local msg = WD.GetEventDescription("EV_POTIONS")
-                self:AddSuccess(timestamp, dst.guid, dst.rt, msg, potionRule.points)
+                WDMF:AddSuccess(timestamp, dst.guid, dst.rt, msg, potionRule.points)
             end
         end
     end
@@ -795,7 +795,7 @@ function WDMF:ProcessDamage(src, dst, ...)
                     local p = deathRule[spell_id].points
                     local msg = WD.GetEventDescription("EV_DEATH", spell_id)
                     msg = updateByRangeDescription(deathRule, msg)
-                    self:AddFail(timestamp, dst.guid, dst.rt, msg, p)
+                    WDMF:AddFail(timestamp, dst.guid, dst.rt, msg, p)
                 else
                     if damageTakenRule and damageTakenRule[spell_id] then
                         local p = damageTakenRule[spell_id].points
@@ -804,7 +804,7 @@ function WDMF:ProcessDamage(src, dst, ...)
                         then
                             local msg = WD.GetEventDescription("EV_DAMAGETAKEN", spell_id, damageTakenRule[spell_id].amount)
                             msg = updateByRangeDescription(damageTakenRule, msg)
-                            self:AddFail(timestamp, dst.guid, dst.rt, msg, p)
+                            WDMF:AddFail(timestamp, dst.guid, dst.rt, msg, p)
                         end
                     end
                 end
@@ -1030,16 +1030,16 @@ function WDMF:CheckConsumables(player)
     local role = WD:GetRole(guid)
     local noflask, nofood, norune = nil, nil, nil
     if rules[role] and rules[role]["EV_FLASKS"] and not hasAnyAura(player, WD.Spells.flasks) then
-        self:AddFail(time(), guid, 0, WD.GetEventDescription("EV_FLASKS"), rules[role]["EV_FLASKS"].points)
+        WDMF:AddFail(time(), guid, 0, WD.GetEventDescription("EV_FLASKS"), rules[role]["EV_FLASKS"].points)
     end
     if rules[role] and rules[role]["EV_FOOD"] and not hasAnyAura(player, WD.Spells.food) then
-        self:AddFail(time(), guid, 0, WD.GetEventDescription("EV_FOOD"), rules[role]["EV_FOOD"].points)
+        WDMF:AddFail(time(), guid, 0, WD.GetEventDescription("EV_FOOD"), rules[role]["EV_FOOD"].points)
     end
     if rules[role] and rules[role]["EV_RUNES"] and not hasAnyAura(player, WD.Spells.runes) then
-        self:AddFail(time(), guid, 0, WD.GetEventDescription("EV_RUNES"), rules[role]["EV_RUNES"].points)
+        WDMF:AddFail(time(), guid, 0, WD.GetEventDescription("EV_RUNES"), rules[role]["EV_RUNES"].points)
     end
     if rules[role] and rules[role]["EV_POTIONS"] and hasAnyAura(player, WD.Spells.potions) then
-        self:AddSuccess(time(), guid, 0, WD.GetEventDescription("EV_POTIONS"), rules[role]["EV_POTIONS"].points)
+        WDMF:AddSuccess(time(), guid, 0, WD.GetEventDescription("EV_POTIONS"), rules[role]["EV_POTIONS"].points)
     end
 end
 

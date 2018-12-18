@@ -256,6 +256,7 @@ end
 local function initExportWindow()
     WDHM.exportWindow = CreateFrame("Frame", nil, WDHM)
     local r = WDHM.exportWindow
+    r:SetFrameStrata("FULLSCREEN")
     r:EnableMouse(true)
     r:SetPoint("CENTER", UIParent, "CENTER")
     r:SetSize(800, 600)
@@ -265,6 +266,7 @@ local function initExportWindow()
     WdLib:createXButton(r, -1)
 
     r.editBox = WdLib:createEditBox(r)
+    r.editBox:SetFrameStrata("FULLSCREEN")
     r.editBox:SetSize(800, 600)
     r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 0, 0)
     r.editBox:SetMultiLine(true)

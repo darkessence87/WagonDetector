@@ -331,6 +331,7 @@ local function initPullsMenu()
         local function onSelect(frame, selected)
             WD.db.profile.tracker.selected = selected.index
             WDTO.lastSelectedCreature = nil
+            WDTO.lastSelectedDispel = nil
             WD:RefreshTrackedCreatures()
             WD:RefreshTrackedDispels()
         end

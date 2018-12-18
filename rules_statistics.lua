@@ -70,6 +70,20 @@ local function findDuplicate(rule)
 end
 
 local function getRuleDescription(rule)
+    local function getRangeRuleDescription(rangeRule, data)
+        if rangeRule == "RT_AURA_EXISTS" then
+            return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+        elseif rangeRule == "RT_AURA_NOT_EXISTS" then
+            return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+        elseif rangeRule == "RT_UNIT_CASTING" then
+            return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+        elseif rangeRule == "RT_CUSTOM" then
+            local startEventMsg = WD.GetEventDescription(data.startEvent[1], data.startEvent[2][1], data.startEvent[2][2])
+            local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
+            return string.format(WD_TRACKER_RT_CUSTOM_DESC, startEventMsg, endEventMsg)
+        end
+    end
+
     if rule.ruleType == "RL_QUALITY" then
         if rule.arg0 == "QT_INTERRUPTS" then
             return string.format(WD_TRACKER_QT_INTERRUPTS_DESC, rule.qualityPercent, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
@@ -85,28 +99,29 @@ local function getRuleDescription(rule)
     elseif rule.ruleType == "RL_RANGE_RULE" then
         local eventName, eventArg0, eventArg1 = rule.arg1[1], rule.arg1[2][1], rule.arg1[2][2]
         local eventMsg = WD.GetEventDescription(eventName, eventArg0, eventArg1)
-        if rule.arg0[1] == "RT_AURA_EXISTS" then
-            local rangeMsg = string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
-            return eventMsg.." "..rangeMsg
-        elseif rule.arg0[1] == "RT_AURA_NOT_EXISTS" then
-            local rangeMsg = string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
-            return eventMsg.." "..rangeMsg
-        elseif rule.arg0[1] == "RT_UNIT_CASTING" then
-            local rangeMsg = string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(rule.arg0[2]))
-            return eventMsg.." "..rangeMsg
-        elseif rule.arg0[1] == "RT_CUSTOM" then
-            local data = rule.arg0[2]
-            local startEventMsg = WD.GetEventDescription(data.startEvent[1], data.startEvent[2][1], data.startEvent[2][2])
-            local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
-            local rangeMsg = string.format(WD_TRACKER_RT_CUSTOM_DESC, startEventMsg, endEventMsg)
-            return eventMsg.." "..rangeMsg
-        end
+        local rangeMsg = getRangeRuleDescription(rule.arg0[1], rule.arg0[2])
+        return eventMsg.." "..rangeMsg
     elseif rule.ruleType == "RL_DEPENDENCY" then
         local reasonName, reasonArg0, reasonArg1 = rule.arg0[1], rule.arg0[2][1], rule.arg0[2][2]
         local reasonMsg = WD.GetEventDescription(reasonName, reasonArg0, reasonArg1)
         local resultName, resultArg0, resultArg1 = rule.arg1[1], rule.arg1[2][1], rule.arg1[2][2]
         local resultMsg = WD.GetEventDescription(resultName, resultArg0, resultArg1)
         return string.format(WD_TRACKER_RT_DEPENDENCY_DESC, resultMsg, rule.timeout, reasonMsg)
+    elseif rule.ruleType == "RL_STATISTICS" then
+        if rule.arg0 == "ST_TARGET_DAMAGE" then
+            local msg = string.format(WD_TRACKER_ST_TARGET_DAMAGE, rule.targetUnit)
+            return msg.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_TARGET_HEALING" then
+            return WD_TRACKER_ST_TARGET_HEALING.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_TARGET_INTERRUPTS" then
+            return WD_TRACKER_ST_TARGET_INTERRUPTS.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_SOURCE_DAMAGE" then
+            return WD_TRACKER_ST_SOURCE_DAMAGE.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_SOURCE_HEALING" then
+            return WD_TRACKER_ST_SOURCE_HEALING.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_SOURCE_INTERRUPTS" then
+            return WD_TRACKER_ST_SOURCE_INTERRUPTS.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        end
     end
     return "Not yet implemented"
 end
@@ -161,6 +176,9 @@ local function editEventConfigMenu(frame, ...)
     while menu do
         if not menu.origin or menu.origin == frame then
             menu.origin = frame
+            if frame and frame.t then
+                frame.t:SetColorTexture(unpack(menu.bg.color))
+            end
             editEventConfig(menu, ...)
             menu:Show()
             return
@@ -195,6 +213,9 @@ local function showEventConfig(origin, menuId, rule)
 
     r.label:SetText(rule)
     r.origin = origin
+    if origin and origin.t then
+        origin.t:SetColorTexture(unpack(r.bg.color))
+    end
 
     if rule == "EV_AURA" then
         WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
@@ -237,7 +258,6 @@ local function updateEventConfigMenu(frame, selected)
             return
         elseif not selected and menu.origin and menu.origin == frame then
             menu:Hide()
-            menu.origin = nil
             return
         end
         i = i + 1
@@ -249,13 +269,15 @@ local function updateEventConfigMenu(frame, selected)
     end
 end
 
-local function editRangeRuleMenu(ruleType, arg0)
+local function editRangeRuleMenu(origin, ruleType, arg0)
     local r = WDRS.menus["new_rule"].hiddenMenus["range_menu"]
     for _,v in pairs(r.hiddenMenus) do v:Hide(); updateEventConfigMenu(v); end
     local arg0_edit = r.hiddenMenus["arg0_edit"]
     local arg0_drop = r.hiddenMenus["arg0_drop"]
     local arg1_drop = r.hiddenMenus["arg1_drop"]
 
+    r.origin = origin
+    r.origin.t:SetColorTexture(unpack(r.bg.color))
     r.label:SetText(ruleType)
 
     if ruleType == "RT_UNIT_CASTING" then
@@ -295,6 +317,11 @@ local function updateRangeRuleMenu(frame, selected)
     local arg0_drop = r.hiddenMenus["arg0_drop"]
     local arg1_drop = r.hiddenMenus["arg1_drop"]
 
+    if not frame then r:Hide() return end
+
+    r.origin = frame
+    r.origin.t:SetColorTexture(unpack(r.bg.color))
+
     local rule = selected.name
     r.label:SetText(rule)
 
@@ -325,7 +352,6 @@ local function updateNewRuleHiddenMenu(frame, selected)
     for k,v in pairs(parent.hiddenMenus) do
         if string.match(k, "selected_rule_") then
             v:Hide()
-            v.origin = nil
         end
     end
 
@@ -362,6 +388,7 @@ local function updateNewRuleHiddenMenu(frame, selected)
     then
         -- arg1
         WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        updateRangeRuleMenu()
         arg1_drop.label:SetText("Range rule type:")
         arg1_drop:Show()
 
@@ -378,7 +405,10 @@ end
 local function editRule(rule)
     if not rule then return end
     local parent = WDRS.menus["new_rule"]
-    if parent:IsVisible() then parent:Hide() return end
+    if parent:IsVisible() and parent.selected and parent.selected == rule then parent:Hide() parent.selected = nil return end
+    parent.selected = rule
+
+    WDRS.menus["new_rule"].menus["preview"]:SetText(getRuleDescription(rule))
 
     for _,v in pairs(parent.hiddenMenus) do v:Hide() end
     local arg0_edit = parent.hiddenMenus["arg0_edit"]
@@ -419,7 +449,7 @@ local function editRule(rule)
             WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
             arg1_edit.label:SetText("Range rule type:")
             arg1_edit:EnableMouse(false)
-            editRangeRuleMenu("RT_UNIT_CASTING", rule.arg1)
+            editRangeRuleMenu(arg1_edit, "RT_UNIT_CASTING", rule.arg1)
             -- arg2
             WdLib:showHiddenEditBox(parent, "arg2_edit", rule.qualityPercent)
             arg2_edit.label:SetText("Quality percent:")
@@ -430,7 +460,7 @@ local function editRule(rule)
             WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
             arg1_edit.label:SetText("Range rule type:")
             arg1_edit:EnableMouse(false)
-            editRangeRuleMenu("RT_AURA_EXISTS", rule.arg1)
+            editRangeRuleMenu(arg1_edit, "RT_AURA_EXISTS", rule.arg1)
             -- arg2
             WdLib:showHiddenEditBox(parent, "arg2_edit", rule.earlyDispel)
             arg2_edit.label:SetText("Early dispel before (msec):")
@@ -448,7 +478,7 @@ local function editRule(rule)
         end
         arg0_drop.label:SetText("Range rule type:")
         arg0_drop:Show()
-        editRangeRuleMenu(rule.arg0[1], rule.arg0[2])
+        editRangeRuleMenu(arg0_drop, rule.arg0[1], rule.arg0[2])
 
         -- arg1
         WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
@@ -484,6 +514,33 @@ local function editRule(rule)
         -- arg2
         WdLib:showHiddenEditBox(parent, "arg2_edit", rule.timeout)
         arg2_edit.label:SetText("Timeout (in msec):")
+    elseif rule.ruleType == "RL_STATISTICS" then
+        -- statistic type
+        WdLib:updateDropDownMenu(arg0_drop, "Select statistics:", WdLib:updateItemsByHoverInfo(true, statisticTypes, WD.Help.statisticInfo, updateNewRuleHiddenMenu))
+        local frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0)
+        if frame then
+            arg0_drop.selected = frame
+            arg0_drop:SetText(rule.arg0)
+        end
+        arg0_drop.label:SetText("Statistics type:")
+        arg0_drop:Show()
+
+        -- range rule type
+        WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1[1])
+        if arg1_frame then
+            arg1_drop.selected = arg1_frame
+            arg1_drop:SetText(rule.arg1[1])
+        end
+        arg1_drop.label:SetText("Range rule type:")
+        arg1_drop:Show()
+        editRangeRuleMenu(arg1_drop, rule.arg1[1], rule.arg1[2])
+
+        -- arg2
+        if rule.arg0 == "ST_TARGET_DAMAGE" then
+            WdLib:showHiddenEditBox(parent, "arg2_edit", rule.targetUnit)
+            arg2_edit.label:SetText("Target unit name:")
+        end
     end
 
     parent:Show()
@@ -578,117 +635,159 @@ local function findEventConfigByOrigin(origin)
 end
 
 local function getEventConfigDataForSave(eventName, eventFrame)
+    local args = nil
     if eventName == "EV_AURA" then
         local auraId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(auraId) then
-            print("Please set correct aura id in event config")
-            return false
+            return false, "Please set correct aura id in event config"
         end
 
         if not eventFrame.hiddenMenus["arg1_drop"].selected then
-            print("Please select aura action in event config")
-            return false
+            return false, "Please select aura action in event config"
         end
         local auraAction = eventFrame.hiddenMenus["arg1_drop"].selected:GetText()
-        return {tonumber(auraId), auraAction}
+        args = {tonumber(auraId), auraAction}
     elseif eventName == "EV_AURA_STACKS" then
         local auraId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(auraId) then
-            print("Please set correct aura id in event config")
-            return false
+            return false, "Please set correct aura id in event config"
         end
 
         local stacks = eventFrame.hiddenMenus["arg1_edit"]:GetText()
         if not tonumber(stacks) or tonumber(stacks) < 0 then
-            print("Please select correct number of stacks")
-            return false
+            return false, "Please select correct number of stacks"
         end
-        return {tonumber(auraId), tonumber(stacks)}
+        args = {tonumber(auraId), tonumber(stacks)}
     elseif eventName == "EV_DISPEL" then
         local auraId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(auraId) then
-            print("Please set correct aura id in event config")
-            return false
+            return false, "Please set correct aura id in event config"
         end
-        return {tonumber(auraId)}
+        args = {tonumber(auraId)}
     elseif eventName == "EV_CAST_START" then
         local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(spellId) then
-            print("Please set correct spell id in event config")
-            return false
+            return false, "Please set correct spell id in event config"
         end
         local casterName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
         if casterName:len() == 0 then
-            print("Please specify caster name")
-            return false
+            return false, "Please specify caster name"
         end
-        return {tonumber(spellId), casterName}
+        args = {tonumber(spellId), casterName}
     elseif eventName == "EV_CAST_INTERRUPTED" then
         local targetSpellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(targetSpellId) then
-            print("Please set correct target spell id in event config")
-            return false
+            return false, "Please set correct target spell id in event config"
         end
         local targetName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
         if targetName:len() == 0 then
-            print("Please specify target name")
-            return false
+            return false, "Please specify target name"
         end
-        return {tonumber(targetSpellId), targetName}
+        args = {tonumber(targetSpellId), targetName}
     elseif eventName == "EV_CAST_END" then
         local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(spellId) then
-            print("Please set correct spell id in event config")
-            return false
+            return false, "Please set correct spell id in event config"
         end
         local casterName = eventFrame.hiddenMenus["arg1_edit"]:GetText()
         if casterName:len() == 0 then
-            print("Please specify caster name")
-            return false
+            return false, "Please specify caster name"
         end
-        return {tonumber(spellId), casterName}
+        args = {tonumber(spellId), casterName}
     elseif eventName == "EV_DAMAGETAKEN" then
         local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(spellId) then
-            print("Please set correct spell id in event config")
-            return false
+            return false, "Please set correct spell id in event config"
         end
 
         local amount = eventFrame.hiddenMenus["arg1_edit"]:GetText()
         if not tonumber(amount) or tonumber(amount) < 0 then
-            print("Please select correct amount number")
-            return false
+            return false, "Please select correct amount number"
         end
-        return {tonumber(spellId), tonumber(amount)}
+        args = {tonumber(spellId), tonumber(amount)}
     elseif eventName == "EV_DEATH" then
         local spellId = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if not GetSpellInfo(spellId) then
-            print("Please set correct spell id in event config")
-            return false
+            return false, "Please set correct spell id in event config"
         end
-        return {tonumber(spellId)}
+        args = {tonumber(spellId)}
     elseif eventName == "EV_DEATH_UNIT" then
         local unitName = eventFrame.hiddenMenus["arg0_edit"]:GetText()
         if unitName:len() == 0 then
-            print("Please specify unit name")
-            return false
+            return false, "Please specify unit name"
         end
-        return {unitName}
+        args = {unitName}
+    else
+        return false, "Unknown event: "..eventName
     end
 
-    print("Unknown event: "..eventName)
-    return false
+    return args, ""
 end
 
-local function saveRule()
+local function getRangeRuleData(parent, frameName)
+    local args = nil
+    if not parent.hiddenMenus[frameName].selected then
+        return false, "Please select range rule type"
+    end
+
+    local rangeRule = parent.hiddenMenus[frameName].selected:GetText()
+    if rangeRule == "RT_AURA_EXISTS" then           -- arg0=aura_id
+        local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+        if not GetSpellInfo(auraId) then
+            return false, "Please set correct aura id in range rule type"
+        end
+
+        args = {rangeRule, tonumber(auraId)}
+    elseif rangeRule == "RT_AURA_NOT_EXISTS" then   -- arg0=aura_id
+        local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+        if not GetSpellInfo(auraId) then
+            return false, "Please set correct aura id in range rule type"
+        end
+
+        args = {rangeRule, tonumber(auraId)}
+    elseif rangeRule == "RT_UNIT_CASTING" then      -- arg0=target_spell_id
+        local spellId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
+        if not GetSpellInfo(spellId) then
+            return false, "Please set correct target spell id in range rule type"
+        end
+
+        args = {rangeRule, tonumber(spellId)}
+    elseif rangeRule == "RT_CUSTOM" then            -- arg0=event_start,     arg1=event_end
+        local function getEventData(frameName)
+            local frame = parent.hiddenMenus["range_menu"].hiddenMenus[frameName]
+            if not frame.selected then
+                return nil
+            end
+            local eventName = frame.selected:GetText()
+            local eventFrame = findEventConfigByOrigin(frame)
+            local data, errorMsg = getEventConfigDataForSave(eventName, eventFrame)
+            return {eventName, data, errorMsg}
+        end
+        local startData = getEventData("arg0_drop")
+        if not startData then
+            return false, "Please select start event"
+        elseif startData[2] == false then return false, startData[3]
+        end
+        local endData = getEventData("arg1_drop")
+        if not endData then
+            return false, "Please select end event"
+        elseif endData[2] == false then return false, endData[3]
+        end
+        args = { rangeRule, { startEvent = startData, endEvent = endData } }
+    else
+        return false, "Unsupported range rule type selected: "..rangeRule
+    end
+
+    return args, ""
+end
+
+local function previewRule()
     local parent = WDRS.menus["new_rule"]
     if not parent.menus["encounters"].selected then
-        print("Please select encounter")
-        return false
+        return false, "Please select encounter"
     end
     if not parent.menus["rule_types"].selected then
-        print("Please select rule type")
-        return false
+        return false, "Please select rule type"
     end
 
     local rule = {}
@@ -697,20 +796,17 @@ local function saveRule()
 
     if rule.ruleType == "RL_QUALITY" then
         if not parent.hiddenMenus["arg0_drop"].selected then
-            print("Please select quality type")
-            return false
+            return false, "Please select quality type"
         end
         local qualityType = parent.hiddenMenus["arg0_drop"].selected:GetText()
         if qualityType == "QT_INTERRUPTS" then
             local targetSpellId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
             if not GetSpellInfo(targetSpellId) then
-                print("Please set correct target spell id")
-                return false
+                return false, "Please set correct target spell id"
             end
             local qualityPercent = tonumber(parent.hiddenMenus["arg2_edit"]:GetText())
             if not qualityPercent then
-                print("Please specify quality percent")
-                return false
+                return false, "Please specify quality percent"
             end
 
             rule.arg0 = qualityType
@@ -719,25 +815,20 @@ local function saveRule()
         elseif qualityType == "QT_DISPELS" then
             local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
             if not GetSpellInfo(auraId) then
-                print("Please set correct aura id")
-                return false
+                return false, "Please set correct aura id"
             end
             local time1 = tonumber(parent.hiddenMenus["arg2_edit"]:GetText())
             if not time1 or time1 < 0 then
-                print("Please specify correct early dispel time")
-                return false
+                return false, "Please specify correct early dispel time"
             end
             local time2 = tonumber(parent.hiddenMenus["arg3_edit"]:GetText())
             if not time2 or time2 < 0 then
-                print("Please specify correct late dispel time")
-                return false
+                return false, "Please specify correct late dispel time"
             end
             if time2 > 0 and time1 > time2 then
-                print("Early dispel time cannot be greater than late dispel time")
-                return false
+                return false, "Early dispel time cannot be greater than late dispel time"
             elseif time1 == 0 and time2 == 0 then
-                print("Incorrect time range. Must be at least one value > 0")
-                return false
+                return false, "Incorrect time range. Must be at least one value > 0"
             end
 
             rule.arg0 = qualityType
@@ -745,80 +836,26 @@ local function saveRule()
             rule.earlyDispel = time1
             rule.lateDispel = time2
         else
-            print("Unsupported quality type selected: "..qualityType)
-            return false
+            return false, "Unsupported quality type selected: "..qualityType
         end
     elseif rule.ruleType == "RL_RANGE_RULE" then        -- arg0=range_rule_type, arg1=event_result                  checks if event_result applied to unit during specified events range
         -- arg0
-        if not parent.hiddenMenus["arg0_drop"].selected then
-            print("Please select range rule type")
-            return false
-        end
-
-        local rangeRule = parent.hiddenMenus["arg0_drop"].selected:GetText()
-        if rangeRule == "RT_AURA_EXISTS" then           -- arg0=aura_id
-            local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
-            if not GetSpellInfo(auraId) then
-                print("Please set correct aura id in range rule type")
-                return false
-            end
-
-            rule.arg0 = {rangeRule, tonumber(auraId)}
-        elseif rangeRule == "RT_AURA_NOT_EXISTS" then   -- arg0=aura_id
-            local auraId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
-            if not GetSpellInfo(auraId) then
-                print("Please set correct aura id in range rule type")
-                return false
-            end
-
-            rule.arg0 = {rangeRule, tonumber(auraId)}
-        elseif rangeRule == "RT_UNIT_CASTING" then      -- arg0=target_spell_id
-            local spellId = tonumber(parent.hiddenMenus["range_menu"].hiddenMenus["arg0_edit"]:GetText())
-            if not GetSpellInfo(spellId) then
-                print("Please set correct target spell id in range rule type")
-                return false
-            end
-
-            rule.arg0 = {rangeRule, tonumber(spellId)}
-        elseif rangeRule == "RT_CUSTOM" then            -- arg0=event_start,     arg1=event_end
-            local function getEventData(frameName)
-                local frame = parent.hiddenMenus["range_menu"].hiddenMenus[frameName]
-                if not frame.selected then
-                    return nil
-                end
-                local eventName = frame.selected:GetText()
-                local eventFrame = findEventConfigByOrigin(frame)
-                local data = getEventConfigDataForSave(eventName, eventFrame)
-                return {eventName, data}
-            end
-            local startData = getEventData("arg0_drop")
-            if not startData then
-                print("Please select start event")
-                return false
-            elseif startData[2] == false then return false
-            end
-            local endData = getEventData("arg1_drop")
-            if not endData then
-                print("Please select end event")
-                return false
-            elseif endData[2] == false then return false
-            end
-            rule.arg0 = { rangeRule, { startEvent = startData, endEvent = endData } }
+        local args, errorMsg = getRangeRuleData(parent, "arg0_drop")
+        if args == false then
+            return false, errorMsg
         else
-            print("Unsupported range rule type selected: "..rangeRule)
-            return false
+            rule.arg0 = args
         end
 
         -- arg1
         if not parent.hiddenMenus["arg1_drop"].selected then
-            print("Please select result event")
-            return false
+            return false, "Please select result event"
         end
         local eventName = parent.hiddenMenus["arg1_drop"].selected:GetText()
         local eventFrame = findEventConfigByOrigin(parent.hiddenMenus["arg1_drop"])
-        local data = getEventConfigDataForSave(eventName, eventFrame)
+        local data, errorMsg = getEventConfigDataForSave(eventName, eventFrame)
         if data == false then
-            return false
+            return false, errorMsg
         else
             rule.arg1 = {eventName, data}
         end
@@ -830,15 +867,14 @@ local function saveRule()
             end
             local eventName = frame.selected:GetText()
             local eventFrame = findEventConfigByOrigin(frame)
-            local data = getEventConfigDataForSave(eventName, eventFrame)
-            return {eventName, data}
+            local data, errorMsg = getEventConfigDataForSave(eventName, eventFrame)
+            return {eventName, data, errorMsg}
         end
 
         -- arg0
         local reasonData = getEventData("arg0_drop")
         if not reasonData then
-            print("Please select reason event")
-            return false
+            return false, "Please select reason event"
         elseif reasonData[2] == false then return false
         end
         rule.arg0 = reasonData
@@ -846,22 +882,56 @@ local function saveRule()
         -- arg1
         local resultData = getEventData("arg1_drop")
         if not resultData then
-            print("Please select result event")
-            return false
-        elseif resultData[2] == false then return false
+            return false, "Please select result event"
+        elseif resultData[2] == false then return false, resultData[3]
         end
         rule.arg1 = resultData
 
         --arg2
         local timeout = tonumber(parent.hiddenMenus["arg2_edit"]:GetText())
         if not timeout or timeout == 0 then
-            print("Please specify correct timeout")
-            return false
+            return false, "Please specify correct timeout"
         end
         rule.timeout = tonumber(timeout)
+    elseif rule.ruleType == "RL_STATISTICS" then
+        if not parent.hiddenMenus["arg0_drop"].selected then
+            return false, "Please select statistic type"
+        end
+
+        -- arg0
+        local statisticType = parent.hiddenMenus["arg0_drop"].selected:GetText()
+        -- arg1
+        local args, errorMsg = getRangeRuleData(parent, "arg1_drop")
+        if args == false then
+            return false, errorMsg
+        end
+        -- arg2
+        if statisticType == "ST_TARGET_DAMAGE" then
+            local targetUnit = parent.hiddenMenus["arg2_edit"]:GetText()
+            if targetUnit:len() == 0 then
+                return false, "Please specify correct target name"
+            end
+            rule.targetUnit = targetUnit
+        end
+
+        rule.arg0 = statisticType
+        rule.arg1 = args
     else
-        print('Not implemented yet:'..rule.ruleType)
+        return false, "Not implemented yet:"..rule.ruleType
+    end
+
+    WDRS.menus["new_rule"].menus["preview"]:SetText(getRuleDescription(rule))
+
+    return rule, ""
+end
+
+local function saveRule()
+    local rule, errorMsg = previewRule()
+    if rule == false then
+        WDRS.menus["new_rule"].menus["preview"]:SetText("|cffff0000"..errorMsg.."|r")
         return false
+    else
+        WDRS.menus["new_rule"].menus["preview"]:SetText("")
     end
 
     local duplicate = findDuplicate(rule)
@@ -873,10 +943,10 @@ local function saveRule()
         if rule.earlyDispel then duplicate.earlyDispel = rule.earlyDispel end
         if rule.lateDispel then duplicate.lateDispel = rule.lateDispel end
         if rule.timeout then duplicate.timeout = rule.timeout end
+        if rule.targetUnit then duplicate.targetUnit = rule.targetUnit end
     end
 
     updateRulesListFrame()
-
     return true
 end
 
@@ -928,28 +998,52 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
     for k,v in pairs(parent.hiddenMenus) do
         if string.match(k, "selected_rule_") then
             v:Hide()
-            v.origin = nil
         end
     end
 end
 
 local function initSelectedRuleMenu()
+    local function updateColorByIndex(frame, index)
+        if index == 1 then
+            frame.color = {.15, 0, 0, 1}
+            frame:SetColorTexture(unpack(frame.color))
+        elseif index == 2 then
+            frame.color = {0, .15, 0, 1}
+            frame:SetColorTexture(unpack(frame.color))
+        elseif index == 3 then
+            frame.color = {.15, .15, 0, 1}
+            frame:SetColorTexture(unpack(frame.color))
+        elseif index == 4 then
+            frame.color = {.15, .15, .15, 1}
+            frame:SetColorTexture(unpack(frame.color))
+        else
+            frame.color = {0, 0, 0, 1}
+            frame:SetColorTexture(unpack(frame.color))
+        end
+    end
+
     local parent = WDRS.menus["new_rule"]
-    local maxV = 4
-    local m = math.floor(maxV / 2) + 1
+    local maxV = 3
+    --local m = math.floor(maxV / 2) + 1
     for i=1,maxV do
         local r = WdLib:createRuleWindow(parent)
-        r:SetFrameStrata("TOOLTIP")
+        r:SetFrameStrata("FULLSCREEN")
+        updateColorByIndex(r.bg, i)
 
         if i == 1 then
-            r:SetPoint("TOPLEFT", parent, "TOPRIGHT", 1, 0)
-        elseif i == m then
-            r:SetPoint("BOTTOMLEFT", parent, "BOTTOMRIGHT", 1, 0)
+            r:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -1, -1)
+        --[[elseif i == m then
+            r:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 1, 0)]]
         else
-            r:SetPoint("TOPLEFT", parent.hiddenMenus["selected_rule_"..(i-1)], "TOPRIGHT", 0, 0)
+            r:SetPoint("TOPRIGHT", parent.hiddenMenus["selected_rule_"..(i-1)], "BOTTOMRIGHT", 0, -1)
         end
 
-        r:SetScript("OnHide", function(self) self.origin = nil end)
+        r:SetScript("OnHide", function(self)
+            if self.origin and self.origin.t then
+                self.origin.t:SetColorTexture(.2,.2,.2,1)
+            end
+            self.origin = nil
+        end)
 
         parent.hiddenMenus["selected_rule_"..i] = r
     end
@@ -965,7 +1059,7 @@ local function initRangeRuleMenu()
     -- label
     r.label = WdLib:createFontDefault(r, "CENTER", "")
     r.label:SetSize(xSize, 20)
-    r.label:SetPoint("TOPRIGHT", r, "TOPRIGHT", 1, -1)
+    r.label:SetPoint("TOPRIGHT", r, "TOPRIGHT", -1, -1)
 
     -- arg0: dropdown or editbox
     r.hiddenMenus["arg0_drop"] = WdLib:createDropDownMenu(r)
@@ -986,12 +1080,22 @@ local function initRangeRuleMenu()
     r.hiddenMenus["arg1_drop"]:SetPoint("TOPRIGHT", r.hiddenMenus["arg0_drop"], "BOTTOMRIGHT", 0, -1)
     r.hiddenMenus["arg1_drop"]:Hide()
 
-    r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)
+    r:SetScript("OnHide", function(self)
+        if self.origin and self.origin.t then
+            self.origin.t:SetColorTexture(.2,.2,.2,1)
+        end
+        self.origin = nil
+
+        for _,v in pairs(r.hiddenMenus)
+            do v:Hide()
+        end
+    end)
 
     r:EnableMouse(true)
-    r:SetPoint("TOPRIGHT", parent, "TOPLEFT", -1, 0)
-    r:SetSize(xSize, 2 * 21 + 1)
-    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
+    r:SetSize(xSize + 2, 3 * 21 + 1)
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, .15, 1)
+    r.bg.color = {0, 0, .15, 1}
     r.bg:SetAllPoints()
 
     r:Hide()
@@ -1002,14 +1106,19 @@ end
 local function initNewRuleWindow()
     WDRS.menus["new_rule"] = CreateFrame("Frame", nil, WDRS)
     local r = WDRS.menus["new_rule"]
+    r:SetFrameStrata("DIALOG")
     r.menus = {}
     r.hiddenMenus = {}
     r.buttons = {}
 
-    local totalWidth = 325
     local xSize = 200
-    local x = totalWidth - xSize
+    local x = 275
+    local totalWidth = xSize + x
 
+    -- preview
+    r.menus["preview"] = WdLib:createFontDefault(r, "LEFT", "")
+    r.menus["preview"]:SetSize(700, 20)
+    r.menus["preview"]:SetPoint("BOTTOMLEFT", r, "BOTTOMLEFT", 5, -2)
     -- encounters menu
     r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList())
     r.menus["encounters"]:SetSize(xSize, 20)
@@ -1088,12 +1197,10 @@ local function initNewRuleWindow()
     r.hiddenMenus["arg3_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg2_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg3_edit"]:Hide()
 
-    r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end end)
-
     r.buttons["save"] = WdLib:createButton(r)
     r.buttons["save"]:SetPoint("TOPLEFT", r.hiddenMenus["arg3_edit"], "BOTTOMLEFT", 1, -2)
     r.buttons["save"]:SetSize(xSize / 2 - 1, 20)
-    r.buttons["save"]:SetScript("OnClick", function() local result = saveRule(); if result == true then r:Hide() end; end)
+    r.buttons["save"]:SetScript("OnClick", function() local result = saveRule() if result == true then r:Hide() end end)
     r.buttons["save"].t:SetColorTexture(.2, .4, .2, 1)
     r.buttons["save"].txt = WdLib:createFont(r.buttons["save"], "CENTER", "Save")
     r.buttons["save"].txt:SetAllPoints()
@@ -1106,10 +1213,19 @@ local function initNewRuleWindow()
     r.buttons["cancel"].txt = WdLib:createFont(r.buttons["cancel"], "CENTER", "Cancel")
     r.buttons["cancel"].txt:SetAllPoints()
 
+    r.buttons["preview"] = WdLib:createButton(r)
+    r.buttons["preview"]:SetPoint("TOPRIGHT", r.buttons["save"], "TOPLEFT", -1, 0)
+    r.buttons["preview"]:SetSize(xSize / 2 - 2, 20)
+    r.buttons["preview"]:SetScript("OnClick", function() local result, errorMsg = previewRule() if result == false then r.menus["preview"]:SetText("|cffff0000"..errorMsg.."|r") end end)
+    r.buttons["preview"].txt = WdLib:createFont(r.buttons["preview"], "CENTER", "Preview")
+    r.buttons["preview"].txt:SetAllPoints()
+
     r:EnableMouse(true)
-    r:SetPoint("CENTER", WDRS, -80, 150)
-    r:SetSize(totalWidth + 1, 7 * 21 + 3)
-    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r:SetPoint("BOTTOMLEFT", WDRS, 2, 2)
+    r:SetSize(700, 230)
+    r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end r.menus["preview"]:SetText("") end)
+
+    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, .9)
     r.bg:SetAllPoints()
 
     initSelectedRuleMenu()
@@ -1120,10 +1236,17 @@ end
 
 local function onMenuClick(menu)
     if not WDRS.menus[menu] then return end
-    if WDRS.menus[menu]:IsVisible() then
-        WDRS.menus[menu]:Hide()
+    local m = WDRS.menus[menu]
+    if m:IsVisible() then
+        if m.selected then
+            m.selected = nil
+            m:Hide()
+            m:Show()
+        else
+            m:Hide()
+        end
     else
-        WDRS.menus[menu]:Show()
+        m:Show()
     end
 
     for k,v in pairs(WDRS.menus) do
@@ -1166,7 +1289,6 @@ function WD:InitRulesStatisticsModule(parent)
     table.insert(WDRS.headers, h)]]
 
     initNewRuleWindow()
-
     updateRulesListFrame()
 
     function WDRS:OnUpdate()

@@ -79,9 +79,9 @@ end
 
 function WdLib:shortNumber(v)
     if v >= 1000000 then
-        return WdLib:float_round_to(v/1000000, 2).."M"
+        return WdLib:float_round_to(v/1000000, 1).."M"
     elseif v >= 1000 then
-        return WdLib:float_round_to(v/1000, 2).."K"
+        return WdLib:float_round_to(v/1000, 1).."K"
     end
     return v
 end

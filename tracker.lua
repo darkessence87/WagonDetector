@@ -20,6 +20,7 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     v.auras = {}
     v.casts = {}
     v.casts.current_spell_id = 0
+    v.casts.current_spell_interrupted = 0
     v.stats = {}
     return v
 end
@@ -28,6 +29,7 @@ local function createExistingEntity(v)
     v.auras = {}
     v.casts = {}
     v.casts.current_spell_id = 0
+    v.casts.current_spell_interrupted = 0
     v.stats = {}
     return v
 end
@@ -312,7 +314,7 @@ local function findLastAuraByCaster(unit, auraId, caster)
 end
 
 local function isCasting(unit, spell_id)
-    if unit.casts.current_spell_id == spell_id then return true end
+    if unit.casts.current_spell_id == spell_id and unit.casts.current_spell_interrupted == 0 then return true end
     return nil
 end
 
@@ -519,6 +521,7 @@ end
 
 local function startCast(unit, timestamp, spell_id)
     unit.casts.current_spell_id = spell_id
+    unit.casts.current_spell_interrupted = 0
     local haste = 1
     if unit.guid ~= UnitGUID("player") then
         haste = haste + UnitSpellHaste("player") / 100.0
@@ -529,7 +532,7 @@ end
 
 local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, target_spell_id, interrupter)
     if unit.casts.current_spell_id == 0 then return end
-    if unit.casts.current_spell_id == target_spell_id then
+    if unit.casts.current_spell_id == target_spell_id and unit.casts.current_spell_interrupted == 0 then
         local parent = findParent(interrupter)
         if parent then
             interrupter = parent
@@ -574,10 +577,9 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
             end
         end
 
-        WD:RefreshTrackedCreatures()
+        --WD:RefreshTrackedCreatures()
+        unit.casts.current_spell_interrupted = 1
     end
-
-    unit.casts.current_spell_id = 0
 end
 
 local function finishCast(self, unit, timestamp, spell_id, result)
@@ -587,7 +589,11 @@ local function finishCast(self, unit, timestamp, spell_id, result)
         if diff >= WD.MIN_CAST_TIME_TRACKED then
             local i = 1
             if unit.casts[spell_id] then
-                i = unit.casts[spell_id].count + 1
+                if unit.casts.current_spell_interrupted == 1 then
+                    i = unit.casts[spell_id].count
+                else
+                    i = unit.casts[spell_id].count + 1
+                end
             else
                 unit.casts[spell_id] = {}
             end
@@ -596,11 +602,10 @@ local function finishCast(self, unit, timestamp, spell_id, result)
             unit.casts[spell_id][i].status = result
             unit.casts[spell_id][i].timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
             unit.casts[spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
-
-            WD:RefreshTrackedCreatures()
         end
     end
     unit.casts.current_spell_id = 0
+    unit.casts.current_spell_interrupted = 0
 end
 
 local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, target_aura_id, dispeller)
@@ -669,10 +674,11 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
         end
     end
 
-    WD:RefreshTrackedDispels()
+    --WD:RefreshTrackedDispels()
 end
 
-local function validateStatsHolders(src, dst, spell_id)
+local function validateHealStatsHolders(src, dst, spell_id)
+    if not src or not dst then return end
     if not src.stats[dst.guid] then src.stats[dst.guid] = {} end
     if not dst.stats[src.guid] then dst.stats[src.guid] = {} end
     if not src.stats[dst.guid].healDone then src.stats[dst.guid].healDone = {} src.stats[dst.guid].healDone.total = 0 end
@@ -687,6 +693,7 @@ local function validateStatsHolders(src, dst, spell_id)
 end
 
 local function trackHeal(src, dst, spell_id, amount, overheal)
+    if not src or not dst then return end
     src.stats[dst.guid].healDone.total = src.stats[dst.guid].healDone.total + amount
     src.stats[dst.guid].healDone[spell_id] = src.stats[dst.guid].healDone[spell_id] + amount
 
@@ -700,12 +707,42 @@ local function trackHeal(src, dst, spell_id, amount, overheal)
     dst.stats[src.guid].overhealTaken[spell_id] = dst.stats[src.guid].overhealTaken[spell_id] + overheal
 end
 
+local function validateDmgStatsHolders(src, dst, spell_id)
+    if not src or not dst then return end
+    if not src.stats[dst.guid] then src.stats[dst.guid] = {} end
+    if not dst.stats[src.guid] then dst.stats[src.guid] = {} end
+    if not src.stats[dst.guid].dmgDone then src.stats[dst.guid].dmgDone = {} src.stats[dst.guid].dmgDone.total = 0 end
+    if not src.stats[dst.guid].overdmgDone then src.stats[dst.guid].overdmgDone = {} src.stats[dst.guid].overdmgDone.total = 0 end
+    if not dst.stats[src.guid].dmgTaken then dst.stats[src.guid].dmgTaken = {} dst.stats[src.guid].dmgTaken.total = 0 end
+    if not dst.stats[src.guid].overdmgTaken then dst.stats[src.guid].overdmgTaken = {} dst.stats[src.guid].overdmgTaken.total = 0 end
+
+    if not src.stats[dst.guid].dmgDone[spell_id] then src.stats[dst.guid].dmgDone[spell_id] = 0 end
+    if not src.stats[dst.guid].overdmgDone[spell_id] then src.stats[dst.guid].overdmgDone[spell_id] = 0 end
+    if not dst.stats[src.guid].dmgTaken[spell_id] then dst.stats[src.guid].dmgTaken[spell_id] = 0 end
+    if not dst.stats[src.guid].overdmgTaken[spell_id] then dst.stats[src.guid].overdmgTaken[spell_id] = 0 end
+end
+
+local function trackDamage(src, dst, spell_id, amount, overkill)
+    if not src or not dst then return end
+    src.stats[dst.guid].dmgDone.total = src.stats[dst.guid].dmgDone.total + amount
+    src.stats[dst.guid].dmgDone[spell_id] = src.stats[dst.guid].dmgDone[spell_id] + amount
+
+    src.stats[dst.guid].overdmgDone.total = src.stats[dst.guid].overdmgDone.total + overkill
+    src.stats[dst.guid].overdmgDone[spell_id] = src.stats[dst.guid].overdmgDone[spell_id] + overkill
+
+    dst.stats[src.guid].dmgTaken.total = dst.stats[src.guid].dmgTaken.total + amount
+    dst.stats[src.guid].dmgTaken[spell_id] = dst.stats[src.guid].dmgTaken[spell_id] + amount
+
+    dst.stats[src.guid].overdmgTaken.total = dst.stats[src.guid].overdmgTaken.total + overkill
+    dst.stats[src.guid].overdmgTaken[spell_id] = dst.stats[src.guid].overdmgTaken[spell_id] + overkill
+end
+
 local function debugEvent(...)
     if WD.DebugEnabled == false then return end
     local info = ChatTypeInfo["COMBAT_MISC_INFO"];
-    local timestamp, event, hideCaster, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags = ...
-    local message = format("%s, %s, %s, 0x%x, %s, %s, 0x%x", event, srcGUID, srcName or "nil", srcFlags, dstGUID, dstName or "nil", dstFlags);
-    for i = 9, select("#", ...) do
+    local timestamp, event, hideCaster, srcGUID, srcName, srcFlags, srcRaidFlags, dstGUID, dstName, dstFlags, dstRaidFlags = ...
+    local message = format("%s, %s, %s, 0x%x, 0x%x, %s, %s, 0x%x, 0x%x", event, srcGUID, srcName or "nil", srcFlags, srcRaidFlags, dstGUID, dstName or "nil", dstFlags, dstRaidFlags);
+    for i = 11, select("#", ...) do
         message = message..", "..tostring(select(i, ...));
     end
     ChatFrame1:AddMessage(message, info.r, info.g, info.b);
@@ -813,7 +850,7 @@ function WDMF:ProcessCasts(src, dst, ...)
     end
 end
 
-function WDMF:ProcessWhiteDamage(src, dst, ...)
+function WDMF:ProcessEnvironmentDamage(src, dst, ...)
     if not dst then return end
     local arg = {...}
     local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
@@ -822,17 +859,53 @@ function WDMF:ProcessWhiteDamage(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     debugEvent(...)
     -----------------------------------------------------------------------------------------------------------------------
+    local environmentType, amount = arg[12], arg[13]
+    if not src then
+        src = createEntity("Environment", environmentType, "environment")
+    end
+    local spell_id = "Environment: "..environmentType
+    validateDmgStatsHolders(src, dst, spell_id, amount, 0)
+    trackDamage(src, dst, spell_id, amount, 0)
 end
 
-function WDMF:ProcessSpellDamage(src, dst, ...)
+function WDMF:ProcessWhiteDamage(src, dst, ...)
     if not dst then return end
     local arg = {...}
-    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
-    debugEvent(...)
+    --debugEvent(...)
     -----------------------------------------------------------------------------------------------------------------------
+    local amount, overkill, spell_id
+    if event == "SWING_DAMAGE" then
+        amount, overkill, spell_id = tonumber(arg[12]), tonumber(arg[13]), ACTION_SWING
+    end
+    if event == "RANGE_DAMAGE" then
+        amount, overkill, spell_id = tonumber(arg[15]), tonumber(arg[16]), tonumber(arg[12])
+    end
+
+    if overkill > 0 then amount = amount - overkill end
+    if overkill == -1 then overkill = 0 end
+    validateDmgStatsHolders(src, dst, spell_id, amount, overkill)
+    trackDamage(src, dst, spell_id, amount, overkill)
+end
+
+function WDMF:ProcessSpellDamage(src, dst, ...)
+    if not src or not dst then return end
+    local arg = {...}
+    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    if not src and src_name then return end
+    if not dst and dst_name then return end
+    -----------------------------------------------------------------------------------------------------------------------
+    --debugEvent(...)
+    -----------------------------------------------------------------------------------------------------------------------
+    local spell_id, amount, overkill = tonumber(arg[12]), tonumber(arg[15]), tonumber(arg[16])
+    if overkill > 0 then amount = amount - overkill end
+    if overkill == -1 then overkill = 0 end
+    validateDmgStatsHolders(src, dst, spell_id, amount, overkill)
+    trackDamage(src, dst, spell_id, amount, overkill)
+
     if event == "SPELL_DAMAGE" then
         -- interrupts
         if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
@@ -841,7 +914,6 @@ function WDMF:ProcessSpellDamage(src, dst, ...)
 
         local function processRules(deathRule, damageTakenRule)
             if deathRule or damageTakenRule then
-                local amount, overkill = tonumber(arg[15]), tonumber(arg[16])
                 local total = amount + overkill
                 if overkill == 0 then total = total + 1 end
 
@@ -911,12 +983,12 @@ function WDMF:ProcessHealing(src, dst, ...)
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
-    debugEvent(...)
+    --debugEvent(...)
     -----------------------------------------------------------------------------------------------------------------------
     local amount, overheal, absorb = tonumber(arg[15]), tonumber(arg[16]), tonumber(arg[17])
     amount = amount - overheal
 
-    validateStatsHolders(src, dst, spell_id)
+    validateHealStatsHolders(src, dst, spell_id)
     trackHeal(src, dst, spell_id, amount, overheal)
 end
 
@@ -950,7 +1022,7 @@ function WDMF:ProcessAbsorbs(src, dst, ...)
     local aura_caster = getEntities(aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags)
     if not aura_caster then return end
 
-    validateStatsHolders(aura_caster, dst, aura_id)
+    validateHealStatsHolders(aura_caster, dst, aura_id)
     trackHeal(aura_caster, dst, aura_id, amount, 0)
 end
 
@@ -1142,16 +1214,17 @@ end
 
 function WDMF:Init()
     WdLib:table_wipe(callbacks)
-    registerCallback(self.ProcessSummons,       "SPELL_SUMMON")
-    registerCallback(self.ProcessAuras,         "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
-    registerCallback(self.ProcessCasts,         "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
-    registerCallback(self.ProcessWhiteDamage,   "SWING_DAMAGE", "RANGE_DAMAGE")
-    registerCallback(self.ProcessSpellDamage,   "SPELL_DAMAGE", "ENVIRONMENTAL_DAMAGE", "DAMAGE_SHIELD", "SPELL_PERIODIC_DAMAGE", "SPELL_BUILDING_DAMAGE")
-    registerCallback(self.ProcessHealing,       "SPELL_HEAL", "SPELL_BUILDING_HEAL", "SPELL_PERIODIC_HEAL")
-    registerCallback(self.ProcessAbsorbs,       "SPELL_ABSORBED")
-    --registerCallback(self.ProcessLeaching,      "SPELL_LEECH", "SPELL_PERIODIC_LEECH", "SPELL_DRAIN", "SPELL_PERIODIC_DRAIN")
-    registerCallback(self.ProcessDispels,       "SPELL_DISPEL", "SPELL_STOLEN")
-    registerCallback(self.ProcessDeaths,        "UNIT_DIED", "UNIT_DESTROYED", "UNIT_DISSIPATES")
+    registerCallback(self.ProcessSummons,           "SPELL_SUMMON")
+    registerCallback(self.ProcessAuras,             "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
+    registerCallback(self.ProcessCasts,             "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
+    registerCallback(self.ProcessEnvironmentDamage, "ENVIRONMENTAL_DAMAGE")
+    registerCallback(self.ProcessWhiteDamage,       "SWING_DAMAGE", "RANGE_DAMAGE")
+    registerCallback(self.ProcessSpellDamage,       "SPELL_DAMAGE", "DAMAGE_SHIELD", "SPELL_PERIODIC_DAMAGE", "SPELL_BUILDING_DAMAGE")
+    registerCallback(self.ProcessHealing,           "SPELL_HEAL", "SPELL_BUILDING_HEAL", "SPELL_PERIODIC_HEAL")
+    registerCallback(self.ProcessAbsorbs,           "SPELL_ABSORBED")
+    --registerCallback(self.ProcessLeaching,          "SPELL_LEECH", "SPELL_PERIODIC_LEECH", "SPELL_DRAIN", "SPELL_PERIODIC_DRAIN")
+    registerCallback(self.ProcessDispels,           "SPELL_DISPEL", "SPELL_STOLEN")
+    registerCallback(self.ProcessDeaths,            "UNIT_DIED", "UNIT_DESTROYED", "UNIT_DISSIPATES")
 end
 
 function WDMF:CreateRaidMember(unit, petUnit)

@@ -595,6 +595,7 @@ function WD:RefreshTrackerPulls()
     end
     if WD.guiFrame.module["tracker_statistics"] then
         WD.guiFrame.module["tracker_statistics"].buttons["select_pull"]:Refresh()
+        WD.guiFrame.module["tracker_statistics"].buttons["select_rule"]:Refresh()
     end
 end
 

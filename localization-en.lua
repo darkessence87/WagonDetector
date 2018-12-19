@@ -119,3 +119,6 @@ WD_TRACKER_ST_TARGET_INTERRUPTS = "collects interrupted |cffffffffby|r statistic
 WD_TRACKER_ST_SOURCE_DAMAGE = "collects damage |cffffffffdone|r statistics"
 WD_TRACKER_ST_SOURCE_HEALING = "collects healing |cffffffffdone|r statistics"
 WD_TRACKER_ST_SOURCE_INTERRUPTS = "collects interrupts |cffffffffdone|r statistics"
+
+WD_TRACKER_DONE_POPUP_LABEL = "%s done to %s by %s"
+WD_TRACKER_TAKEN_POPUP_LABEL = "%s taken by %s from %s"

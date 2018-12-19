@@ -91,6 +91,7 @@ function WD:LoadDefaults()
             autoTrack = true,
             tracker = {
                 selected = 0,
+                selectedRule = "TOTAL_DONE",
             },
         }
     }

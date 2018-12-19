@@ -123,3 +123,6 @@ WD_TRACKER_ST_TARGET_INTERRUPTS = "собирает статистику сби�
 WD_TRACKER_ST_SOURCE_DAMAGE = "собирает статистику |cffffffffнанесенного|r урона"
 WD_TRACKER_ST_SOURCE_HEALING = "собирает статистику |cffffffffисходящего|r лечения"
 WD_TRACKER_ST_SOURCE_INTERRUPTS = "собирает статистику сбитых |cffffffffцелью|r кастов"
+
+--WD_TRACKER_DONE_POPUP_LABEL = "%s done to %s by %s"
+--WD_TRACKER_TAKEN_POPUP_LABEL = "%s taken by %s from %s"

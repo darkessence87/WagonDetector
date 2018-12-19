@@ -1,7 +1,7 @@
 
 WdLib = {}
 
-WdLib.MAX_DROP_DOWN_MENUS = 25
+WdLib.MAX_DROP_DOWN_MENUS = 30
 
 function WdLib:CreateTimer(fn, delay, ...)
     local function executeFn(self) self.fn(unpack(self.args)) end
@@ -75,6 +75,15 @@ local function createListButton(parent, name)
     button.arrow:SetSize(15, 15)
     button.arrow:SetPoint("RIGHT")
     return button
+end
+
+function WdLib:shortNumber(v)
+    if v >= 1000000 then
+        return WdLib:float_round_to(v/1000000, 2).."M"
+    elseif v >= 1000 then
+        return WdLib:float_round_to(v/1000, 2).."K"
+    end
+    return v
 end
 
 function WdLib:float_round_to(v, n)

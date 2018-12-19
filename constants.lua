@@ -1,8 +1,9 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.48"
+WD.Version = "v0.0.49"
 WD.TiersInfo = {}
 WD.MaxPullsToBeSaved = 25
+WD.DebugEnabled = false
 
 WD.CurrentRealmName = string.gsub(GetRealmName(), "%s+", "")
 
@@ -91,6 +92,19 @@ local function loadInstances(tierId)
 
         i = i + 1
         instanceId, instanceName = EJ_GetInstanceByIndex(i, true)
+    end
+
+    local j = 1
+    local instanceId, instanceName = EJ_GetInstanceByIndex(j, false)
+    while instanceId do
+        local inst = {}
+        inst.id = instanceId
+        inst.name = instanceName
+        inst.encounters = loadEncounters(instanceId)
+        instances[#instances+1] = inst
+
+        j = j + 1
+        instanceId, instanceName = EJ_GetInstanceByIndex(j, false)
     end
 
     return instances

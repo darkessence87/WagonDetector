@@ -20,6 +20,7 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     v.auras = {}
     v.casts = {}
     v.casts.current_spell_id = 0
+    v.stats = {}
     return v
 end
 
@@ -27,6 +28,7 @@ local function createExistingEntity(v)
     v.auras = {}
     v.casts = {}
     v.casts.current_spell_id = 0
+    v.stats = {}
     return v
 end
 
@@ -670,6 +672,45 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
     WD:RefreshTrackedDispels()
 end
 
+local function validateStatsHolders(src, dst, spell_id)
+    if not src.stats[dst.guid] then src.stats[dst.guid] = {} end
+    if not dst.stats[src.guid] then dst.stats[src.guid] = {} end
+    if not src.stats[dst.guid].healDone then src.stats[dst.guid].healDone = {} src.stats[dst.guid].healDone.total = 0 end
+    if not src.stats[dst.guid].overhealDone then src.stats[dst.guid].overhealDone = {} src.stats[dst.guid].overhealDone.total = 0 end
+    if not dst.stats[src.guid].healTaken then dst.stats[src.guid].healTaken = {} dst.stats[src.guid].healTaken.total = 0 end
+    if not dst.stats[src.guid].overhealTaken then dst.stats[src.guid].overhealTaken = {} dst.stats[src.guid].overhealTaken.total = 0 end
+
+    if not src.stats[dst.guid].healDone[spell_id] then src.stats[dst.guid].healDone[spell_id] = 0 end
+    if not src.stats[dst.guid].overhealDone[spell_id] then src.stats[dst.guid].overhealDone[spell_id] = 0 end
+    if not dst.stats[src.guid].healTaken[spell_id] then dst.stats[src.guid].healTaken[spell_id] = 0 end
+    if not dst.stats[src.guid].overhealTaken[spell_id] then dst.stats[src.guid].overhealTaken[spell_id] = 0 end
+end
+
+local function trackHeal(src, dst, spell_id, amount, overheal)
+    src.stats[dst.guid].healDone.total = src.stats[dst.guid].healDone.total + amount
+    src.stats[dst.guid].healDone[spell_id] = src.stats[dst.guid].healDone[spell_id] + amount
+
+    src.stats[dst.guid].overhealDone.total = src.stats[dst.guid].overhealDone.total + overheal
+    src.stats[dst.guid].overhealDone[spell_id] = src.stats[dst.guid].overhealDone[spell_id] + overheal
+
+    dst.stats[src.guid].healTaken.total = dst.stats[src.guid].healTaken.total + amount
+    dst.stats[src.guid].healTaken[spell_id] = dst.stats[src.guid].healTaken[spell_id] + amount
+
+    dst.stats[src.guid].overhealTaken.total = dst.stats[src.guid].overhealTaken.total + overheal
+    dst.stats[src.guid].overhealTaken[spell_id] = dst.stats[src.guid].overhealTaken[spell_id] + overheal
+end
+
+local function debugEvent(...)
+    if WD.DebugEnabled == false then return end
+    local info = ChatTypeInfo["COMBAT_MISC_INFO"];
+    local timestamp, event, hideCaster, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags = ...
+    local message = format("%s, %s, %s, 0x%x, %s, %s, 0x%x", event, srcGUID, srcName or "nil", srcFlags, dstGUID, dstName or "nil", dstFlags);
+    for i = 9, select("#", ...) do
+        message = message..", "..tostring(select(i, ...));
+    end
+    ChatFrame1:AddMessage(message, info.r, info.g, info.b);
+end
+
 function WDMF:ProcessSummons(src, dst, ...)
     if not src then return end
     local arg = {...}
@@ -772,12 +813,25 @@ function WDMF:ProcessCasts(src, dst, ...)
     end
 end
 
-function WDMF:ProcessDamage(src, dst, ...)
+function WDMF:ProcessWhiteDamage(src, dst, ...)
+    if not dst then return end
+    local arg = {...}
+    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    if not src and src_name then return end
+    if not dst and dst_name then return end
+    -----------------------------------------------------------------------------------------------------------------------
+    debugEvent(...)
+    -----------------------------------------------------------------------------------------------------------------------
+end
+
+function WDMF:ProcessSpellDamage(src, dst, ...)
     if not dst then return end
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
     if not src and src_name then return end
     if not dst and dst_name then return end
+    -----------------------------------------------------------------------------------------------------------------------
+    debugEvent(...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_DAMAGE" then
         -- interrupts
@@ -850,11 +904,54 @@ function WDMF:ProcessDamage(src, dst, ...)
 end
 
 function WDMF:ProcessHealing(src, dst, ...)
+    if not src or not dst then return end
     local rules = self.encounter.rules
     local arg = {...}
     local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
     if not src and src_name then return end
     if not dst and dst_name then return end
+    -----------------------------------------------------------------------------------------------------------------------
+    debugEvent(...)
+    -----------------------------------------------------------------------------------------------------------------------
+    local amount, overheal, absorb = tonumber(arg[15]), tonumber(arg[16]), tonumber(arg[17])
+    amount = amount - overheal
+
+    validateStatsHolders(src, dst, spell_id)
+    trackHeal(src, dst, spell_id, amount, overheal)
+end
+
+function WDMF:ProcessLeechEffects(src, dst, ...)
+    if not src or not dst then return end
+    local rules = self.encounter.rules
+    local arg = {...}
+    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    if not src and src_name then return end
+    if not dst and dst_name then return end
+    -----------------------------------------------------------------------------------------------------------------------
+    debugEvent(...)
+end
+
+function WDMF:ProcessAbsorbs(src, dst, ...)
+    if not dst then return end
+    local rules = self.encounter.rules
+    local arg = {...}
+    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    if not src and src_name then return end
+    if not dst and dst_name then return end
+    -------------------------------------------------------------------
+
+    -- non-spell atacks
+    local aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags, aura_id, _, _, amount = select(12, ...)
+    if tonumber(aura_caster_guid) then
+        -- spell attacks
+        local spell_id = arg[12]
+        aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags, aura_id, _, _, amount = select(15, ...)
+    end
+    local aura_caster = getEntities(aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags)
+    if not aura_caster then return end
+
+    validateStatsHolders(aura_caster, dst, aura_id)
+    trackHeal(aura_caster, dst, aura_id, amount, 0)
 end
 
 function WDMF:ProcessDeaths(src, dst, ...)
@@ -1045,13 +1142,16 @@ end
 
 function WDMF:Init()
     WdLib:table_wipe(callbacks)
-    registerCallback(self.ProcessSummons,   "SPELL_SUMMON")
-    registerCallback(self.ProcessAuras,     "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
-    registerCallback(self.ProcessCasts,     "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
-    registerCallback(self.ProcessDamage,    "SPELL_DAMAGE")
-    --registerCallback(self.ProcessHealing, "SPELL_HEAL")
-    registerCallback(self.ProcessDeaths,    "UNIT_DIED")
-    registerCallback(self.ProcessDispels,   "SPELL_DISPEL", "SPELL_STOLEN")
+    registerCallback(self.ProcessSummons,       "SPELL_SUMMON")
+    registerCallback(self.ProcessAuras,         "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
+    registerCallback(self.ProcessCasts,         "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
+    registerCallback(self.ProcessWhiteDamage,   "SWING_DAMAGE", "RANGE_DAMAGE")
+    registerCallback(self.ProcessSpellDamage,   "SPELL_DAMAGE", "ENVIRONMENTAL_DAMAGE", "DAMAGE_SHIELD", "SPELL_PERIODIC_DAMAGE", "SPELL_BUILDING_DAMAGE")
+    registerCallback(self.ProcessHealing,       "SPELL_HEAL", "SPELL_BUILDING_HEAL", "SPELL_PERIODIC_HEAL")
+    registerCallback(self.ProcessAbsorbs,       "SPELL_ABSORBED")
+    --registerCallback(self.ProcessLeaching,      "SPELL_LEECH", "SPELL_PERIODIC_LEECH", "SPELL_DRAIN", "SPELL_PERIODIC_DRAIN")
+    registerCallback(self.ProcessDispels,       "SPELL_DISPEL", "SPELL_STOLEN")
+    registerCallback(self.ProcessDeaths,        "UNIT_DIED", "UNIT_DESTROYED", "UNIT_DISSIPATES")
 end
 
 function WDMF:CreateRaidMember(unit, petUnit)
@@ -1144,6 +1244,7 @@ function WDMF:Tracker_OnStartEncounter()
     WD:RefreshTrackerPulls()
     WD:RefreshTrackedCreatures()
     WD:RefreshTrackedDispels()
+    WD:RefreshUnitStatistics()
 end
 
 function WDMF:Tracker_OnStopEncounter()
@@ -1154,6 +1255,7 @@ function WDMF:Tracker_OnStopEncounter()
     WD:RefreshTrackerPulls()
     WD:RefreshTrackedCreatures()
     WD:RefreshTrackedDispels()
+    WD:RefreshUnitStatistics()
 end
 
 function WDMF:Tracker_OnEvent(...)

@@ -590,7 +590,12 @@ function WD:RefreshTrackedCreatures()
 end
 
 function WD:RefreshTrackerPulls()
-    WDTO.buttons["select_pull"]:Refresh()
+    if WD.guiFrame.module["tracker_overview"] then
+        WD.guiFrame.module["tracker_overview"].buttons["select_pull"]:Refresh()
+    end
+    if WD.guiFrame.module["tracker_statistics"] then
+        WD.guiFrame.module["tracker_statistics"].buttons["select_pull"]:Refresh()
+    end
 end
 
 function WD:InitTrackerOverviewModule(parent)
@@ -604,6 +609,8 @@ function WD:InitTrackerOverviewModule(parent)
     initInterruptsInfoTable()
     initDispelButtons()
     initDispelInfoTable()
+
+    WDTO:SetScript("OnShow", function(self) self:OnUpdate() end)
 
     function WDTO:OnUpdate()
         WD:RefreshTrackedCreatures()

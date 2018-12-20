@@ -4,6 +4,7 @@ local WDTS = nil
 local POPUP_MAX_SPELLS = 25
 
 local function log(data)
+    --if WD.DebugEnabled ~= true then return end
     if type(data) == "table" then
         print(WdLib:table_tostring(data))
     else
@@ -37,6 +38,27 @@ local function getPopupLabelByMode(mode)
         if mode == "dmg" then return "Total damage taken by %s" end
     end
     print("Unknown rule type:"..ruleType)
+    return nil
+end
+
+local function getTablesNameByRule(mode, rule)
+    if mode == "heal" then
+        if rule == "done" then
+            return {"healDone", "overhealDone"}
+        elseif rule == "taken" then
+            return {"healTaken", "overhealTaken"}
+        elseif rule == "range" then
+            print("Not implemented yet")
+        end
+    elseif mode == "dmg" then
+        if rule == "done" then
+            return {"dmgDone", "overdmgDone"}
+        elseif rule == "taken" then
+            return {"dmgTaken", "overdmgTaken"}
+        elseif rule == "range" then
+            print("Not implemented yet")
+        end
+    end
     return nil
 end
 
@@ -81,12 +103,42 @@ local function findEntityByGUID(guid)
 end
 
 local function generateSpellChart(data)
-    local chart = {}
-    if not data then return chart end
-    for spellId,amount in pairs(data) do
-        if (tonumber(spellId) or spellId == ACTION_SWING or spellId == ACTION_RANGE or spellId:match("Environment")) and amount > 0 then
+    local function getSpellTypeByEvent(event)
+        if event:match("PERIODIC") then
+            if event:match("HEAL") then return "(HOT)" end
+            if event:match("DAMAGE") then return "(DOT)" end
+        end
+        if event:match("ABSORB") then
+            return "(ABSORB)"
+        end
+        if event:match("SHIELD") then
+            return "(REFLECT)"
+        end
+        return nil
+    end
+
+    local function createSpellRow(chart, event, spellId, amount, petName)
+        if amount > 0 then
             local t = {}
+            t.index = #chart+1
             t.id = spellId
+            local spellType = getSpellTypeByEvent(event)
+            if spellType and tonumber(spellId) then
+                t.spellName = GetSpellInfo(spellId).." "..spellType
+            elseif spellType then
+                t.spellName = " |cffffffff"..spellId.." "..spellType.."|r"
+            end
+
+            if petName then
+                if t.spellName then
+                    t.spellName = t.spellName.." |cffffffff("..petName..")|r"
+                elseif tonumber(spellId) then
+                    t.spellName = GetSpellInfo(spellId).." |cffffffff("..petName..")|r"
+                else
+                    t.spellName = " |cffffffff"..spellId.." ".." ("..petName..")|r"
+                end
+            end
+
             t.value = amount
             if data.total > 0 then
                 t.percent = amount * 100 / data.total
@@ -97,17 +149,121 @@ local function generateSpellChart(data)
         end
     end
 
+    local chart = {}
+    if not data then return chart end
+    for spellId,spellData in pairs(data.spells) do
+        if type(spellData) == "table" then
+            for event,amount in pairs(spellData) do
+                createSpellRow(chart, event, spellId, amount)
+            end
+        end
+    end
+    if data.pet then
+        for spellId,spellData in pairs(data.pet.spells) do
+            if type(spellData) == "table" then
+                for event,amount in pairs(spellData) do
+                    if event ~= "name" then
+                        createSpellRow(chart, event, spellId, amount, spellData.name)
+                    end
+                end
+            end
+        end
+    end
+
     local func = function(a, b)
         if a.value > b.value then
             return true
         elseif a.value < b.value then
             return false
         end
-        return a.id < b.id
+        return a.index > b.index
     end
     table.sort(chart, func)
 
     return chart
+end
+
+local function prepareDataForSpellChart(tableData)
+    local spellInfo = {spells={},total=0}
+    if not tableData then return spellInfo end
+    for spellId,spellData in pairs(tableData) do
+        if type(spellData) == "table" then
+            if spellId == "pet" then
+                for petSpellId,petSpellData in pairs(spellData) do
+                    if type(petSpellData) == "table" then
+                        for event,eventData in pairs(petSpellData) do
+                            if type(eventData) == "table" then
+                                if not spellInfo.pet then spellInfo.pet = {spells={},total=0} end
+                                local t = spellInfo.pet.spells
+                                if not t[petSpellId] then t[petSpellId] = {} end
+                                if not t[petSpellId][event] then t[petSpellId][event] = 0 end
+                                t[petSpellId][event] = t[petSpellId][event] + eventData.amount
+                                t[petSpellId].name = WdLib:getShortName(tableData.pet.name, "norealm")
+                                spellInfo.pet.total = spellInfo.pet.total + eventData.amount
+                            end
+                        end
+                    end
+                end
+            else
+                for event,eventData in pairs(spellData) do
+                    if type(eventData) == "table" then
+                        if not spellInfo.spells[spellId] then spellInfo.spells[spellId] = {} end
+                        if not spellInfo.spells[spellId][event] then spellInfo.spells[spellId][event] = 0 end
+                        spellInfo.spells[spellId][event] = spellInfo.spells[spellId][event] + eventData.amount
+                    end
+                end
+            end
+        end
+    end
+    spellInfo.total = spellInfo.total + tableData.total
+    --log(spellInfo)
+    return spellInfo
+end
+
+local function prepareTotalDataForSpellChart(unit, mode)
+    local rule = getCurrentFilter()
+    local tNames = getTablesNameByRule(mode, rule)
+    local spellInfo = {spells={},total=0}
+    for _,guidData in pairs(unit.stats) do
+        if type(guidData) == "table" then
+            for tableName,tableData in pairs(guidData) do
+                if tableName == tNames[1] then
+                    for spellId,spellData in pairs(tableData) do
+                        if type(spellData) == "table" then
+                            if spellId == "pet" then
+                                for petSpellId,petSpellData in pairs(spellData) do
+                                    if type(petSpellData) == "table" then
+                                        for event,eventData in pairs(petSpellData) do
+                                            if type(eventData) == "table" then
+                                                if not spellInfo.pet then spellInfo.pet = {spells={},total=0} end
+                                                local t = spellInfo.pet.spells
+                                                if not t[petSpellId] then t[petSpellId] = {} end
+                                                if not t[petSpellId][event] then t[petSpellId][event] = 0 end
+                                                t[petSpellId][event] = t[petSpellId][event] + eventData.amount
+                                                t[petSpellId].name = WdLib:getShortName(tableData.pet.name, "norealm")
+                                                spellInfo.pet.total = spellInfo.pet.total + eventData.amount
+                                            end
+                                        end
+                                    end
+                                end
+                            else
+                                for event,eventData in pairs(spellData) do
+                                    if type(eventData) == "table" then
+                                        if not spellInfo.spells[spellId] then spellInfo.spells[spellId] = {} end
+                                        if not spellInfo.spells[spellId][event] then spellInfo.spells[spellId][event] = 0 end
+                                        spellInfo.spells[spellId][event] = spellInfo.spells[spellId][event] + eventData.amount
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    spellInfo.total = spellInfo.total + tableData.total
+                end
+            end
+        end
+    end
+    --log(spellInfo)
+    return spellInfo
 end
 
 local function showPopup(parent, label, data)
@@ -124,11 +280,15 @@ local function showPopup(parent, label, data)
         WDTS.popup.label:SetText(label)
     end
 
-    local delta = 100 - chart[1].percent
+    local total = chart[1].percent
     for i=1,math.min(#chart, POPUP_MAX_SPELLS) do
-        WDTS.popup.members[i]:SetValue(chart[i].percent + delta)
+        WDTS.popup.members[i]:SetValue(chart[i].percent * 100 / total)
         local spellId = chart[i].id
-        if tonumber(spellId) then
+        if chart[i].spellName and tonumber(spellId) then
+            spellId = WdLib:makeSpellLinkWithTexture(spellId, chart[i].spellName)
+        elseif chart[i].spellName then
+            spellId = chart[i].spellName
+        elseif tonumber(spellId) then
             spellId = WdLib:getSpellLinkByIdWithTexture(spellId)
         else
             spellId = " |cffffffff"..spellId.."|r"
@@ -164,7 +324,7 @@ local function initSpellChartPopup()
         r:GetStatusBarTexture():SetHorizTile(false)
         r:GetStatusBarTexture():SetVertTile(false)
         r:SetMinMaxValues(0, 100)
-        r:SetStatusBarColor(.1,.2,.1,1)
+        r:SetStatusBarColor(.15,.25,.15,1)
         r:SetSize(xSize, 20)
         r.leftTxt = WdLib:createFontDefault(r, "LEFT", "")
         r.leftTxt:SetSize(250, 20)
@@ -388,7 +548,7 @@ local function updateHealInfo()
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Healing", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.healDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healDone)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 2 then
@@ -397,7 +557,7 @@ local function updateHealInfo()
             local f = WdLib:addNextColumn(WDTS.data["heal_info"], parent, index, "CENTER", WdLib:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overhealing", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overhealDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overhealDone)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 3 then
@@ -406,7 +566,7 @@ local function updateHealInfo()
             local f = WdLib:addNextColumn(WDTS.data["heal_info"], parent, index, "CENTER", WdLib:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Healing", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.healTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healTaken)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 4 then
@@ -415,7 +575,7 @@ local function updateHealInfo()
             local f = WdLib:addNextColumn(WDTS.data["heal_info"], parent, index, "CENTER", WdLib:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overhealing", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overhealTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overhealTaken)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 5 then
@@ -432,25 +592,25 @@ local function updateHealInfo()
             if v.healDone then value = v.healDone.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Healing", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.healDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healDone)) end)
         elseif index == 2 then
             local value = 0
             if v.overhealDone then value = v.overhealDone.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overhealing", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overhealDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overhealDone)) end)
         elseif index == 3 then
             local value = 0
             if v.healTaken then value = v.healTaken.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Healing", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.healTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healTaken)) end)
         elseif index == 4 then
             local value = 0
             if v.overhealTaken then value = v.overhealTaken.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overhealing", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overhealTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overhealTaken)) end)
         elseif index == 5 then
             f.txt:SetText(target)
         end
@@ -512,7 +672,7 @@ local function updateDmgInfo()
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Damage", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.dmgDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgDone)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 2 then
@@ -521,7 +681,7 @@ local function updateDmgInfo()
             local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overkill", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overdmgDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgDone)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 3 then
@@ -530,7 +690,7 @@ local function updateDmgInfo()
             local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Damage", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.dmgTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgTaken)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 4 then
@@ -539,7 +699,7 @@ local function updateDmgInfo()
             local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overkill", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overdmgTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgTaken)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 5 then
@@ -556,25 +716,25 @@ local function updateDmgInfo()
             if v.dmgDone then value = v.dmgDone.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Damage", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.dmgDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgDone)) end)
         elseif index == 2 then
             local value = 0
             if v.overdmgDone then value = v.overdmgDone.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overkill", target, source)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overdmgDone) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgDone)) end)
         elseif index == 3 then
             local value = 0
             if v.dmgTaken then value = v.dmgTaken.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Damage", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.dmgTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgTaken)) end)
         elseif index == 4 then
             local value = 0
             if v.overdmgTaken then value = v.overdmgTaken.total end
             f.txt:SetText(WdLib:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overkill", source, target)
-            f:SetScript("OnEnter", function() showPopup(f, popupLabel, v.overdmgTaken) end)
+            f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgTaken)) end)
         elseif index == 5 then
             f.txt:SetText(target)
         end
@@ -787,35 +947,14 @@ local function filterBySelectedRule(v, mode, rule)
     return nil
 end
 
-local function getTablesNameByRule(mode, rule)
-    if mode == "heal" then
-        if rule == "done" then
-            return {"healDone", "overhealDone"}
-        elseif rule == "taken" then
-            return {"healTaken", "overhealTaken"}
-        elseif rule == "range" then
-            print("Not implemented yet")
-        end
-    elseif mode == "dmg" then
-        if rule == "done" then
-            return {"dmgDone", "overdmgDone"}
-        elseif rule == "taken" then
-            return {"dmgTaken", "overdmgTaken"}
-        elseif rule == "range" then
-            print("Not implemented yet")
-        end
-    end
-    return nil
-end
-
 local function calculateTotalStatsByRule(unit, mode, rule)
     local tNames = getTablesNameByRule(mode, rule)
     unit.total = 0
-    for _,v in pairs(unit.stats) do
+    for k,v in pairs(unit.stats) do
         if type(v) == "table" then
-            for k,data in pairs(v) do
-                if k == tNames[1] then
-                    unit.total = unit.total + data.total
+            for tableName,tableData in pairs(v) do
+                if tableName == tNames[1] then
+                    unit.total = unit.total + tableData.total
                 end
             end
         end
@@ -832,62 +971,81 @@ local function mergeSpells(units, parent, pet)
         return nil
     end
 
-    local function mergeDoneData(parentUnit, targetGuid, petData)
-        local function merge(parentTable, petTable)
-            if not petTable or not parentTable then return 0 end
-            for spell,amount in pairs(petTable) do
-                if not parentTable[spell] then parentTable[spell] = 0 end
-                parentTable[spell] = parentTable[spell] + amount
+    local function merge(parentTable, petTable)
+        if not petTable or not parentTable then return 0 end
+        for spellId,spellData in pairs(petTable) do
+            if type(spellData) == "table" then
+                for event,eventData in pairs(spellData) do
+                    if type(eventData) == "table" then
+                        if not parentTable[spellId] then parentTable[spellId] = {total=0} end
+                        if not parentTable[spellId][event] then parentTable[spellId][event] = {amount=0} end
+                        parentTable[spellId][event].amount = parentTable[spellId][event].amount + eventData.amount
+                        parentTable[spellId].total = parentTable[spellId].total + eventData.amount
+                    end
+                end
+                parentTable.total = parentTable.total + parentTable[spellId].total
             end
         end
+    end
+
+    local function mergeDoneData(parentUnit, targetGuid, petData)
         if not parentUnit.stats[targetGuid] then parentUnit.stats[targetGuid] = {} end
         local t = parentUnit.stats[targetGuid]
         if petData.healDone then
-            if not t.healDone then t.healDone = {} t.healDone.total = 0 end
-            merge(t.healDone, petData.healDone)
+            if not t.healDone then t.healDone = {total=0} end
+            if not t.healDone.pet then t.healDone.pet = {total=0,name=pet.name} end
+            merge(t.healDone.pet, petData.healDone)
+            t.healDone.total = t.healDone.total + t.healDone.pet.total
         end
         if petData.overhealDone then
-            if not t.overhealDone then t.overhealDone = {} t.overhealDone.total = 0 end
-            merge(t.overhealDone, petData.overhealDone)
+            if not t.overhealDone then t.overhealDone = {total=0} end
+            if not t.overhealDone.pet then t.overhealDone.pet = {total=0,name=pet.name} end
+            merge(t.overhealDone.pet, petData.overhealDone)
+            t.overhealDone.total = t.overhealDone.total + t.overhealDone.pet.total
         end
         if petData.dmgDone then
-            if not t.dmgDone then t.dmgDone = {} t.dmgDone.total = 0 end
-            merge(t.dmgDone, petData.dmgDone)
+            if not t.dmgDone then t.dmgDone = {total=0} end
+            if not t.dmgDone.pet then t.dmgDone.pet = {total=0,name=pet.name} end
+            merge(t.dmgDone.pet, petData.dmgDone)
+            t.dmgDone.total = t.dmgDone.total + t.dmgDone.pet.total
         end
         if petData.overdmgDone then
-            if not t.overdmgDone then t.overdmgDone = {} t.overdmgDone.total = 0 end
-            merge(t.overdmgDone, petData.overdmgDone)
+            if not t.overdmgDone then t.overdmgDone = {total=0} end
+            if not t.overdmgDone.pet then t.overdmgDone.pet = {total=0,name=pet.name} end
+            merge(t.overdmgDone.pet, petData.overdmgDone)
+            t.overdmgDone.total = t.overdmgDone.total + t.overdmgDone.pet.total
         end
     end
 
     local function mergeTakenData(parentUnit, targetGuid, petData)
-        local function merge(parentTable, petTable)
-            if not petTable or not parentTable then return 0 end
-            for spell,amount in pairs(petTable) do
-                if not parentTable[spell] then parentTable[spell] = 0 end
-                parentTable[spell] = parentTable[spell] + amount
-            end
-        end
         if not parentUnit.stats[targetGuid] then parentUnit.stats[targetGuid] = {} end
         local t = parentUnit.stats[targetGuid]
         if petData.healDone then
-            if not t.healTaken then t.healTaken = {} t.healTaken.total = 0 end
-            merge(t.healTaken, petData.healDone)
+            if not t.healTaken then t.healTaken = {total=0} end
+            if not t.healTaken.pet then t.healTaken.pet = {total=0,name=pet.name} end
+            merge(t.healTaken.pet, petData.healDone)
+            t.healTaken.total = t.healTaken.total + t.healTaken.pet.total
             parentUnit.stats[pet.guid].healTaken = nil
         end
         if petData.overhealDone then
-            if not t.overhealTaken then t.overhealTaken = {} t.overhealTaken.total = 0 end
-            merge(t.overhealTaken, petData.overhealDone)
+            if not t.overhealTaken then t.overhealTaken = {total=0} end
+            if not t.overhealTaken.pet then t.overhealTaken.pet = {total=0,name=pet.name} end
+            merge(t.overhealTaken.pet, petData.overhealDone)
+            t.overhealTaken.total = t.overhealTaken.total + t.overhealTaken.pet.total
             parentUnit.stats[pet.guid].overhealTaken = nil
         end
         if petData.dmgDone then
-            if not t.dmgTaken then t.dmgTaken = {} t.dmgTaken.total = 0 end
-            merge(t.dmgTaken, petData.dmgDone)
+            if not t.dmgTaken then t.dmgTaken = {total=0} end
+            if not t.dmgTaken.pet then t.dmgTaken.pet = {total=0,name=pet.name} end
+            merge(t.dmgTaken.pet, petData.dmgDone)
+            t.dmgTaken.total = t.dmgTaken.total + t.dmgTaken.pet.total
             parentUnit.stats[pet.guid].dmgTaken = nil
         end
         if petData.overdmgDone then
-            if not t.overdmgTaken then t.overdmgTaken = {} t.overdmgTaken.total = 0 end
-            merge(t.overdmgTaken, petData.overdmgDone)
+            if not t.overdmgTaken then t.overdmgTaken = {total=0} end
+            if not t.overdmgTaken.pet then t.overdmgTaken.pet = {total=0,name=pet.name} end
+            merge(t.overdmgTaken.pet, petData.overdmgDone)
+            t.overdmgTaken.total = t.overdmgTaken.total + t.overdmgTaken.pet.total
             parentUnit.stats[pet.guid].overdmgTaken = nil
         end
     end
@@ -904,25 +1062,6 @@ local function mergeSpells(units, parent, pet)
         -- re-arrange taken data from pet source to parent source
         updateTakenData(targetGuid, petData)
     end
-end
-
-local function prepareTotalDataForSpellChart(unit, mode)
-    local rule = getCurrentFilter()
-    local tNames = getTablesNameByRule(mode, rule)
-    local spellInfo = {}
-    for _,v in pairs(unit.stats) do
-        if type(v) == "table" then
-            for k,data in pairs(v) do
-                if k == tNames[1] then
-                    for spellId,amount in pairs(data) do
-                        if not spellInfo[spellId] then spellInfo[spellId] = 0 end
-                        spellInfo[spellId] = spellInfo[spellId] + amount
-                    end
-                end
-            end
-        end
-    end
-    return spellInfo
 end
 
 local function getUnitStatistics(mode)

@@ -87,7 +87,7 @@ end
 
 function WdLib:shortNumber(v)
     if v >= 1000000 then
-        return WdLib:float_round_to(v/1000000, 1).."M"
+        return WdLib:float_round_to(v/1000000, 2).."M"
     elseif v >= 1000 then
         return WdLib:float_round_to(v/1000, 1).."K"
     end
@@ -201,6 +201,12 @@ function WdLib:sendMessage(msg)
     else
         SendChatMessage(msg, chatType, nil, 0)
     end
+end
+
+function WdLib:makeSpellLinkWithTexture(id, name)
+    local _,_,icon = GetSpellInfo(id)
+    if not icon then return " |cffffff00"..id.." "..name.."|r" end
+    return "|cff71d5ff|Hspell:"..id.."|h "..WdLib:getTextureLinkByPath(icon, 18).." "..name.."|h|r"
 end
 
 function WdLib:getSpellLinkById(id)

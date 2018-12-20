@@ -677,64 +677,82 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
     --WD:RefreshTrackedDispels()
 end
 
-local function validateHealStatsHolders(src, dst, spell_id)
+local function validateHealStatsHolders(src, dst, event, spell_id)
     if not src or not dst then return end
     if not src.stats[dst.guid] then src.stats[dst.guid] = {} end
     if not dst.stats[src.guid] then dst.stats[src.guid] = {} end
+
     if not src.stats[dst.guid].healDone then src.stats[dst.guid].healDone = {} src.stats[dst.guid].healDone.total = 0 end
     if not src.stats[dst.guid].overhealDone then src.stats[dst.guid].overhealDone = {} src.stats[dst.guid].overhealDone.total = 0 end
     if not dst.stats[src.guid].healTaken then dst.stats[src.guid].healTaken = {} dst.stats[src.guid].healTaken.total = 0 end
     if not dst.stats[src.guid].overhealTaken then dst.stats[src.guid].overhealTaken = {} dst.stats[src.guid].overhealTaken.total = 0 end
 
-    if not src.stats[dst.guid].healDone[spell_id] then src.stats[dst.guid].healDone[spell_id] = 0 end
-    if not src.stats[dst.guid].overhealDone[spell_id] then src.stats[dst.guid].overhealDone[spell_id] = 0 end
-    if not dst.stats[src.guid].healTaken[spell_id] then dst.stats[src.guid].healTaken[spell_id] = 0 end
-    if not dst.stats[src.guid].overhealTaken[spell_id] then dst.stats[src.guid].overhealTaken[spell_id] = 0 end
+    if not src.stats[dst.guid].healDone[spell_id] then src.stats[dst.guid].healDone[spell_id] = {total=0} end
+    if not src.stats[dst.guid].overhealDone[spell_id] then src.stats[dst.guid].overhealDone[spell_id] = {total=0} end
+    if not dst.stats[src.guid].healTaken[spell_id] then dst.stats[src.guid].healTaken[spell_id] = {total=0} end
+    if not dst.stats[src.guid].overhealTaken[spell_id] then dst.stats[src.guid].overhealTaken[spell_id] = {total=0} end
+
+    if not src.stats[dst.guid].healDone[spell_id][event] then src.stats[dst.guid].healDone[spell_id][event] = {amount = 0} end
+    if not src.stats[dst.guid].overhealDone[spell_id][event] then src.stats[dst.guid].overhealDone[spell_id][event] = {amount = 0} end
+    if not dst.stats[src.guid].healTaken[spell_id][event] then dst.stats[src.guid].healTaken[spell_id][event] = {amount = 0} end
+    if not dst.stats[src.guid].overhealTaken[spell_id][event] then dst.stats[src.guid].overhealTaken[spell_id][event] = {amount = 0} end
 end
 
-local function trackHeal(src, dst, spell_id, amount, overheal)
+local function trackHeal(src, dst, event, spell_id, amount, overheal)
     if not src or not dst then return end
     src.stats[dst.guid].healDone.total = src.stats[dst.guid].healDone.total + amount
-    src.stats[dst.guid].healDone[spell_id] = src.stats[dst.guid].healDone[spell_id] + amount
-
     src.stats[dst.guid].overhealDone.total = src.stats[dst.guid].overhealDone.total + overheal
-    src.stats[dst.guid].overhealDone[spell_id] = src.stats[dst.guid].overhealDone[spell_id] + overheal
-
     dst.stats[src.guid].healTaken.total = dst.stats[src.guid].healTaken.total + amount
-    dst.stats[src.guid].healTaken[spell_id] = dst.stats[src.guid].healTaken[spell_id] + amount
-
     dst.stats[src.guid].overhealTaken.total = dst.stats[src.guid].overhealTaken.total + overheal
-    dst.stats[src.guid].overhealTaken[spell_id] = dst.stats[src.guid].overhealTaken[spell_id] + overheal
+
+    src.stats[dst.guid].healDone[spell_id].total = src.stats[dst.guid].healDone[spell_id].total + amount
+    src.stats[dst.guid].overhealDone[spell_id].total = src.stats[dst.guid].overhealDone[spell_id].total + overheal
+    dst.stats[src.guid].healTaken[spell_id].total = dst.stats[src.guid].healTaken[spell_id].total + amount
+    dst.stats[src.guid].overhealTaken[spell_id].total = dst.stats[src.guid].overhealTaken[spell_id].total + overheal
+
+    src.stats[dst.guid].healDone[spell_id][event].amount = src.stats[dst.guid].healDone[spell_id][event].amount + amount
+    src.stats[dst.guid].overhealDone[spell_id][event].amount = src.stats[dst.guid].overhealDone[spell_id][event].amount + overheal
+    dst.stats[src.guid].healTaken[spell_id][event].amount = dst.stats[src.guid].healTaken[spell_id][event].amount + amount
+    dst.stats[src.guid].overhealTaken[spell_id][event].amount = dst.stats[src.guid].overhealTaken[spell_id][event].amount + overheal
 end
 
-local function validateDmgStatsHolders(src, dst, spell_id)
+local function validateDmgStatsHolders(src, dst, event, spell_id)
     if not src or not dst then return end
     if not src.stats[dst.guid] then src.stats[dst.guid] = {} end
     if not dst.stats[src.guid] then dst.stats[src.guid] = {} end
+
     if not src.stats[dst.guid].dmgDone then src.stats[dst.guid].dmgDone = {} src.stats[dst.guid].dmgDone.total = 0 end
     if not src.stats[dst.guid].overdmgDone then src.stats[dst.guid].overdmgDone = {} src.stats[dst.guid].overdmgDone.total = 0 end
     if not dst.stats[src.guid].dmgTaken then dst.stats[src.guid].dmgTaken = {} dst.stats[src.guid].dmgTaken.total = 0 end
     if not dst.stats[src.guid].overdmgTaken then dst.stats[src.guid].overdmgTaken = {} dst.stats[src.guid].overdmgTaken.total = 0 end
 
-    if not src.stats[dst.guid].dmgDone[spell_id] then src.stats[dst.guid].dmgDone[spell_id] = 0 end
-    if not src.stats[dst.guid].overdmgDone[spell_id] then src.stats[dst.guid].overdmgDone[spell_id] = 0 end
-    if not dst.stats[src.guid].dmgTaken[spell_id] then dst.stats[src.guid].dmgTaken[spell_id] = 0 end
-    if not dst.stats[src.guid].overdmgTaken[spell_id] then dst.stats[src.guid].overdmgTaken[spell_id] = 0 end
+    if not src.stats[dst.guid].dmgDone[spell_id] then src.stats[dst.guid].dmgDone[spell_id] = {total=0} end
+    if not src.stats[dst.guid].overdmgDone[spell_id] then src.stats[dst.guid].overdmgDone[spell_id] = {total=0} end
+    if not dst.stats[src.guid].dmgTaken[spell_id] then dst.stats[src.guid].dmgTaken[spell_id] = {total=0} end
+    if not dst.stats[src.guid].overdmgTaken[spell_id] then dst.stats[src.guid].overdmgTaken[spell_id] = {total=0} end
+
+    if not src.stats[dst.guid].dmgDone[spell_id][event] then src.stats[dst.guid].dmgDone[spell_id][event] = {amount = 0} end
+    if not src.stats[dst.guid].overdmgDone[spell_id][event] then src.stats[dst.guid].overdmgDone[spell_id][event] = {amount = 0} end
+    if not dst.stats[src.guid].dmgTaken[spell_id][event] then dst.stats[src.guid].dmgTaken[spell_id][event] = {amount = 0} end
+    if not dst.stats[src.guid].overdmgTaken[spell_id][event] then dst.stats[src.guid].overdmgTaken[spell_id][event] = {amount = 0} end
 end
 
-local function trackDamage(src, dst, spell_id, amount, overkill)
+local function trackDamage(src, dst, event, spell_id, amount, overdmg)
     if not src or not dst then return end
     src.stats[dst.guid].dmgDone.total = src.stats[dst.guid].dmgDone.total + amount
-    src.stats[dst.guid].dmgDone[spell_id] = src.stats[dst.guid].dmgDone[spell_id] + amount
-
-    src.stats[dst.guid].overdmgDone.total = src.stats[dst.guid].overdmgDone.total + overkill
-    src.stats[dst.guid].overdmgDone[spell_id] = src.stats[dst.guid].overdmgDone[spell_id] + overkill
-
+    src.stats[dst.guid].overdmgDone.total = src.stats[dst.guid].overdmgDone.total + overdmg
     dst.stats[src.guid].dmgTaken.total = dst.stats[src.guid].dmgTaken.total + amount
-    dst.stats[src.guid].dmgTaken[spell_id] = dst.stats[src.guid].dmgTaken[spell_id] + amount
+    dst.stats[src.guid].overdmgTaken.total = dst.stats[src.guid].overdmgTaken.total + overdmg
 
-    dst.stats[src.guid].overdmgTaken.total = dst.stats[src.guid].overdmgTaken.total + overkill
-    dst.stats[src.guid].overdmgTaken[spell_id] = dst.stats[src.guid].overdmgTaken[spell_id] + overkill
+    src.stats[dst.guid].dmgDone[spell_id].total = src.stats[dst.guid].dmgDone[spell_id].total + amount
+    src.stats[dst.guid].overdmgDone[spell_id].total = src.stats[dst.guid].overdmgDone[spell_id].total + overdmg
+    dst.stats[src.guid].dmgTaken[spell_id].total = dst.stats[src.guid].dmgTaken[spell_id].total + amount
+    dst.stats[src.guid].overdmgTaken[spell_id].total = dst.stats[src.guid].overdmgTaken[spell_id].total + overdmg
+
+    src.stats[dst.guid].dmgDone[spell_id][event].amount = src.stats[dst.guid].dmgDone[spell_id][event].amount + amount
+    src.stats[dst.guid].overdmgDone[spell_id][event].amount = src.stats[dst.guid].overdmgDone[spell_id][event].amount + overdmg
+    dst.stats[src.guid].dmgTaken[spell_id][event].amount = dst.stats[src.guid].dmgTaken[spell_id][event].amount + amount
+    dst.stats[src.guid].overdmgTaken[spell_id][event].amount = dst.stats[src.guid].overdmgTaken[spell_id][event].amount + overdmg
 end
 
 local function debugEvent(...)
@@ -779,7 +797,7 @@ function WDMF:ProcessAuras(src, dst, ...)
         end
 
         -- interrupts
-        if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
+        if WD.Spells.knockbackEffects[spell_id] --[[and not hasAnyAura(dst, WD.Spells.rootEffects)]] then
             interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
         end
         if WD.Spells.controlEffects[spell_id] then
@@ -866,8 +884,8 @@ function WDMF:ProcessEnvironmentDamage(src, dst, ...)
         src = createEntity("Environment", environmentType, "environment")
     end
     local spell_id = "Environment: "..environmentType
-    validateDmgStatsHolders(src, dst, spell_id, amount, 0)
-    trackDamage(src, dst, spell_id, amount, 0)
+    validateDmgStatsHolders(src, dst, event, spell_id, amount, 0)
+    trackDamage(src, dst, event, spell_id, amount, 0)
 end
 
 function WDMF:ProcessWhiteDamage(src, dst, ...)
@@ -889,8 +907,8 @@ function WDMF:ProcessWhiteDamage(src, dst, ...)
 
     if overkill > 0 then amount = amount - overkill end
     if overkill == -1 then overkill = 0 end
-    validateDmgStatsHolders(src, dst, spell_id, amount, overkill)
-    trackDamage(src, dst, spell_id, amount, overkill)
+    validateDmgStatsHolders(src, dst, event, spell_id, amount, overkill)
+    trackDamage(src, dst, event, spell_id, amount, overkill)
 end
 
 function WDMF:ProcessSpellDamage(src, dst, ...)
@@ -905,12 +923,12 @@ function WDMF:ProcessSpellDamage(src, dst, ...)
     local spell_id, amount, overkill = tonumber(arg[12]), tonumber(arg[15]), tonumber(arg[16])
     if overkill > 0 then amount = amount - overkill end
     if overkill == -1 then overkill = 0 end
-    validateDmgStatsHolders(src, dst, spell_id, amount, overkill)
-    trackDamage(src, dst, spell_id, amount, overkill)
+    validateDmgStatsHolders(src, dst, event, spell_id, amount, overkill)
+    trackDamage(src, dst, event, spell_id, amount, overkill)
 
     if event == "SPELL_DAMAGE" then
         -- interrupts
-        if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
+        if WD.Spells.knockbackEffects[spell_id] --[[and not hasAnyAura(dst, WD.Spells.rootEffects)]] then
             interruptCast(self, dst, dst_name, timestamp, spell_id, dst.casts.current_spell_id, src)
         end
 
@@ -990,8 +1008,8 @@ function WDMF:ProcessHealing(src, dst, ...)
     local amount, overheal, absorb = tonumber(arg[15]), tonumber(arg[16]), tonumber(arg[17])
     amount = amount - overheal
 
-    validateHealStatsHolders(src, dst, spell_id)
-    trackHeal(src, dst, spell_id, amount, overheal)
+    validateHealStatsHolders(src, dst, event, spell_id)
+    trackHeal(src, dst, event, spell_id, amount, overheal)
 end
 
 function WDMF:ProcessLeechEffects(src, dst, ...)
@@ -1024,8 +1042,8 @@ function WDMF:ProcessAbsorbs(src, dst, ...)
     local aura_caster = getEntities(aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags)
     if not aura_caster then return end
 
-    validateHealStatsHolders(aura_caster, dst, aura_id)
-    trackHeal(aura_caster, dst, aura_id, amount, 0)
+    validateHealStatsHolders(aura_caster, dst, event, aura_id)
+    trackHeal(aura_caster, dst, event, aura_id, amount, 0)
 end
 
 function WDMF:ProcessDeaths(src, dst, ...)

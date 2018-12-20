@@ -160,10 +160,10 @@ local function generateSpellChart(data)
     end
     if data.pet then
         for spellId,spellData in pairs(data.pet.spells) do
-            if type(spellData) == "table" then
-                for event,amount in pairs(spellData) do
-                    if event ~= "name" then
-                        createSpellRow(chart, event, spellId, amount, spellData.name)
+            for petName,dataByName in pairs(spellData) do
+                if type(dataByName) == "table" then
+                    for event,amount in pairs(dataByName) do
+                        createSpellRow(chart, event, spellId, amount, petName)
                     end
                 end
             end
@@ -183,27 +183,32 @@ local function generateSpellChart(data)
     return chart
 end
 
+local function preparePetSpells(spellInfo, data)
+    for petSpellId,petSpellData in pairs(data) do
+        if type(petSpellData) == "table" then
+            for petName,dataByName in pairs(petSpellData) do
+                for event,eventData in pairs(dataByName) do
+                    if type(eventData) == "table" then
+                        if not spellInfo.pet then spellInfo.pet = {spells={},total=0} end
+                        local t = spellInfo.pet.spells
+                        if not t[petSpellId] then t[petSpellId] = {} end
+                        if not t[petSpellId][petName] then t[petSpellId][petName] = {} end
+                        if not t[petSpellId][petName][event] then t[petSpellId][petName][event] = 0 end
+                        t[petSpellId][petName][event] = t[petSpellId][petName][event] + eventData.amount
+                    end
+                end
+            end
+        end
+    end
+end
+
 local function prepareDataForSpellChart(tableData)
     local spellInfo = {spells={},total=0}
     if not tableData then return spellInfo end
     for spellId,spellData in pairs(tableData) do
         if type(spellData) == "table" then
             if spellId == "pet" then
-                for petSpellId,petSpellData in pairs(spellData) do
-                    if type(petSpellData) == "table" then
-                        for event,eventData in pairs(petSpellData) do
-                            if type(eventData) == "table" then
-                                if not spellInfo.pet then spellInfo.pet = {spells={},total=0} end
-                                local t = spellInfo.pet.spells
-                                if not t[petSpellId] then t[petSpellId] = {} end
-                                if not t[petSpellId][event] then t[petSpellId][event] = 0 end
-                                t[petSpellId][event] = t[petSpellId][event] + eventData.amount
-                                t[petSpellId].name = WdLib:getShortName(tableData.pet.name, "norealm")
-                                spellInfo.pet.total = spellInfo.pet.total + eventData.amount
-                            end
-                        end
-                    end
-                end
+                preparePetSpells(spellInfo, spellData)
             else
                 for event,eventData in pairs(spellData) do
                     if type(eventData) == "table" then
@@ -231,21 +236,7 @@ local function prepareTotalDataForSpellChart(unit, mode)
                     for spellId,spellData in pairs(tableData) do
                         if type(spellData) == "table" then
                             if spellId == "pet" then
-                                for petSpellId,petSpellData in pairs(spellData) do
-                                    if type(petSpellData) == "table" then
-                                        for event,eventData in pairs(petSpellData) do
-                                            if type(eventData) == "table" then
-                                                if not spellInfo.pet then spellInfo.pet = {spells={},total=0} end
-                                                local t = spellInfo.pet.spells
-                                                if not t[petSpellId] then t[petSpellId] = {} end
-                                                if not t[petSpellId][event] then t[petSpellId][event] = 0 end
-                                                t[petSpellId][event] = t[petSpellId][event] + eventData.amount
-                                                t[petSpellId].name = WdLib:getShortName(tableData.pet.name, "norealm")
-                                                spellInfo.pet.total = spellInfo.pet.total + eventData.amount
-                                            end
-                                        end
-                                    end
-                                end
+                                preparePetSpells(spellInfo, spellData)
                             else
                                 for event,eventData in pairs(spellData) do
                                     if type(eventData) == "table" then
@@ -971,21 +962,22 @@ local function mergeSpells(units, parent, pet)
         return nil
     end
 
-    local function merge(parentTable, petTable)
+    local function merge(parentTable, petTable, petName)
         if not petTable or not parentTable then return 0 end
+        petName = WdLib:getShortName(petName, "norealm")
         for spellId,spellData in pairs(petTable) do
             if type(spellData) == "table" then
                 for event,eventData in pairs(spellData) do
                     if type(eventData) == "table" then
-                        if not parentTable[spellId] then parentTable[spellId] = {total=0} end
-                        if not parentTable[spellId][event] then parentTable[spellId][event] = {amount=0} end
-                        parentTable[spellId][event].amount = parentTable[spellId][event].amount + eventData.amount
-                        parentTable[spellId].total = parentTable[spellId].total + eventData.amount
+                        if not parentTable[spellId] then parentTable[spellId] = {} end
+                        if not parentTable[spellId][petName] then parentTable[spellId][petName] = {} end
+                        if not parentTable[spellId][petName][event] then parentTable[spellId][petName][event] = {amount=0} end
+                        parentTable[spellId][petName][event].amount = parentTable[spellId][petName][event].amount + eventData.amount
                     end
                 end
-                parentTable.total = parentTable.total + parentTable[spellId].total
             end
         end
+        parentTable.total = parentTable.total + petTable.total
     end
 
     local function mergeDoneData(parentUnit, targetGuid, petData)
@@ -993,26 +985,30 @@ local function mergeSpells(units, parent, pet)
         local t = parentUnit.stats[targetGuid]
         if petData.healDone then
             if not t.healDone then t.healDone = {total=0} end
-            if not t.healDone.pet then t.healDone.pet = {total=0,name=pet.name} end
-            merge(t.healDone.pet, petData.healDone)
+            if not t.healDone.pet then t.healDone.pet = {total=0} end
+            t.healDone.total = t.healDone.total - t.healDone.pet.total
+            merge(t.healDone.pet, petData.healDone, pet.name)
             t.healDone.total = t.healDone.total + t.healDone.pet.total
         end
         if petData.overhealDone then
             if not t.overhealDone then t.overhealDone = {total=0} end
-            if not t.overhealDone.pet then t.overhealDone.pet = {total=0,name=pet.name} end
-            merge(t.overhealDone.pet, petData.overhealDone)
+            if not t.overhealDone.pet then t.overhealDone.pet = {total=0} end
+            t.overhealDone.total = t.overhealDone.total - t.overhealDone.pet.total
+            merge(t.overhealDone.pet, petData.overhealDone, pet.name)
             t.overhealDone.total = t.overhealDone.total + t.overhealDone.pet.total
         end
         if petData.dmgDone then
             if not t.dmgDone then t.dmgDone = {total=0} end
-            if not t.dmgDone.pet then t.dmgDone.pet = {total=0,name=pet.name} end
-            merge(t.dmgDone.pet, petData.dmgDone)
+            if not t.dmgDone.pet then t.dmgDone.pet = {total=0} end
+            t.dmgDone.total = t.dmgDone.total - t.dmgDone.pet.total
+            merge(t.dmgDone.pet, petData.dmgDone, pet.name)
             t.dmgDone.total = t.dmgDone.total + t.dmgDone.pet.total
         end
         if petData.overdmgDone then
             if not t.overdmgDone then t.overdmgDone = {total=0} end
-            if not t.overdmgDone.pet then t.overdmgDone.pet = {total=0,name=pet.name} end
-            merge(t.overdmgDone.pet, petData.overdmgDone)
+            if not t.overdmgDone.pet then t.overdmgDone.pet = {total=0} end
+            t.overdmgDone.total = t.overdmgDone.total - t.overdmgDone.pet.total
+            merge(t.overdmgDone.pet, petData.overdmgDone, pet.name)
             t.overdmgDone.total = t.overdmgDone.total + t.overdmgDone.pet.total
         end
     end
@@ -1022,29 +1018,33 @@ local function mergeSpells(units, parent, pet)
         local t = parentUnit.stats[targetGuid]
         if petData.healDone then
             if not t.healTaken then t.healTaken = {total=0} end
-            if not t.healTaken.pet then t.healTaken.pet = {total=0,name=pet.name} end
-            merge(t.healTaken.pet, petData.healDone)
+            if not t.healTaken.pet then t.healTaken.pet = {total=0} end
+            t.healTaken.total = t.healTaken.total - t.healTaken.pet.total
+            merge(t.healTaken.pet, petData.healDone, pet.name)
             t.healTaken.total = t.healTaken.total + t.healTaken.pet.total
             parentUnit.stats[pet.guid].healTaken = nil
         end
         if petData.overhealDone then
             if not t.overhealTaken then t.overhealTaken = {total=0} end
-            if not t.overhealTaken.pet then t.overhealTaken.pet = {total=0,name=pet.name} end
-            merge(t.overhealTaken.pet, petData.overhealDone)
+            if not t.overhealTaken.pet then t.overhealTaken.pet = {total=0} end
+            t.overhealTaken.total = t.overhealTaken.total - t.overhealTaken.pet.total
+            merge(t.overhealTaken.pet, petData.overhealDone, pet.name)
             t.overhealTaken.total = t.overhealTaken.total + t.overhealTaken.pet.total
             parentUnit.stats[pet.guid].overhealTaken = nil
         end
         if petData.dmgDone then
             if not t.dmgTaken then t.dmgTaken = {total=0} end
-            if not t.dmgTaken.pet then t.dmgTaken.pet = {total=0,name=pet.name} end
-            merge(t.dmgTaken.pet, petData.dmgDone)
+            if not t.dmgTaken.pet then t.dmgTaken.pet = {total=0} end
+            t.dmgTaken.total = t.dmgTaken.total - t.dmgTaken.pet.total
+            merge(t.dmgTaken.pet, petData.dmgDone, pet.name)
             t.dmgTaken.total = t.dmgTaken.total + t.dmgTaken.pet.total
             parentUnit.stats[pet.guid].dmgTaken = nil
         end
         if petData.overdmgDone then
             if not t.overdmgTaken then t.overdmgTaken = {total=0} end
-            if not t.overdmgTaken.pet then t.overdmgTaken.pet = {total=0,name=pet.name} end
-            merge(t.overdmgTaken.pet, petData.overdmgDone)
+            if not t.overdmgTaken.pet then t.overdmgTaken.pet = {total=0} end
+            t.overdmgTaken.total = t.overdmgTaken.total - t.overdmgTaken.pet.total
+            merge(t.overdmgTaken.pet, petData.overdmgDone, pet.name)
             t.overdmgTaken.total = t.overdmgTaken.total + t.overdmgTaken.pet.total
             parentUnit.stats[pet.guid].overdmgTaken = nil
         end
@@ -1110,7 +1110,7 @@ local function getUnitStatistics(mode)
         -- load pets
         for parentGuid,info in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].pets) do
             for npcId,data in pairs(info) do
-                for _,pet in pairs(data) do
+                for k,pet in pairs(data) do
                     local parent = findParent(parentGuid)
                     if parent then
                         total = total - parent.total

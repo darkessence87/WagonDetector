@@ -3,6 +3,14 @@ WdLib = {}
 
 WdLib.MAX_DROP_DOWN_MENUS = 30
 
+local function log(data)
+    if type(data) == "table" then
+        print(WdLib:table_tostring(data))
+    else
+        print(data or "nil")
+    end
+end
+
 function WdLib:CreateTimer(fn, delay, ...)
     local function executeFn(self) self.fn(unpack(self.args)) end
 

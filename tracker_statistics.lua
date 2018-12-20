@@ -3,6 +3,14 @@ local WDTS = nil
 
 local POPUP_MAX_SPELLS = 25
 
+local function log(data)
+    if type(data) == "table" then
+        print(WdLib:table_tostring(data))
+    else
+        print(data or "nil")
+    end
+end
+
 local ruleTypes = {
     "TOTAL_DONE",
     "TOTAL_TAKEN",
@@ -48,7 +56,7 @@ local function findPet(guid)
     local t = WD.db.profile.tracker[WD.db.profile.tracker.selected]
     if not guid then return nil end
     for parentGuid,infoByNpcId in pairs(t.pets) do
-        for name,infoByGuid in pairs(infoByNpcId) do
+        for npcId,infoByGuid in pairs(infoByNpcId) do
             local index = WdLib:findEntityIndex(infoByGuid, guid)
             if index then return infoByGuid[index] end
         end
@@ -752,18 +760,28 @@ end
 
 local function filterBySelectedRule(v, mode, rule)
     if not v or not v.stats or not rule or not mode then return nil end
-    for guid,info in pairs(v.stats) do
-        if mode == "heal" and rule == "done" and ((info.healDone and info.healDone.total > 0) or (info.overhealDone and info.overhealDone.total > 0)) then
-            return true
+    local function validate(unit)
+        for guid,info in pairs(unit.stats) do
+            if mode == "heal" and rule == "done" and ((info.healDone and info.healDone.total > 0) or (info.overhealDone and info.overhealDone.total > 0)) then
+                return true
+            end
+            if mode == "heal" and rule == "taken" and ((info.healTaken and info.healTaken.total > 0) or (info.overhealTaken and info.overhealTaken.total > 0)) then
+                return true
+            end
+            if mode == "dmg" and rule == "done" and ((info.dmgDone and info.dmgDone.total > 0) or (info.overdmgDone and info.overdmgDone.total > 0)) then
+                return true
+            end
+            if mode == "dmg" and rule == "taken" and ((info.dmgTaken and info.dmgTaken.total > 0) or (info.overdmgTaken and info.overdmgTaken.total > 0)) then
+                return true
+            end
         end
-        if mode == "heal" and rule == "taken" and ((info.healTaken and info.healTaken.total > 0) or (info.overhealTaken and info.overhealTaken.total > 0)) then
-            return true
-        end
-        if mode == "dmg" and rule == "done" and ((info.dmgDone and info.dmgDone.total > 0) or (info.overdmgDone and info.overdmgDone.total > 0)) then
-            return true
-        end
-        if mode == "dmg" and rule == "taken" and ((info.dmgTaken and info.dmgTaken.total > 0) or (info.overdmgTaken and info.overdmgTaken.total > 0)) then
-            return true
+        return nil
+    end
+    if validate(v) then return true end
+    if v.pets then
+        for _,guid in pairs(v.pets) do
+            local pet = findEntityByGUID(guid)
+            if validate(pet) then return true end
         end
     end
     return nil
@@ -790,8 +808,9 @@ local function getTablesNameByRule(mode, rule)
     return nil
 end
 
-local function calculateTotalStatByRule(unit, mode, rule)
+local function calculateTotalStatsByRule(unit, mode, rule)
     local tNames = getTablesNameByRule(mode, rule)
+    unit.total = 0
     for _,v in pairs(unit.stats) do
         if type(v) == "table" then
             for k,data in pairs(v) do
@@ -801,7 +820,90 @@ local function calculateTotalStatByRule(unit, mode, rule)
             end
         end
     end
-    return unit.total or 0
+end
+
+local function mergeSpells(units, parent, pet)
+    local function findUnit(guid)
+        for i=1,#units do
+            if units[i].guid == guid then
+                return units[i]
+            end
+        end
+        return nil
+    end
+
+    local function mergeDoneData(parentUnit, targetGuid, petData)
+        local function merge(parentTable, petTable)
+            if not petTable or not parentTable then return 0 end
+            for spell,amount in pairs(petTable) do
+                if not parentTable[spell] then parentTable[spell] = 0 end
+                parentTable[spell] = parentTable[spell] + amount
+            end
+        end
+        if not parentUnit.stats[targetGuid] then parentUnit.stats[targetGuid] = {} end
+        local t = parentUnit.stats[targetGuid]
+        if petData.healDone then
+            if not t.healDone then t.healDone = {} t.healDone.total = 0 end
+            merge(t.healDone, petData.healDone)
+        end
+        if petData.overhealDone then
+            if not t.overhealDone then t.overhealDone = {} t.overhealDone.total = 0 end
+            merge(t.overhealDone, petData.overhealDone)
+        end
+        if petData.dmgDone then
+            if not t.dmgDone then t.dmgDone = {} t.dmgDone.total = 0 end
+            merge(t.dmgDone, petData.dmgDone)
+        end
+        if petData.overdmgDone then
+            if not t.overdmgDone then t.overdmgDone = {} t.overdmgDone.total = 0 end
+            merge(t.overdmgDone, petData.overdmgDone)
+        end
+    end
+
+    local function mergeTakenData(parentUnit, targetGuid, petData)
+        local function merge(parentTable, petTable)
+            if not petTable or not parentTable then return 0 end
+            for spell,amount in pairs(petTable) do
+                if not parentTable[spell] then parentTable[spell] = 0 end
+                parentTable[spell] = parentTable[spell] + amount
+            end
+        end
+        if not parentUnit.stats[targetGuid] then parentUnit.stats[targetGuid] = {} end
+        local t = parentUnit.stats[targetGuid]
+        if petData.healDone then
+            if not t.healTaken then t.healTaken = {} t.healTaken.total = 0 end
+            merge(t.healTaken, petData.healDone)
+            parentUnit.stats[pet.guid].healTaken = nil
+        end
+        if petData.overhealDone then
+            if not t.overhealTaken then t.overhealTaken = {} t.overhealTaken.total = 0 end
+            merge(t.overhealTaken, petData.overhealDone)
+            parentUnit.stats[pet.guid].overhealTaken = nil
+        end
+        if petData.dmgDone then
+            if not t.dmgTaken then t.dmgTaken = {} t.dmgTaken.total = 0 end
+            merge(t.dmgTaken, petData.dmgDone)
+            parentUnit.stats[pet.guid].dmgTaken = nil
+        end
+        if petData.overdmgDone then
+            if not t.overdmgTaken then t.overdmgTaken = {} t.overdmgTaken.total = 0 end
+            merge(t.overdmgTaken, petData.overdmgDone)
+            parentUnit.stats[pet.guid].overdmgTaken = nil
+        end
+    end
+
+    local function updateTakenData(targetGuid, petData)
+        local target = findUnit(targetGuid)
+        if not target then return end
+        mergeTakenData(target, parent.guid, petData)
+    end
+
+    for targetGuid,petData in pairs(pet.stats) do
+        -- add pet's data to parent's
+        mergeDoneData(parent, targetGuid, petData)
+        -- re-arrange taken data from pet source to parent source
+        updateTakenData(targetGuid, petData)
+    end
 end
 
 local function prepareTotalDataForSpellChart(unit, mode)
@@ -823,82 +925,6 @@ local function prepareTotalDataForSpellChart(unit, mode)
     return spellInfo
 end
 
-local function mergeStatsToParent(units, src, dst)
-    if not src or not dst then return end
-    local function mergeSpells(t, data)
-        for spellId,amount in pairs(data) do
-            if not t[spellId] then t[spellId] = 0 end
-            t[spellId] = t[spellId] + amount
-        end
-    end
-
-    -- move src done data to dst
-    local t = dst.stats
-    for guid,v in pairs(src.stats) do
-        if type(v) == "table" then
-            for tableName,data in pairs(v) do
-                if tableName == "healDone" then
-                    if not t[guid] then t[guid] = {} end
-                    if not t[guid].healDone then t[guid].healDone = {} t[guid].healDone.total = 0 end
-                    mergeSpells(t[guid].healDone, data)
-                end
-                if tableName == "overhealDone" then
-                    if not t[guid] then t[guid] = {} end
-                    if not t[guid].overhealDone then t[guid].overhealDone = {} t[guid].overhealDone.total = 0 end
-                    mergeSpells(t[guid].overhealDone, data)
-                end
-                if tableName == "dmgDone" then
-                    if not t[guid] then t[guid] = {} end
-                    if not t[guid].dmgDone then t[guid].dmgDone = {} t[guid].dmgDone.total = 0 end
-                    mergeSpells(t[guid].dmgDone, data)
-                end
-                if tableName == "overdmgDone" then
-                    if not t[guid] then t[guid] = {} end
-                    if not t[guid].overdmgDone then t[guid].overdmgDone = {} t[guid].overdmgDone.total = 0 end
-                    mergeSpells(t[guid].overdmgDone, data)
-                end
-            end
-        end
-    end
-
-    -- move src taken data to dst
-    for i=1,#units do
-        local t = units[i].stats
-        if t[src.guid] then
-            local old = t[src.guid]
-     
-            if old.healTaken then
-                if not t[dst.guid] then t[dst.guid] = {} end
-                if not t[dst.guid].healTaken then t[dst.guid].healTaken = {} t[dst.guid].healTaken.total = 0 end
-                mergeSpells(t[dst.guid].healTaken, old.healTaken)
-                old.healTaken = nil
-            end
-            if old.overhealTaken then
-                if not t[dst.guid] then t[dst.guid] = {} end
-                if not t[dst.guid].overhealTaken then t[dst.guid].overhealTaken = {} t[dst.guid].overhealTaken.total = 0 end
-                mergeSpells(t[dst.guid].overhealTaken, old.overhealTaken)
-                old.overhealTaken = nil
-            end
-            if old.dmgTaken then
-                if not t[dst.guid] then t[dst.guid] = {} end
-                if not t[dst.guid].dmgTaken then t[dst.guid].dmgTaken = {} t[dst.guid].dmgTaken.total = 0 end
-                mergeSpells(t[dst.guid].dmgTaken, old.dmgTaken)
-                old.dmgTaken = nil
-            end
-            if old.overdmgTaken then
-                if not t[dst.guid] then t[dst.guid] = {} end
-                if not t[dst.guid].overdmgTaken then t[dst.guid].overdmgTaken = {} t[dst.guid].overdmgTaken.total = 0 end
-                mergeSpells(t[dst.guid].overdmgTaken, old.overdmgTaken)
-                old.overdmgTaken = nil
-            end
-        end
-    end
-end
-
-function WD:Test()
-    return WDTS.lastSelectedUnitHeal
-end
-
 local function getUnitStatistics(mode)
     local units = {}
     local total = 0
@@ -912,27 +938,19 @@ local function getUnitStatistics(mode)
         local function findParent(guid)
             for i=1,#units do
                 if units[i].guid == guid then
-                    return units[i], i
+                    return units[i]
                 end
             end
-            return nil, 0
+            return nil
         end
- 
+
         local function filterUnit(unit)
             unit = WdLib:table_deepcopy(unit)
             local rule = getCurrentFilter()
             if filterBySelectedRule(unit, mode, rule) then
-         
-                if unit.parentGuid then
-                    local parent = findParent(unit.parentGuid)
-                    mergeStatsToParent(units, unit, parent)
-                    parent.total = 0
-                    total = total + calculateTotalStatByRule(parent, mode, rule)
-                else
-                    unit.total = 0
-                    total = total + calculateTotalStatByRule(unit, mode, rule)
-                    units[#units+1] = unit
-                end
+                calculateTotalStatsByRule(unit, mode, rule)
+                total = total + unit.total
+                units[#units+1] = unit
             end
         end
 
@@ -954,7 +972,13 @@ local function getUnitStatistics(mode)
         for parentGuid,info in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].pets) do
             for npcId,data in pairs(info) do
                 for _,pet in pairs(data) do
-                    filterUnit(pet)
+                    local parent = findParent(parentGuid)
+                    if parent then
+                        total = total - parent.total
+                        mergeSpells(units, parent, pet)
+                        calculateTotalStatsByRule(parent, mode, getCurrentFilter())
+                        total = total + parent.total
+                    end
                 end
             end
         end

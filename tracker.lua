@@ -755,7 +755,9 @@ function WDMF:ProcessSummons(src, dst, ...)
     if not dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_SUMMON" then
-        loadPet(dst_guid, dst_name, src.guid, src.name)
+        local pet = loadPet(dst_guid, dst_name, src.guid, src.name)
+        if not src.pets then src.pets = {} end
+        src.pets[#src.pets+1] = pet.guid
     end
 end
 

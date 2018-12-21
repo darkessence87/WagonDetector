@@ -138,6 +138,8 @@ function WD:SlashHandler(msg, box)
         WD:SendAddonMessage("reset_encounter")
     elseif cmd == "clear" then
         WD:ClearHistory()
+    elseif cmd == "startunittest" then
+        WD:_StartUnitTest(tail)
     else
         print(WD_HELP)
         self:OpenConfig()

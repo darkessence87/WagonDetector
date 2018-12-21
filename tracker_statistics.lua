@@ -65,7 +65,7 @@ end
 local function findNpc(guid)
     if not WD.db.profile.tracker or not WD.db.profile.tracker.selected then return nil end
     local t = WD.db.profile.tracker[WD.db.profile.tracker.selected]
-    if not guid or not guid:match("Creature") then return nil end
+    if not guid then return nil end
     local npcId = WdLib:getNpcId(guid)
     local holder = t.npc[npcId]
     local index = WdLib:findEntityIndex(holder, guid)
@@ -119,6 +119,9 @@ local function generateSpellChart(data)
 
     local function createSpellRow(chart, event, spellId, amount, petName)
         if amount > 0 then
+            if spellId == ACTION_SWING then
+                spellId = 260421
+            end
             local t = {}
             t.index = #chart+1
             t.id = spellId
@@ -318,7 +321,7 @@ local function initSpellChartPopup()
         r:SetStatusBarColor(.15,.25,.15,1)
         r:SetSize(xSize, 20)
         r.leftTxt = WdLib:createFontDefault(r, "LEFT", "")
-        r.leftTxt:SetSize(250, 20)
+        r.leftTxt:SetSize(xSize-50, 20)
         r.leftTxt:SetPoint("LEFT", r, "LEFT", 2, 0)
         r.rightTxt = WdLib:createFontDefault(r, "RIGHT", "")
         r.rightTxt:SetSize(100, 20)
@@ -633,7 +636,8 @@ local function updateDmgInfo()
                 chart[#chart+1] = {
                     id = WdLib:getColoredName(WdLib:getShortName(target.name), target.class),
                     data = info,
-                    source = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
+                    source = WdLib:getColoredName(WdLib:getShortName(v.name), v.class),
+                    class = target.class,
                 }
             end
         end
@@ -652,6 +656,14 @@ local function updateDmgInfo()
     local rowsN = #chart
     local columnsN = 5
 
+    local function updateStatusBar(bar, class, vCurrent, vTotal)
+        local total = vTotal.total
+        local curr = vCurrent.total
+        bar:SetValue(vCurrent.total * 100 / vTotal.total)
+        local r,g,b = GetClassColor(class)
+        bar:SetStatusBarColor(r,g,b,0.2)
+    end
+
     local function createFn(parent, row, index)
         local source = chart[row].source
         local target = chart[row].id
@@ -661,15 +673,26 @@ local function updateDmgInfo()
             if v.dmgDone then value = v.dmgDone.total end
             local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            local sb = CreateFrame("StatusBar", nil, f)
+            sb:SetStatusBarTexture([[Interface\AddOns\WagonDetector\media\statusbars\otravi]])
+            sb:GetStatusBarTexture():SetHorizTile(false)
+            sb:GetStatusBarTexture():SetVertTile(false)
+            sb:SetMinMaxValues(0, 100)
+            sb:SetStatusBarColor(0,0,0,0)
+            sb:SetAllPoints()
+            f.bar = sb
+            if v.dmgDone then
+                --updateStatusBar(f.bar, chart[row].class, v.dmgDone, chart[1].data.dmgDone)
+            end
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Damage", target, source)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgDone)) end)
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 2 then
-            local value = 0
-            if v.overdmgDone then value = v.overdmgDone.total end
-            local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
+            local value = ""
+            if v.overdmgDone and v.overdmgDone.total > 0 then value = "|cffff0000KILLING BLOW!|r" end
+            local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", value)
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overkill", target, source)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgDone)) end)
@@ -685,9 +708,9 @@ local function updateDmgInfo()
             f:SetScript("OnLeave", hidePopup)
             return f
         elseif index == 4 then
-            local value = 0
-            if v.overdmgTaken then value = v.overdmgTaken.total end
-            local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
+            local value = ""
+            if v.overdmgTaken and v.overdmgTaken.total > 0 then value = "|cffff0000KILLING BLOW!|r" end
+            local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", value)
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overkill", source, target)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgTaken)) end)
@@ -706,12 +729,15 @@ local function updateDmgInfo()
             local value = 0
             if v.dmgDone then value = v.dmgDone.total end
             f.txt:SetText(WdLib:shortNumber(value))
+            if v.dmgDone then
+                --updateStatusBar(f.bar, chart[row].class, v.dmgDone, chart[1].data.dmgDone)
+            end
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Damage", target, source)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgDone)) end)
         elseif index == 2 then
-            local value = 0
-            if v.overdmgDone then value = v.overdmgDone.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            local value = ""
+            if v.overdmgDone and v.overdmgDone.total > 0 then value = "|cffff0000KILLING BLOW!|r" end
+            f.txt:SetText(value)
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overkill", target, source)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgDone)) end)
         elseif index == 3 then
@@ -721,9 +747,9 @@ local function updateDmgInfo()
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Damage", source, target)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgTaken)) end)
         elseif index == 4 then
-            local value = 0
-            if v.overdmgTaken then value = v.overdmgTaken.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            local value = ""
+            if v.overdmgTaken and v.overdmgTaken.total > 0 then value = "|cffff0000KILLING BLOW!|r" end
+            f.txt:SetText(value)
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overkill", source, target)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.overdmgTaken)) end)
         elseif index == 5 then
@@ -861,6 +887,38 @@ local function initPullsMenu()
     function frame:Refresh()
         WdLib:updateDropDownMenu(self, getPullName(), getPulls())
     end
+
+    -- clear current pull history button
+    WDTS.buttons["clear_current_pull"] = WdLib:createButton(WDTS)
+    WDTS.buttons["clear_current_pull"]:SetSize(90, 20)
+    WDTS.buttons["clear_current_pull"]:SetScript("OnClick", function()
+        if WD.db.profile.tracker and WD.db.profile.tracker.selected and WD.db.profile.tracker.selected > 0 then
+            table.remove(WD.db.profile.tracker, WD.db.profile.tracker.selected)
+            if #WD.db.profile.tracker == 0 then
+                WD.db.profile.tracker.selected = 0
+            elseif WD.db.profile.tracker.selected > #WD.db.profile.tracker then
+                WD.db.profile.tracker.selected = #WD.db.profile.tracker
+            end
+        end
+        WD:RefreshTrackerPulls()
+        WD:RefreshUnitStatistics()
+    end)
+    WDTS.buttons["clear_current_pull"].txt = WdLib:createFont(WDTS.buttons["clear_current_pull"], "CENTER", WD_TRACKER_BUTTON_CLEAR_SELECTED)
+    WDTS.buttons["clear_current_pull"].txt:SetAllPoints()
+
+    -- clear pulls history button
+    WDTS.buttons["clear_pulls"] = WdLib:createButton(WDTS)
+    WDTS.buttons["clear_pulls"]:SetSize(90, 20)
+    WDTS.buttons["clear_pulls"]:SetScript("OnClick", function()
+        WdLib:table_wipe(WD.db.profile.tracker)
+        WD:RefreshTrackerPulls()
+        WD:RefreshUnitStatistics()
+    end)
+    WDTS.buttons["clear_pulls"].txt = WdLib:createFont(WDTS.buttons["clear_pulls"], "CENTER", WD_TRACKER_BUTTON_CLEAR)
+    WDTS.buttons["clear_pulls"].txt:SetAllPoints()
+
+    WDTS.buttons["clear_pulls"]:SetPoint("TOPRIGHT", WDTS, "TOPRIGHT", -5, -5)
+    WDTS.buttons["clear_current_pull"]:SetPoint("TOPRIGHT", WDTS.buttons["clear_pulls"], "TOPLEFT", -1, 0)
 end
 
 local function initRulesMenu()
@@ -929,12 +987,17 @@ local function filterBySelectedRule(v, mode, rule)
         return nil
     end
     if validate(v) then return true end
-    if v.pets then
-        for _,guid in pairs(v.pets) do
+
+    local function validatePets(unit)
+        if not unit.pets then return nil end
+        for _,guid in pairs(unit.pets) do
             local pet = findEntityByGUID(guid)
             if validate(pet) then return true end
+            if validatePets(pet) then return true end
         end
+        return nil
     end
+    if validatePets(v) then return true end
     return nil
 end
 
@@ -952,34 +1015,82 @@ local function calculateTotalStatsByRule(unit, mode, rule)
     end
 end
 
-local function mergeSpells(units, parent, pet)
-    local function findUnit(guid)
-        for i=1,#units do
-            if units[i].guid == guid then
-                return units[i]
-            end
-        end
-        return nil
-    end
-
-    local function merge(parentTable, petTable, petName)
-        if not petTable or not parentTable then return 0 end
-        petName = WdLib:getShortName(petName, "norealm")
-        for spellId,spellData in pairs(petTable) do
-            if type(spellData) == "table" then
+local function copyTableTo(src, dst)
+    if not src or not dst then return end
+    for spellId,spellData in pairs(src) do
+        if type(spellData) == "table" then
+            if spellId == "pet" then
+                for petSpellId,petSpellData in pairs(spellData) do
+                    if type(petSpellData) == "table" then
+                        for petName,dataByName in pairs(petSpellData) do
+                            for event,eventData in pairs(dataByName) do
+                                if type(eventData) == "table" then
+                                    if not dst.pet then dst.pet = {} end
+                                    if not dst.pet[petSpellId] then dst.pet[petSpellId] = {} end
+                                    if not dst.pet[petSpellId][petName] then dst.pet[petSpellId][petName] = {} end
+                                    if not dst.pet[petSpellId][petName][event] then dst.pet[petSpellId][petName][event] = {amount=0} end
+                                    dst.pet[petSpellId][petName][event].amount = dst.pet[petSpellId][petName][event].amount + eventData.amount
+                                end
+                            end
+                        end
+                    end
+                end
+            else
                 for event,eventData in pairs(spellData) do
                     if type(eventData) == "table" then
-                        if not parentTable[spellId] then parentTable[spellId] = {} end
-                        if not parentTable[spellId][petName] then parentTable[spellId][petName] = {} end
-                        if not parentTable[spellId][petName][event] then parentTable[spellId][petName][event] = {amount=0} end
-                        parentTable[spellId][petName][event].amount = parentTable[spellId][petName][event].amount + eventData.amount
+                        if not dst[spellId] then dst[spellId] = {} end
+                        if not dst[spellId][event] then dst[spellId][event] = {amount=0} end
+                        dst[spellId][event].amount = dst[spellId][event].amount + eventData.amount
                     end
                 end
             end
         end
-        parentTable.total = parentTable.total + petTable.total
     end
+    dst.total = dst.total + src.total
+end
 
+local function merge(parentTable, petTable, petName)
+    if not petTable or not parentTable then return 0 end
+    petName = WdLib:getShortName(petName, "norealm")
+    for spellId,spellData in pairs(petTable) do
+        if type(spellData) == "table" then
+            if spellId == "pet" then
+                for petSpellId,petSpellData in pairs(spellData) do
+                    if type(petSpellData) == "table" then
+                        for petName,dataByName in pairs(petSpellData) do
+                            for event,eventData in pairs(dataByName) do
+                                if type(eventData) == "table" then
+                                    if not parentTable[petSpellId] then parentTable[petSpellId] = {} end
+                                    if not parentTable[petSpellId][petName] then parentTable[petSpellId][petName] = {} end
+                                    if not parentTable[petSpellId][petName][event] then parentTable[petSpellId][petName][event] = {amount=0} end
+                                    parentTable[petSpellId][petName][event].amount = parentTable[petSpellId][petName][event].amount + eventData.amount
+                                end
+                            end
+                        end
+                    end
+                end
+            else
+                for event,eventData in pairs(spellData) do
+                    if type(eventData) == "table" then
+                        if petName then
+                            if not parentTable[spellId] then parentTable[spellId] = {} end
+                            if not parentTable[spellId][petName] then parentTable[spellId][petName] = {} end
+                            if not parentTable[spellId][petName][event] then parentTable[spellId][petName][event] = {amount=0} end
+                            parentTable[spellId][petName][event].amount = parentTable[spellId][petName][event].amount + eventData.amount
+                        else
+                            if not parentTable[spellId] then parentTable[spellId] = {} end
+                            if not parentTable[spellId][event] then parentTable[spellId][event] = {amount=0} end
+                            parentTable[spellId][event].amount = parentTable[spellId][event].amount + eventData.amount
+                        end
+                    end
+                end
+            end
+        end
+    end
+    parentTable.total = parentTable.total + petTable.total
+end
+
+local function mergeSpells(parent, pet)
     local function mergeDoneData(parentUnit, targetGuid, petData)
         if not parentUnit.stats[targetGuid] then parentUnit.stats[targetGuid] = {} end
         local t = parentUnit.stats[targetGuid]
@@ -1013,54 +1124,8 @@ local function mergeSpells(units, parent, pet)
         end
     end
 
-    local function mergeTakenData(parentUnit, targetGuid, petData)
-        if not parentUnit.stats[targetGuid] then parentUnit.stats[targetGuid] = {} end
-        local t = parentUnit.stats[targetGuid]
-        if petData.healDone then
-            if not t.healTaken then t.healTaken = {total=0} end
-            if not t.healTaken.pet then t.healTaken.pet = {total=0} end
-            t.healTaken.total = t.healTaken.total - t.healTaken.pet.total
-            merge(t.healTaken.pet, petData.healDone, pet.name)
-            t.healTaken.total = t.healTaken.total + t.healTaken.pet.total
-            parentUnit.stats[pet.guid].healTaken = nil
-        end
-        if petData.overhealDone then
-            if not t.overhealTaken then t.overhealTaken = {total=0} end
-            if not t.overhealTaken.pet then t.overhealTaken.pet = {total=0} end
-            t.overhealTaken.total = t.overhealTaken.total - t.overhealTaken.pet.total
-            merge(t.overhealTaken.pet, petData.overhealDone, pet.name)
-            t.overhealTaken.total = t.overhealTaken.total + t.overhealTaken.pet.total
-            parentUnit.stats[pet.guid].overhealTaken = nil
-        end
-        if petData.dmgDone then
-            if not t.dmgTaken then t.dmgTaken = {total=0} end
-            if not t.dmgTaken.pet then t.dmgTaken.pet = {total=0} end
-            t.dmgTaken.total = t.dmgTaken.total - t.dmgTaken.pet.total
-            merge(t.dmgTaken.pet, petData.dmgDone, pet.name)
-            t.dmgTaken.total = t.dmgTaken.total + t.dmgTaken.pet.total
-            parentUnit.stats[pet.guid].dmgTaken = nil
-        end
-        if petData.overdmgDone then
-            if not t.overdmgTaken then t.overdmgTaken = {total=0} end
-            if not t.overdmgTaken.pet then t.overdmgTaken.pet = {total=0} end
-            t.overdmgTaken.total = t.overdmgTaken.total - t.overdmgTaken.pet.total
-            merge(t.overdmgTaken.pet, petData.overdmgDone, pet.name)
-            t.overdmgTaken.total = t.overdmgTaken.total + t.overdmgTaken.pet.total
-            parentUnit.stats[pet.guid].overdmgTaken = nil
-        end
-    end
-
-    local function updateTakenData(targetGuid, petData)
-        local target = findUnit(targetGuid)
-        if not target then return end
-        mergeTakenData(target, parent.guid, petData)
-    end
-
     for targetGuid,petData in pairs(pet.stats) do
-        -- add pet's data to parent's
         mergeDoneData(parent, targetGuid, petData)
-        -- re-arrange taken data from pet source to parent source
-        updateTakenData(targetGuid, petData)
     end
 end
 
@@ -1074,7 +1139,7 @@ local function getUnitStatistics(mode)
     local ruleType = WD.db.profile.tracker.selectedRule
     if ruleType == "TOTAL_DONE" or ruleType == "TOTAL_TAKEN" then
 
-        local function findParent(guid)
+        local function findUnit(guid)
             for i=1,#units do
                 if units[i].guid == guid then
                     return units[i]
@@ -1083,43 +1148,101 @@ local function getUnitStatistics(mode)
             return nil
         end
 
-        local function filterUnit(unit)
-            unit = WdLib:table_deepcopy(unit)
-            local rule = getCurrentFilter()
-            if filterBySelectedRule(unit, mode, rule) then
-                calculateTotalStatsByRule(unit, mode, rule)
-                total = total + unit.total
-                units[#units+1] = unit
+        local function updateTakenInfo(srcUnit)
+            for dstGuid,src in pairs(srcUnit.stats) do
+                local dstUnit = findUnit(dstGuid)
+                if dstUnit then
+                    if not dstUnit.stats[srcUnit.guid] then dstUnit.stats[srcUnit.guid] = {} end
+                    local dst = dstUnit.stats[srcUnit.guid]
+
+                    dst.healTaken = {total=0}
+                    dst.overhealTaken = {total=0}
+                    dst.dmgTaken = {total=0}
+                    dst.overdmgTaken = {total=0}
+
+                    copyTableTo(src.healDone, dst.healTaken)
+                    copyTableTo(src.overhealDone, dst.overhealTaken)
+                    copyTableTo(src.dmgDone, dst.dmgTaken)
+                    copyTableTo(src.overdmgDone, dst.overdmgTaken)
+                end
             end
+        end
+
+        local function loadUnit(unit)
+            if filterBySelectedRule(unit, mode, getCurrentFilter()) then
+                unit = WdLib:table_deepcopy(unit)
+                for guid in pairs(unit.stats) do
+                    unit.stats[guid].healTaken = nil
+                    unit.stats[guid].overhealTaken = nil
+                    unit.stats[guid].dmgTaken = nil
+                    unit.stats[guid].overdmgTaken = nil
+                end
+                return unit
+            end
+            return nil
         end
 
         -- load npc
         for npcId,data in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].npc) do
             for _,npc in pairs(data) do
                 if type(npc) == "table" then
-                    filterUnit(npc)
+                    local unit = loadUnit(npc)
+                    if unit then
+                        units[#units+1] = unit
+                    end
                 end
             end
         end
         -- load players
         for guid,pl in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].players) do
             if type(pl) == "table" then
-                filterUnit(pl)
+                local unit = loadUnit(pl)
+                if unit then
+                    units[#units+1] = unit
+                end
             end
         end
         -- load pets
+        local function loadParentPet(parentGuid, pet)
+            local parent = findEntityByGUID(parentGuid)
+            if not parent then return pet end
+            if parent.type == "pet" then
+                return loadParentPet(parent.parentGuid, parent)
+            end
+            return pet
+        end
+
         for parentGuid,info in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].pets) do
             for npcId,data in pairs(info) do
                 for k,pet in pairs(data) do
-                    local parent = findParent(parentGuid)
+                    local parent = findUnit(parentGuid)
                     if parent then
-                        total = total - parent.total
-                        mergeSpells(units, parent, pet)
-                        calculateTotalStatsByRule(parent, mode, getCurrentFilter())
-                        total = total + parent.total
+                        mergeSpells(parent, pet)
+                    else
+                        local petAsParent = loadParentPet(parentGuid, pet)
+                        if petAsParent.guid ~= pet.guid then
+                            if petAsParent.type == "pet" then
+                                local petUnit = loadUnit(pet)
+                                if petUnit then
+                                    local currId = WdLib:getUnitNumber(petAsParent.name)
+                                    if currId then
+                                        petUnit.name = petUnit.name.."-"..currId
+                                    end
+                                    units[#units+1] = petUnit
+                                end
+                            end
+                        end
                     end
                 end
             end
+        end
+
+        for i=1,#units do
+            updateTakenInfo(units[i])
+        end
+        for i=1,#units do
+            calculateTotalStatsByRule(units[i], mode, getCurrentFilter())
+            total = total + units[i].total
         end
     end
 

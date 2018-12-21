@@ -27,3 +27,5 @@ core.lua
 tracker.lua
 tracker_overview.lua
 tracker_statistics.lua
+
+tests/unit_tests.lua

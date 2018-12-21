@@ -32,6 +32,10 @@ function WdLib:RestartTimer(self, fn, delay, ...)
     return WdLib:CreateTimer(fn, delay, ...)
 end
 
+function WdLib:PostponeCall(fn, delay)
+    C_Timer.After(delay, fn)
+end
+
 local function table_val_to_str(v)
     if "string" == type(v) then
         v = string.gsub(v, "\n", "\\n")
@@ -239,6 +243,7 @@ function WdLib:getFullName(name)
 end
 
 function WdLib:getShortName(name, noRealm)
+    if not name then return nil end
     local dashIndex = string.find(name, "-[^-]*$")
     if not dashIndex then
         return name

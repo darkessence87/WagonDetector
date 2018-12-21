@@ -1,6 +1,14 @@
 
 local WDMF = WD.mainFrame
 
+local function log(data)
+    if type(data) == "table" then
+        print(WdLib:table_tostring(data))
+    else
+        print(data or "nil")
+    end
+end
+
 local callbacks = {}
 local function registerCallback(callback, ...)
     local events = {...}
@@ -13,6 +21,7 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     local v = {}
     v.guid = guid
     v.name = name
+    v.unit = "Unknown"
     v.class = 0
     v.type = unit_type
     v.parentGuid = parentGuid
@@ -36,7 +45,7 @@ end
 
 local function findNpc(guid)
     if not WDMF.tracker or not WDMF.tracker.npc then return nil end
-    if not guid or not guid:match("Creature") then return nil end
+    if not guid or tonumber(guid) or not guid:match("Creature") then return nil end
     local npcId = WdLib:getNpcId(guid)
     local holder = WDMF.tracker.npc[npcId]
     local index = WdLib:findEntityIndex(holder, guid)
@@ -101,6 +110,17 @@ local function updateUnitName(unit, name)
     end
 end
 
+local function loadAuras(p)
+    for index=1,40 do
+        local _, _, _, _, duration, expirationTime, _, _, _, spellId = UnitAura(p.unit, index)
+        if spellId then
+            if not p.auras[spellId] then p.auras[spellId] = {} end
+            local appliedAt = expirationTime - duration
+            p.auras[spellId][#p.auras[spellId]+1] = { caster = p.guid, applied = appliedAt }
+        end
+    end
+end
+
 local function loadNpc(guid, name)
     local npcId = WdLib:getNpcId(guid)
     local holder = WDMF.tracker.npc[npcId]
@@ -124,7 +144,42 @@ local function loadNpc(guid, name)
 end
 
 local function loadPet(guid, name, parentGuid, parentName)
-    if not parentGuid then return nil end
+    local function findParentByPetGuid(guid)
+        --print("Trying find parent for guid:"..guid)
+        for _,player in pairs(WDMF.tracker.players) do
+            local petUnit = nil
+            if player.unit:match("raid") then
+                local raidN = player.unit:sub(player.unit:find("%d"))
+                petUnit = "raidpet"..raidN
+            elseif player.unit:match("party") then
+                local partyN = player.unit:sub(player.unit:find("%d"))
+                petUnit = "partypet"..partyN
+            elseif player.unit == "player" then
+                petUnit = "pet"
+            end
+
+            if petUnit then
+                local petGuid = UnitGUID(petUnit)
+                if petGuid == guid then
+                    if not player.pets then player.pets = {} end
+                    player.pets[#player.pets+1] = guid
+                    print("updated parent for pet:"..guid)
+                    return player.guid, player.name
+                end
+            else
+                --print("not found")
+            end
+        end
+        return nil, nil
+    end
+
+    if not parentGuid then
+        parentGuid, parentName = findParentByPetGuid(guid)
+        if not parentGuid then
+            return nil
+        end
+    end
+
     local petNpcId = WdLib:getNpcId(guid)
     local holder = WDMF.tracker.pets[parentGuid]
     if not holder then
@@ -154,50 +209,12 @@ local function loadPet(guid, name, parentGuid, parentName)
     return holder[index]
 end
 
-local function loadExistingPet(pet)
-    if not pet or not pet.parentGuid then return end
-    local petNpcId = WdLib:getNpcId(pet.guid)
-    local holder = WDMF.tracker.pets[pet.parentGuid]
-    if not holder then
-        WDMF.tracker.pets[pet.parentGuid] = {}
-        WDMF.tracker.pets[pet.parentGuid][petNpcId] = {}
-        holder = WDMF.tracker.pets[pet.parentGuid][petNpcId]
-        holder[#holder+1] = createExistingEntity(pet)
-        return
-    elseif not holder[petNpcId] then
-        WDMF.tracker.pets[pet.parentGuid][petNpcId] = {}
-        holder = WDMF.tracker.pets[pet.parentGuid][petNpcId]
-        holder[#holder+1] = createExistingEntity(pet)
-        return
-    else
-        holder = holder[petNpcId]
-    end
-
-    local index = WdLib:findEntityIndex(holder, pet.guid)
-    if not index then
-        if #holder == 1 then
-            holder[1].name = holder[1].name.."-1"
-        end
-        pet = createExistingEntity(pet)
-        pet.name = pet.name.."-"..(#holder + 1)
-        holder[#holder+1] = pet
-        return
-    end
-end
-
 local function loadPlayer(guid, name)
     if not WDMF.tracker.players[guid] then
         WDMF.tracker.players[guid] = {}
         WDMF.tracker.players[guid] = createEntity(guid, name, "player")
     end
     return WDMF.tracker.players[guid]
-end
-
-local function loadExistingPlayer(v)
-    if not WDMF.tracker.players[v.guid] then
-        WDMF.tracker.players[v.guid] = {}
-        WDMF.tracker.players[v.guid] = createExistingEntity(v)
-    end
 end
 
 local function loadEntity(guid, name, unit_type)
@@ -227,10 +244,40 @@ local function loadEntity(guid, name, unit_type)
     return nil
 end
 
+local function updatePet(pet, newGuid)
+    if pet.guid ~= newGuid then
+        if pet.parentGuid and WDMF.tracker.players[pet.parentGuid] then
+            if not WDMF.tracker.players[pet.parentGuid].pets then WDMF.tracker.players[pet.parentGuid].pets = {} end
+            local t = WDMF.tracker.players[pet.parentGuid].pets
+            if #t == 0 then
+                t[1] = newGuid
+            else
+                for i=1,#t do
+                    if t[i] == pet.guid then
+                        t[i] = newGuid
+                        print("updated pet's guid from "..pet.guid.." to "..newGuid)
+                        break
+                    end
+                end
+            end
+        end
+        pet.guid = newGuid
+    end
+end
+
+local function updatePlayer(player)
+end
+
 local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
+    if not src_name then
+        src_guid = "Environment-0-0-0-0-0-0000000000"
+    end
     local src = findEntityByGUID(src_guid)
     if not src then
-        if WD:IsNpc(src_flags) then
+        if not src_name then
+            src_name = "Environment"
+            src = loadEntity(src_guid, src_name, "creature")
+        elseif WD:IsNpc(src_flags) then
             src = loadEntity(src_guid, src_name, "creature")
         elseif WD:IsPet(src_flags) then
             src = loadEntity(src_guid, src_name, "pet")
@@ -584,28 +631,30 @@ end
 
 local function finishCast(self, unit, timestamp, spell_id, result)
     if unit.casts.current_spell_id == 0 then return end
-    if unit.casts.current_spell_id == spell_id and result ~= "FAILED" then
-        local diff = (timestamp - unit.casts.current_timestamp) * 1000
-        if diff >= WD.MIN_CAST_TIME_TRACKED then
-            local i = 1
-            if unit.casts[spell_id] then
-                if unit.casts.current_spell_interrupted == 1 then
-                    i = unit.casts[spell_id].count
+    if unit.casts.current_spell_id == spell_id then
+        if result ~= "FAILED" then
+            local diff = (timestamp - unit.casts.current_timestamp) * 1000
+            if diff >= WD.MIN_CAST_TIME_TRACKED then
+                local i = 1
+                if unit.casts[spell_id] then
+                    if unit.casts.current_spell_interrupted == 1 then
+                        i = unit.casts[spell_id].count
+                    else
+                        i = unit.casts[spell_id].count + 1
+                    end
                 else
-                    i = unit.casts[spell_id].count + 1
+                    unit.casts[spell_id] = {}
                 end
-            else
-                unit.casts[spell_id] = {}
+                unit.casts[spell_id].count = i
+                unit.casts[spell_id][i] = {}
+                unit.casts[spell_id][i].status = result
+                unit.casts[spell_id][i].timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+                unit.casts[spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
             end
-            unit.casts[spell_id].count = i
-            unit.casts[spell_id][i] = {}
-            unit.casts[spell_id][i].status = result
-            unit.casts[spell_id][i].timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
-            unit.casts[spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
         end
+        unit.casts.current_spell_id = 0
+        unit.casts.current_spell_interrupted = 0
     end
-    unit.casts.current_spell_id = 0
-    unit.casts.current_spell_interrupted = 0
 end
 
 local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, target_aura_id, dispeller)
@@ -839,7 +888,7 @@ function WDMF:ProcessCasts(src, dst, ...)
     if not src then return end
     local rules = self.encounter.rules
     local arg = {...}
-    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    local timestamp, event, src_guid, src_name, dst_name, spell_id = arg[1], arg[2], arg[4], arg[5], arg[9], tonumber(arg[12])
     if not src and src_name then return end
     if not dst and dst_name then return end
 
@@ -880,9 +929,6 @@ function WDMF:ProcessEnvironmentDamage(src, dst, ...)
     debugEvent(...)
     -----------------------------------------------------------------------------------------------------------------------
     local environmentType, amount = arg[12], arg[13]
-    if not src then
-        src = createEntity("Environment", environmentType, "environment")
-    end
     local spell_id = "Environment: "..environmentType
     validateDmgStatsHolders(src, dst, event, spell_id, amount, 0)
     trackDamage(src, dst, event, spell_id, amount, 0)
@@ -1079,6 +1125,25 @@ function WDMF:ProcessDispels(src, dst, ...)
     end
 end
 
+function WDMF:ProcessTests(...)
+    local _, event = ...
+    if event == "TEST_UNIT_PET" then
+        local args = {...}
+        local unitId, newGuid = args[4], args[5]
+        if unitId:match("pet") then
+            for parentGuid,npcData in pairs(self.tracker.pets) do
+                for npcId,dataByNpcId in pairs(npcData) do
+                    for _,petData in pairs(dataByNpcId) do
+                        if petData.unit == unitId then
+                            updatePet(petData, newGuid)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 function WDMF:LoadRules()
     local function fillEventByType(event, rType, arg0, arg1, p)
         if rType == "EV_DAMAGETAKEN" then
@@ -1245,26 +1310,30 @@ function WDMF:Init()
     --registerCallback(self.ProcessLeaching,          "SPELL_LEECH", "SPELL_PERIODIC_LEECH", "SPELL_DRAIN", "SPELL_PERIODIC_DRAIN")
     registerCallback(self.ProcessDispels,           "SPELL_DISPEL", "SPELL_STOLEN")
     registerCallback(self.ProcessDeaths,            "UNIT_DIED", "UNIT_DESTROYED", "UNIT_DISSIPATES")
+
+    -- internal events
+    registerCallback(self.ProcessTests,             "TEST_UNIT_PET")
 end
 
-function WDMF:CreateRaidMember(unit, petUnit)
-    local function createInternalEntity(unit)
-        if not UnitIsVisible(unit) then return nil end
-        local name = WdLib:getUnitName(unit)
+function WDMF:CreateRaidMember(unitId, petUnitId)
+    local function createInternalEntity(unitId)
+        if not UnitIsVisible(unitId) then return nil end
+        local name = WdLib:getUnitName(unitId)
         if name == UNKNOWNOBJECT then return nil end
-        local _,class = UnitClass(unit)
+        local _,class = UnitClass(unitId)
 
         local p = {}
         p.name = name
-        p.unit = unit
+        p.unit = unitId
         p.class = class
         p.guid = UnitGUID(p.unit)
         p.rt = 0
+
         return p
     end
 
-    local player = createInternalEntity(unit)
-    local pet = createInternalEntity(petUnit)
+    local player = createInternalEntity(unitId)
+    local pet = createInternalEntity(petUnitId)
 
     if player then
         if WD.cache.raidroster[player.name] then
@@ -1274,17 +1343,7 @@ function WDMF:CreateRaidMember(unit, petUnit)
         end
 
         player.type = "player"
-        loadExistingPlayer(player)
-
-        -- load auras
-        for index=1,40 do
-            local _, _, _, _, duration, expirationTime, _, _, _, spellId = UnitBuff(player.unit, index)
-            if spellId then
-                if not player.auras[spellId] then player.auras[spellId] = {} end
-                local appliedAt = expirationTime - duration
-                player.auras[spellId][#player.auras[spellId]+1] = { caster = player.guid, applied = appliedAt }
-            end
-        end
+        self:LoadExistingPlayer(player)
 
         self:CheckConsumables(player)
     end
@@ -1294,11 +1353,39 @@ function WDMF:CreateRaidMember(unit, petUnit)
         pet.name = WdLib:getShortName(pet.name)
         pet.parentGuid = player.guid
         pet.parentName = player.name
-        loadExistingPet(pet)
+        self:LoadExistingPet(pet)
 
         if not player.pets then player.pets = {} end
         player.pets[#player.pets+1] = pet.guid
     end
+end
+
+function WDMF:UpdateRaidMember(unitId)
+    local function updateByUnitId(unitId)
+        if unitId:match("pet") then
+            for parentGuid,npcData in pairs(self.tracker.pets) do
+                for npcId,petData in pairs(npcData) do
+                    if petData.unit == unitId then
+                        local newGuid = UnitGUID(unitId)
+                        local name = WdLib:getUnitName(unitId)
+                        if name ~= UNKNOWNOBJECT then
+                            petData.name = name
+                        end
+                        updatePet(petData, newGuid)
+                    end
+                end
+            end
+        else
+            for guid,playerData in pairs(self.tracker.players) do
+                if playerData.unit == unitId then
+                    updatePlayer(playerData, unitId)
+                end
+            end
+        end
+        return nil
+    end
+
+    updateByUnitId(unitId)
 end
 
 function WDMF:ProcessPull()
@@ -1352,15 +1439,60 @@ function WDMF:Tracker_OnStopEncounter()
 end
 
 function WDMF:Tracker_OnEvent(...)
+    --debugEvent(...)
     local _, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
     if callbacks[event] then
         if event == "SPELL_SUMMON" then
             local src = getEntities(src_guid, src_name, src_flags, src_raid_flags)
             callbacks[event](self, src, nil, ...)
+        elseif event:match("TEST_") then
+            callbacks[event](self, ...)
         else
             local src, dst = getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
             callbacks[event](self, src, dst, ...)
         end
+    end
+end
+
+function WDMF:LoadExistingPet(pet)
+    if not pet or not pet.parentGuid then return end
+    local petNpcId = WdLib:getNpcId(pet.guid)
+    local holder = WDMF.tracker.pets[pet.parentGuid]
+    if not holder then
+        WDMF.tracker.pets[pet.parentGuid] = {}
+        WDMF.tracker.pets[pet.parentGuid][petNpcId] = {}
+        holder = WDMF.tracker.pets[pet.parentGuid][petNpcId]
+        holder[#holder+1] = createExistingEntity(pet)
+        loadAuras(pet)
+        return
+    elseif not holder[petNpcId] then
+        WDMF.tracker.pets[pet.parentGuid][petNpcId] = {}
+        holder = WDMF.tracker.pets[pet.parentGuid][petNpcId]
+        holder[#holder+1] = createExistingEntity(pet)
+        loadAuras(pet)
+        return
+    else
+        holder = holder[petNpcId]
+    end
+
+    local index = WdLib:findEntityIndex(holder, pet.guid)
+    if not index then
+        if #holder == 1 then
+            holder[1].name = holder[1].name.."-1"
+        end
+        pet = createExistingEntity(pet)
+        pet.name = pet.name.."-"..(#holder + 1)
+        holder[#holder+1] = pet
+        loadAuras(pet)
+        return
+    end
+end
+
+function WDMF:LoadExistingPlayer(v)
+    if not WDMF.tracker.players[v.guid] then
+        WDMF.tracker.players[v.guid] = {}
+        WDMF.tracker.players[v.guid] = createExistingEntity(v)
+        loadAuras(v)
     end
 end
 

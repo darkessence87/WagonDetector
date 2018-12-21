@@ -158,7 +158,7 @@ end
 local function createModuleFrame(name)
     WDGF.module[name] = CreateFrame("Frame", nil, WDGF)
     local m = WDGF.module[name]
-    m:SetSize(800, 600)
+    m:SetSize(1000, 600)
     m:ClearAllPoints()
     m:SetPoint("TOPLEFT", WDGF, "TOPLEFT", 161, 0)
     m:SetFrameStrata("HIGH")

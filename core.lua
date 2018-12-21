@@ -135,7 +135,9 @@ function WDMF:OnEvent(event, ...)
         self:ResetEncounter()
         self:StartEncounter(encounterID, name)
         self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        self:RegisterEvent("UNIT_PET")
     elseif event == "ENCOUNTER_END" then
+        self:UnregisterEvent("UNIT_PET")
         self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         self:StopEncounter()
 
@@ -148,6 +150,9 @@ function WDMF:OnEvent(event, ...)
         end
     elseif event == "CHAT_MSG_ADDON" then
         self:OnAddonMessage(...)
+    elseif event == "UNIT_PET" then
+        local petUnitId = ...
+        self:UpdateRaidMember(petUnitId)
     end
 end
 

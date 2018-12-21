@@ -65,7 +65,7 @@ end
 local function findNpc(guid)
     if not WD.db.profile.tracker or not WD.db.profile.tracker.selected then return nil end
     local t = WD.db.profile.tracker[WD.db.profile.tracker.selected]
-    if not guid or not guid:match("Creature") then return nil end
+    if not guid then return nil end
     local npcId = WdLib:getNpcId(guid)
     local holder = t.npc[npcId]
     local index = WdLib:findEntityIndex(holder, guid)
@@ -119,6 +119,9 @@ local function generateSpellChart(data)
 
     local function createSpellRow(chart, event, spellId, amount, petName)
         if amount > 0 then
+            if spellId == ACTION_SWING then
+                spellId = 260421
+            end
             local t = {}
             t.index = #chart+1
             t.id = spellId
@@ -318,7 +321,7 @@ local function initSpellChartPopup()
         r:SetStatusBarColor(.15,.25,.15,1)
         r:SetSize(xSize, 20)
         r.leftTxt = WdLib:createFontDefault(r, "LEFT", "")
-        r.leftTxt:SetSize(250, 20)
+        r.leftTxt:SetSize(xSize-50, 20)
         r.leftTxt:SetPoint("LEFT", r, "LEFT", 2, 0)
         r.rightTxt = WdLib:createFontDefault(r, "RIGHT", "")
         r.rightTxt:SetSize(100, 20)
@@ -861,6 +864,38 @@ local function initPullsMenu()
     function frame:Refresh()
         WdLib:updateDropDownMenu(self, getPullName(), getPulls())
     end
+
+    -- clear current pull history button
+    WDTS.buttons["clear_current_pull"] = WdLib:createButton(WDTS)
+    WDTS.buttons["clear_current_pull"]:SetSize(90, 20)
+    WDTS.buttons["clear_current_pull"]:SetScript("OnClick", function()
+        if WD.db.profile.tracker and WD.db.profile.tracker.selected and WD.db.profile.tracker.selected > 0 then
+            table.remove(WD.db.profile.tracker, WD.db.profile.tracker.selected)
+            if #WD.db.profile.tracker == 0 then
+                WD.db.profile.tracker.selected = 0
+            elseif WD.db.profile.tracker.selected > #WD.db.profile.tracker then
+                WD.db.profile.tracker.selected = #WD.db.profile.tracker
+            end
+        end
+        WD:RefreshTrackerPulls()
+        WD:RefreshUnitStatistics()
+    end)
+    WDTS.buttons["clear_current_pull"].txt = WdLib:createFont(WDTS.buttons["clear_current_pull"], "CENTER", WD_TRACKER_BUTTON_CLEAR_SELECTED)
+    WDTS.buttons["clear_current_pull"].txt:SetAllPoints()
+
+    -- clear pulls history button
+    WDTS.buttons["clear_pulls"] = WdLib:createButton(WDTS)
+    WDTS.buttons["clear_pulls"]:SetSize(90, 20)
+    WDTS.buttons["clear_pulls"]:SetScript("OnClick", function()
+        WdLib:table_wipe(WD.db.profile.tracker)
+        WD:RefreshTrackerPulls()
+        WD:RefreshUnitStatistics()
+    end)
+    WDTS.buttons["clear_pulls"].txt = WdLib:createFont(WDTS.buttons["clear_pulls"], "CENTER", WD_TRACKER_BUTTON_CLEAR)
+    WDTS.buttons["clear_pulls"].txt:SetAllPoints()
+
+    WDTS.buttons["clear_pulls"]:SetPoint("TOPRIGHT", WDTS, "TOPRIGHT", -5, -5)
+    WDTS.buttons["clear_current_pull"]:SetPoint("TOPRIGHT", WDTS.buttons["clear_pulls"], "TOPLEFT", -1, 0)
 end
 
 local function initRulesMenu()

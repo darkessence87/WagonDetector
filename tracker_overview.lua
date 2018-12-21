@@ -355,9 +355,27 @@ local function initPullsMenu()
         WdLib:updateDropDownMenu(self, getPullName(), getPulls())
     end
 
+    -- clear current pull history button
+    WDTO.buttons["clear_current_pull"] = WdLib:createButton(WDTO)
+    WDTO.buttons["clear_current_pull"]:SetSize(90, 20)
+    WDTO.buttons["clear_current_pull"]:SetScript("OnClick", function()
+        if WD.db.profile.tracker and WD.db.profile.tracker.selected and WD.db.profile.tracker.selected > 0 then
+            table.remove(WD.db.profile.tracker, WD.db.profile.tracker.selected)
+            if #WD.db.profile.tracker == 0 then
+                WD.db.profile.tracker.selected = 0
+            elseif WD.db.profile.tracker.selected > #WD.db.profile.tracker then
+                WD.db.profile.tracker.selected = #WD.db.profile.tracker
+            end
+        end
+        WD:RefreshTrackerPulls()
+        WD:RefreshTrackedCreatures()
+        WD:RefreshTrackedDispels()
+    end)
+    WDTO.buttons["clear_current_pull"].txt = WdLib:createFont(WDTO.buttons["clear_current_pull"], "CENTER", WD_TRACKER_BUTTON_CLEAR_SELECTED)
+    WDTO.buttons["clear_current_pull"].txt:SetAllPoints()
+
     -- clear pulls history button
     WDTO.buttons["clear_pulls"] = WdLib:createButton(WDTO)
-    WDTO.buttons["clear_pulls"]:SetPoint("TOPRIGHT", WDTO, "TOPRIGHT", -5, -5)
     WDTO.buttons["clear_pulls"]:SetSize(90, 20)
     WDTO.buttons["clear_pulls"]:SetScript("OnClick", function()
         WdLib:table_wipe(WD.db.profile.tracker)
@@ -367,6 +385,9 @@ local function initPullsMenu()
     end)
     WDTO.buttons["clear_pulls"].txt = WdLib:createFont(WDTO.buttons["clear_pulls"], "CENTER", WD_TRACKER_BUTTON_CLEAR)
     WDTO.buttons["clear_pulls"].txt:SetAllPoints()
+
+    WDTO.buttons["clear_pulls"]:SetPoint("TOPRIGHT", WDTO, "TOPRIGHT", -5, -5)
+    WDTO.buttons["clear_current_pull"]:SetPoint("TOPRIGHT", WDTO.buttons["clear_pulls"], "TOPLEFT", -1, 0)
 end
 
 local function isCastedNpc(v)

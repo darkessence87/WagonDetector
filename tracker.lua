@@ -1310,7 +1310,7 @@ function WDMF:Init()
     --registerCallback(self.ProcessLeaching,          "SPELL_LEECH", "SPELL_PERIODIC_LEECH", "SPELL_DRAIN", "SPELL_PERIODIC_DRAIN")
     registerCallback(self.ProcessDispels,           "SPELL_DISPEL", "SPELL_STOLEN")
     registerCallback(self.ProcessDeaths,            "UNIT_DIED", "UNIT_DESTROYED", "UNIT_DISSIPATES")
-    
+
     -- internal events
     registerCallback(self.ProcessTests,             "TEST_UNIT_PET")
 end

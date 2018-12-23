@@ -102,6 +102,15 @@ local function findEntityByGUID(guid)
     return nil
 end
 
+local function findParentPet(parentGuid, pet)
+    local parent = findEntityByGUID(parentGuid)
+    if not parent then return pet end
+    if parent.type == "pet" then
+        return findParentPet(parent.parentGuid, parent)
+    end
+    return pet
+end
+
 local function generateSpellChart(data)
     local function getSpellTypeByEvent(event)
         if event:match("PERIODIC") then
@@ -493,6 +502,66 @@ local function dmgTakenSortFunction(a, b)
     return result == 1
 end
 
+local function updateStatusBar(bar, class, vCurrent, vTotal)
+    if not vCurrent or not vTotal then
+        bar:SetValue(0)
+        bar:SetStatusBarColor(0,0,0,0)
+        return
+    end
+    local total = vTotal.total
+    local curr = vCurrent.total
+    local percent = vCurrent.total / vTotal.total
+    bar:SetValue(percent * 100)
+    local r,g,b = GetClassColor(class)
+    if class == 0 then
+        local rule = getCurrentFilter()
+        if rule == "done" then
+            r,g,b = 1-percent, percent, 0
+        elseif rule == "taken" then
+            r,g,b = percent, 1-percent, 0
+        end
+    end
+    bar:SetStatusBarColor(r,g,b,.75)
+end
+
+local function initStatusBar(parent)
+    local sb = CreateFrame("StatusBar", nil, parent)
+    sb:SetStatusBarTexture([[Interface\AddOns\WagonDetector\media\statusbars\otravi]])
+    sb:GetStatusBarTexture():SetHorizTile(false)
+    sb:GetStatusBarTexture():SetVertTile(false)
+    sb:SetMinMaxValues(0, 100)
+    sb:SetStatusBarColor(0,0,0,0)
+    sb:SetAllPoints()
+    parent.txt:SetParent(sb)
+    parent.bar = sb
+end
+
+local function findUnitByGuid(mode, guid)
+    local t = WDTS.cache.units[mode]
+    if not t then return nil end
+    for i=1,#t do
+        if t[i].guid == guid then
+            return t[i]
+        end
+    end
+    return nil
+end
+
+local function updatePetName(pet)
+    local petAsParent = findParentPet(pet.parentGuid, pet)
+    if petAsParent.guid ~= pet.guid then
+        if petAsParent.type == "pet" then
+            local currId = WdLib:getUnitNumber(petAsParent.name)
+            if currId then
+                pet = WdLib:table_deepcopy(pet)
+                pet.name = pet.name.."-"..currId
+                return pet
+            end
+        end
+    end
+    return pet
+end
+
 local function updateHealInfo()
     local core = WD.mainFrame
 
@@ -500,6 +569,7 @@ local function updateHealInfo()
         v:Hide()
     end
 
+    local rule = getCurrentFilter()
     local chart = {}
     if WDTS.lastSelectedUnitHeal then
         local v = WDTS.lastSelectedUnitHeal:GetParent().info
@@ -510,15 +580,16 @@ local function updateHealInfo()
                (info.overhealTaken and info.overhealTaken.total > 0)
             then
                 local target = findEntityByGUID(guid)
+                if target and target.type == "pet" then target = updatePetName(target) end
                 if not target then target = { name = guid, class = 0 } end
                 chart[#chart+1] = {
                     id = WdLib:getColoredName(WdLib:getShortName(target.name), target.class),
                     data = info,
-                    source = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
+                    source = WdLib:getColoredName(WdLib:getShortName(v.name), v.class),
+                    class = target.class,
                 }
             end
         end
-        local rule = getCurrentFilter()
         if rule == "done" then
             table.sort(chart, healDoneSortFunction)
         elseif rule == "taken" then
@@ -540,6 +611,12 @@ local function updateHealInfo()
             if v.healDone then value = v.healDone.total end
             local f = WdLib:addNextColumn(WDTS.data["heal_info"], parent, index, "CENTER", WdLib:shortNumber(value))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            initStatusBar(f)
+            if v.healDone and rule == "done" then
+                updateStatusBar(f.bar, chart[row].class, v.healDone, chart[1].data.healDone)
+            else
+                updateStatusBar(f.bar)
+            end
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Healing", target, source)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healDone)) end)
@@ -558,6 +635,12 @@ local function updateHealInfo()
             local value = 0
             if v.healTaken then value = v.healTaken.total end
             local f = WdLib:addNextColumn(WDTS.data["heal_info"], parent, index, "CENTER", WdLib:shortNumber(value))
+            initStatusBar(f)
+            if v.healTaken and rule == "taken" then
+                updateStatusBar(f.bar, chart[row].class, v.healTaken, chart[1].data.healTaken)
+            else
+                updateStatusBar(f.bar)
+            end
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Healing", source, target)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healTaken)) end)
@@ -585,6 +668,11 @@ local function updateHealInfo()
             local value = 0
             if v.healDone then value = v.healDone.total end
             f.txt:SetText(WdLib:shortNumber(value))
+            if v.healDone and rule == "done" then
+                updateStatusBar(f.bar, chart[row].class, v.healDone, chart[1].data.healDone)
+            else
+                updateStatusBar(f.bar)
+            end
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Healing", target, source)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healDone)) end)
         elseif index == 2 then
@@ -597,6 +685,11 @@ local function updateHealInfo()
             local value = 0
             if v.healTaken then value = v.healTaken.total end
             f.txt:SetText(WdLib:shortNumber(value))
+            if v.healTaken and rule == "taken" then
+                updateStatusBar(f.bar, chart[row].class, v.healTaken, chart[1].data.healTaken)
+            else
+                updateStatusBar(f.bar)
+            end
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Healing", source, target)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.healTaken)) end)
         elseif index == 4 then
@@ -622,6 +715,7 @@ local function updateDmgInfo()
         v:Hide()
     end
 
+    local rule = getCurrentFilter()
     local chart = {}
     if WDTS.lastSelectedUnitDmg then
         local v = WDTS.lastSelectedUnitDmg:GetParent().info
@@ -632,6 +726,7 @@ local function updateDmgInfo()
                (info.overdmgTaken and info.overdmgTaken.total > 0)
             then
                 local target = findEntityByGUID(guid)
+                if target and target.type == "pet" then target = updatePetName(target) end
                 if not target then target = { name = guid, class = 0 } end
                 chart[#chart+1] = {
                     id = WdLib:getColoredName(WdLib:getShortName(target.name), target.class),
@@ -642,7 +737,6 @@ local function updateDmgInfo()
             end
         end
         if #chart > 0 then
-            local rule = getCurrentFilter()
             if rule == "done" then
                 table.sort(chart, dmgDoneSortFunction)
             elseif rule == "taken" then
@@ -656,14 +750,6 @@ local function updateDmgInfo()
     local rowsN = #chart
     local columnsN = 5
 
-    local function updateStatusBar(bar, class, vCurrent, vTotal)
-        local total = vTotal.total
-        local curr = vCurrent.total
-        bar:SetValue(vCurrent.total * 100 / vTotal.total)
-        local r,g,b = GetClassColor(class)
-        bar:SetStatusBarColor(r,g,b,0.2)
-    end
-
     local function createFn(parent, row, index)
         local source = chart[row].source
         local target = chart[row].id
@@ -673,16 +759,11 @@ local function updateDmgInfo()
             if v.dmgDone then value = v.dmgDone.total end
             local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            local sb = CreateFrame("StatusBar", nil, f)
-            sb:SetStatusBarTexture([[Interface\AddOns\WagonDetector\media\statusbars\otravi]])
-            sb:GetStatusBarTexture():SetHorizTile(false)
-            sb:GetStatusBarTexture():SetVertTile(false)
-            sb:SetMinMaxValues(0, 100)
-            sb:SetStatusBarColor(0,0,0,0)
-            sb:SetAllPoints()
-            f.bar = sb
-            if v.dmgDone then
-                --updateStatusBar(f.bar, chart[row].class, v.dmgDone, chart[1].data.dmgDone)
+            initStatusBar(f)
+            if v.dmgDone and rule == "done" then
+                updateStatusBar(f.bar, chart[row].class, v.dmgDone, chart[1].data.dmgDone)
+            else
+                updateStatusBar(f.bar)
             end
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Damage", target, source)
@@ -702,6 +783,12 @@ local function updateDmgInfo()
             local value = 0
             if v.dmgTaken then value = v.dmgTaken.total end
             local f = WdLib:addNextColumn(WDTS.data["dmg_info"], parent, index, "CENTER", WdLib:shortNumber(value))
+            initStatusBar(f)
+            if v.dmgTaken and rule == "taken" then
+                updateStatusBar(f.bar, chart[row].class, v.dmgTaken, chart[1].data.dmgTaken)
+            else
+                updateStatusBar(f.bar)
+            end
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Damage", source, target)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgTaken)) end)
@@ -729,8 +816,10 @@ local function updateDmgInfo()
             local value = 0
             if v.dmgDone then value = v.dmgDone.total end
             f.txt:SetText(WdLib:shortNumber(value))
-            if v.dmgDone then
-                --updateStatusBar(f.bar, chart[row].class, v.dmgDone, chart[1].data.dmgDone)
+            if v.dmgDone and rule == "done" then
+                updateStatusBar(f.bar, chart[row].class, v.dmgDone, chart[1].data.dmgDone)
+            else
+                updateStatusBar(f.bar)
             end
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Damage", target, source)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgDone)) end)
@@ -744,6 +833,11 @@ local function updateDmgInfo()
             local value = 0
             if v.dmgTaken then value = v.dmgTaken.total end
             f.txt:SetText(WdLib:shortNumber(value))
+            if v.dmgTaken and rule == "taken" then
+                updateStatusBar(f.bar, chart[row].class, v.dmgTaken, chart[1].data.dmgTaken)
+            else
+                updateStatusBar(f.bar)
+            end
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Damage", source, target)
             f:SetScript("OnEnter", function() showPopup(f, popupLabel, prepareDataForSpellChart(v.dmgTaken)) end)
         elseif index == 4 then
@@ -967,8 +1061,10 @@ local function initRulesMenu()
     WDTS.buttons["select_rule"].label:SetPoint("RIGHT", WDTS.buttons["select_rule"], "LEFT", -2, 0)
 end
 
-local function filterBySelectedRule(v, mode, rule)
+local function filterBySelectedRule(v, mode)
+    local rule = getCurrentFilter()
     if not v or not v.stats or not rule or not mode then return nil end
+    if v.name == "Environment" then return true end
     local function validate(unit)
         for guid,info in pairs(unit.stats) do
             if mode == "heal" and rule == "done" and ((info.healDone and info.healDone.total > 0) or (info.overhealDone and info.overhealDone.total > 0)) then
@@ -1129,59 +1225,55 @@ local function mergeSpells(parent, pet)
     end
 end
 
+local function updateTakenInfo(mode, srcUnit)
+    for dstGuid,src in pairs(srcUnit.stats) do
+        local dstUnit = findUnitByGuid(mode, dstGuid)
+        if dstUnit then
+            if not dstUnit.stats[srcUnit.guid] then dstUnit.stats[srcUnit.guid] = {} end
+            local dst = dstUnit.stats[srcUnit.guid]
+
+            dst.healTaken = {total=0}
+            dst.overhealTaken = {total=0}
+            dst.dmgTaken = {total=0}
+            dst.overdmgTaken = {total=0}
+
+            copyTableTo(src.healDone, dst.healTaken)
+            copyTableTo(src.overhealDone, dst.overhealTaken)
+            copyTableTo(src.dmgDone, dst.dmgTaken)
+            copyTableTo(src.overdmgDone, dst.overdmgTaken)
+        end
+    end
+end
+
 local function getUnitStatistics(mode)
-    local units = {}
+    if not WDTS.cache.units[mode] then
+        WDTS.cache.units[mode] = {}
+    else
+        WdLib:table_wipe(WDTS.cache.units[mode])
+    end
     local total = 0
     if not WD.db.profile.tracker or not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
-        return units, total
+        return WDTS.cache.units[mode], total
     end
 
+    local units = WDTS.cache.units[mode]
     local ruleType = WD.db.profile.tracker.selectedRule
+
+    local function loadUnit(unit)
+        if filterBySelectedRule(unit, mode) then
+            unit = WdLib:table_deepcopy(unit)
+            for guid in pairs(unit.stats) do
+                unit.stats[guid].healTaken = nil
+                unit.stats[guid].overhealTaken = nil
+                unit.stats[guid].dmgTaken = nil
+                unit.stats[guid].overdmgTaken = nil
+            end
+            return unit
+        end
+        return nil
+    end
+
     if ruleType == "TOTAL_DONE" or ruleType == "TOTAL_TAKEN" then
-
-        local function findUnit(guid)
-            for i=1,#units do
-                if units[i].guid == guid then
-                    return units[i]
-                end
-            end
-            return nil
-        end
-
-        local function updateTakenInfo(srcUnit)
-            for dstGuid,src in pairs(srcUnit.stats) do
-                local dstUnit = findUnit(dstGuid)
-                if dstUnit then
-                    if not dstUnit.stats[srcUnit.guid] then dstUnit.stats[srcUnit.guid] = {} end
-                    local dst = dstUnit.stats[srcUnit.guid]
-
-                    dst.healTaken = {total=0}
-                    dst.overhealTaken = {total=0}
-                    dst.dmgTaken = {total=0}
-                    dst.overdmgTaken = {total=0}
-
-                    copyTableTo(src.healDone, dst.healTaken)
-                    copyTableTo(src.overhealDone, dst.overhealTaken)
-                    copyTableTo(src.dmgDone, dst.dmgTaken)
-                    copyTableTo(src.overdmgDone, dst.overdmgTaken)
-                end
-            end
-        end
-
-        local function loadUnit(unit)
-            if filterBySelectedRule(unit, mode, getCurrentFilter()) then
-                unit = WdLib:table_deepcopy(unit)
-                for guid in pairs(unit.stats) do
-                    unit.stats[guid].healTaken = nil
-                    unit.stats[guid].overhealTaken = nil
-                    unit.stats[guid].dmgTaken = nil
-                    unit.stats[guid].overdmgTaken = nil
-                end
-                return unit
-            end
-            return nil
-        end
-
         -- load npc
         for npcId,data in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].npc) do
             for _,npc in pairs(data) do
@@ -1203,23 +1295,14 @@ local function getUnitStatistics(mode)
             end
         end
         -- load pets
-        local function loadParentPet(parentGuid, pet)
-            local parent = findEntityByGUID(parentGuid)
-            if not parent then return pet end
-            if parent.type == "pet" then
-                return loadParentPet(parent.parentGuid, parent)
-            end
-            return pet
-        end
-
         for parentGuid,info in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].pets) do
             for npcId,data in pairs(info) do
                 for k,pet in pairs(data) do
-                    local parent = findUnit(parentGuid)
+                    local parent = findUnitByGuid(mode, parentGuid)
                     if parent then
                         mergeSpells(parent, pet)
                     else
-                        local petAsParent = loadParentPet(parentGuid, pet)
+                        local petAsParent = findParentPet(parentGuid, pet)
                         if petAsParent.guid ~= pet.guid then
                             if petAsParent.type == "pet" then
                                 local petUnit = loadUnit(pet)
@@ -1236,14 +1319,14 @@ local function getUnitStatistics(mode)
                 end
             end
         end
+    end
 
-        for i=1,#units do
-            updateTakenInfo(units[i])
-        end
-        for i=1,#units do
-            calculateTotalStatsByRule(units[i], mode, getCurrentFilter())
-            total = total + units[i].total
-        end
+    for i=1,#units do
+        updateTakenInfo(mode, units[i])
+    end
+    for i=1,#units do
+        calculateTotalStatsByRule(units[i], mode, getCurrentFilter())
+        total = total + units[i].total
     end
 
     return units, total
@@ -1415,6 +1498,8 @@ function WD:InitTrackerStatisticsModule(parent)
 
     WDTS.buttons = {}
     WDTS.data = {}
+    WDTS.cache = {}
+    WDTS.cache.units = {}
 
     initPullsMenu()
     initRulesMenu()

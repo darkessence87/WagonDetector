@@ -549,17 +549,21 @@ end
 
 local function updatePetName(pet)
     local petAsParent = findParentPet(pet.parentGuid, pet)
+    local newName = pet.name
     if petAsParent.guid ~= pet.guid then
         if petAsParent.type == "pet" then
             local currId = WdLib:getUnitNumber(petAsParent.name)
             if currId then
-                pet = WdLib:table_deepcopy(pet)
-                pet.name = pet.name.."-"..currId
-                return pet
+                newName = newName.."-"..currId
             end
         end
     end
-    return pet
+    local parent = findEntityByGUID(pet.parentGuid)
+    if parent then
+        local parentName = WdLib:getColoredName("("..WdLib:getShortName(parent.name, "norealm")..")", parent.class)
+        newName = newName.." "..parentName
+    end
+    return newName
 end
 
 local function updateHealInfo()
@@ -580,13 +584,20 @@ local function updateHealInfo()
                (info.overhealTaken and info.overhealTaken.total > 0)
             then
                 local target = findEntityByGUID(guid)
-                if target and target.type == "pet" then target = updatePetName(target) end
-                if not target then target = { name = guid, class = 0 } end
+                local targetName, classId = guid, 0
+                if target then
+                    targetName, classId = WdLib:getShortName(target.name), target.class
+                    if target.type == "pet" then
+                        targetName = updatePetName(target)
+                    end
+                    targetName = WdLib:getColoredName(targetName, classId)
+                end
+                local sourceName = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
                 chart[#chart+1] = {
-                    id = WdLib:getColoredName(WdLib:getShortName(target.name), target.class),
+                    id = targetName,
                     data = info,
-                    source = WdLib:getColoredName(WdLib:getShortName(v.name), v.class),
-                    class = target.class,
+                    source = sourceName,
+                    class = classId,
                 }
             end
         end
@@ -726,13 +737,20 @@ local function updateDmgInfo()
                (info.overdmgTaken and info.overdmgTaken.total > 0)
             then
                 local target = findEntityByGUID(guid)
-                if target and target.type == "pet" then target = updatePetName(target) end
-                if not target then target = { name = guid, class = 0 } end
+                local targetName, classId = guid, 0
+                if target then
+                    targetName, classId = WdLib:getShortName(target.name), target.class
+                    if target.type == "pet" then
+                        targetName = updatePetName(target)
+                    end
+                    targetName = WdLib:getColoredName(targetName, classId)
+                end
+                local sourceName = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
                 chart[#chart+1] = {
-                    id = WdLib:getColoredName(WdLib:getShortName(target.name), target.class),
+                    id = targetName,
                     data = info,
-                    source = WdLib:getColoredName(WdLib:getShortName(v.name), v.class),
-                    class = target.class,
+                    source = sourceName,
+                    class = classId,
                 }
             end
         end

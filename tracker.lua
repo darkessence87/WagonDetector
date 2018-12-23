@@ -88,6 +88,29 @@ local function findEntityByGUID(guid)
     return nil
 end
 
+local function scanPetOwners(petGuid)
+    WDMF.scanner:SetOwner(WorldFrame, "ANCHOR_NONE")
+    WDMF.scanner:SetHyperlink("unit:" .. petGuid or "")
+
+    local function scanLine(lineObj)
+        local txt = lineObj:GetText()
+        if not txt or txt == "" then return nil end
+        for ownerGuid, owner in pairs(WDMF.tracker.players) do
+            local name = WdLib:getShortName(owner.name)
+            if txt:find(name) then
+                return ownerGuid, owner.name
+            end
+        end
+        return nil
+    end
+
+    local ownerGuid, ownerName = scanLine(WDMF.scanner.line1)
+    if not ownerGuid then
+        ownerGuid, ownerName = scanLine(WDMF.scanner.line2)
+    end
+    return ownerGuid, ownerName
+end
+
 local function updateUnitClass(unit)
     if unit.type == "player" and unit.class == 0 then
         local _, classId = GetPlayerInfoByGUID(unit.guid)
@@ -144,37 +167,8 @@ local function loadNpc(guid, name)
 end
 
 local function loadPet(guid, name, parentGuid, parentName)
-    local function findParentByPetGuid(guid)
-        --print("Trying find parent for guid:"..guid)
-        for _,player in pairs(WDMF.tracker.players) do
-            local petUnit = nil
-            if player.unit:match("raid") then
-                local raidN = player.unit:sub(player.unit:find("%d"))
-                petUnit = "raidpet"..raidN
-            elseif player.unit:match("party") then
-                local partyN = player.unit:sub(player.unit:find("%d"))
-                petUnit = "partypet"..partyN
-            elseif player.unit == "player" then
-                petUnit = "pet"
-            end
-
-            if petUnit then
-                local petGuid = UnitGUID(petUnit)
-                if petGuid == guid then
-                    if not player.pets then player.pets = {} end
-                    player.pets[#player.pets+1] = guid
-                    print("updated parent for pet:"..guid)
-                    return player.guid, player.name
-                end
-            else
-                --print("not found")
-            end
-        end
-        return nil, nil
-    end
-
     if not parentGuid then
-        parentGuid, parentName = findParentByPetGuid(guid)
+        parentGuid, parentName = scanPetOwners(guid)
         if not parentGuid then
             return nil
         end
@@ -1439,7 +1433,7 @@ function WDMF:Tracker_OnStopEncounter()
 end
 
 function WDMF:Tracker_OnEvent(...)
-    --debugEvent(...)
+    debugEvent(...)
     local _, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
     if callbacks[event] then
         if event == "SPELL_SUMMON" then

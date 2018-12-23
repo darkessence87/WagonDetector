@@ -1,9 +1,16 @@
 ﻿
+-- init core frame
 WD.mainFrame = CreateFrame("Frame")
 local WDMF = WD.mainFrame
 WDMF.isActive = 0
 WDMF.isBlockedByAnother = 0
 WDMF.encounter = {}
+
+-- init pet's owner scanner
+CreateFrame("GameTooltip", "WdPetScanner", nil, "GameTooltipTemplate")
+WDMF.scanner = _G.WdPetScanner
+WDMF.scanner.line1 = _G["WdPetScannerTextLeft2"]
+WDMF.scanner.line2 = _G["WdPetScannerTextLeft3"]
 
 local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 

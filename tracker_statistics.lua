@@ -503,7 +503,7 @@ local function dmgTakenSortFunction(a, b)
 end
 
 local function updateStatusBar(bar, class, vCurrent, vTotal)
-    if not vCurrent or not vTotal then
+    if not vCurrent or not vTotal or (vCurrent.total == 0 and vTotal.total == 0) then
         bar:SetValue(0)
         bar:SetStatusBarColor(0,0,0,0)
         return

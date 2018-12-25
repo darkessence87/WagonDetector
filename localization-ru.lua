@@ -98,6 +98,12 @@ WD_RULE_POTIONS = "использование зелья"
 WD_RULE_FLASKS = "отсутствие фласки"
 WD_RULE_FOOD = "отсутствие еды"
 WD_RULE_RUNES = "отсутствие руны"
+WD_RULE_ST_TARGET_DAMAGE = "|cffffffffполученный|r |cffff0000%s|r урон"
+WD_RULE_ST_TARGET_HEALING = "|cffffffffполученное|r лечение"
+WD_RULE_ST_TARGET_INTERRUPTS = "сбитые |cffffffffцели|r касты"
+WD_RULE_ST_SOURCE_DAMAGE = "|cffffffffнанесенный|r урон"
+WD_RULE_ST_SOURCE_HEALING = "|cffffffffисходящее|r лечение"
+WD_RULE_ST_SOURCE_INTERRUPTS = "сбитые |cffffffffцелью|r касты"
 
 WD_RULE_ERROR_OLD_VERSION = "Версия правила слишком старая: %s. Минимальная поддерживаемая версия: %s"
 

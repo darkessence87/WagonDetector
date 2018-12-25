@@ -537,16 +537,19 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
                     self.items[i].drop = item
                 else
                     if self.items[i].item then self.items[i].item.locked = true end
+                    --self.items[i].drop:SetSize(self:GetWidth(), 20)
                     self.items[i].drop.locked = nil
                     WdLib:updateDropDownMenu(self.items[i].drop, v.name, v.items, parent)
                 end
             else
                 if not self.items[i] or not self.items[i].item then
                     local item = WdLib:createListItemButton(self, v.name, i - 1)
+                    --item:SetSize(self:GetWidth(), 20)
                     self.items[i] = {}
                     self.items[i].item = item
                 end
                 if self.items[i].drop then self.items[i].drop.locked = true end
+                --self.items[i].item:SetSize(self:GetWidth(), 20)
                 self.items[i].item.locked = nil
                 self.items[i].item.data = v
                 self.items[i].item.txt:SetText(v.name)
@@ -597,7 +600,7 @@ end
 
 function WdLib:createDropDownMenu(parent, name, items, grandParent)
     local dropFrame = createListButton(parent, name)
-    dropFrame:SetFrameStrata("TOOLTIP")
+    dropFrame:SetFrameStrata("FULLSCREEN_DIALOG")
     dropFrame:SetScript("OnClick", function(self)
         local parent = self:GetParent()
         if self.isVisible then

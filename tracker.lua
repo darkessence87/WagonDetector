@@ -227,6 +227,12 @@ local function loadEntity(guid, name, unit_type)
         return nil
     end]]
 
+    -- try to find unit as pet summoned before pull
+    local parentGuid, parentName = scanPetOwners(guid)
+    if parentGuid then
+        return loadPet(guid, name, parentGuid, parentName)
+    end
+
     if unit_type == "creature" then
         return loadNpc(guid, name)
     elseif unit_type == "pet" then
@@ -249,7 +255,7 @@ local function updatePet(pet, newGuid)
                 for i=1,#t do
                     if t[i] == pet.guid then
                         t[i] = newGuid
-                        print("updated pet's guid from "..pet.guid.." to "..newGuid)
+                        --print("updated pet's guid from "..pet.guid.." to "..newGuid)
                         break
                     end
                 end
@@ -720,82 +726,258 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
     --WD:RefreshTrackedDispels()
 end
 
-local function validateHealStatsHolders(src, dst, event, spell_id)
-    if not src or not dst then return end
-    if not src.stats[dst.guid] then src.stats[dst.guid] = {} end
-    if not dst.stats[src.guid] then dst.stats[src.guid] = {} end
-
-    if not src.stats[dst.guid].healDone then src.stats[dst.guid].healDone = {} src.stats[dst.guid].healDone.total = 0 end
-    if not src.stats[dst.guid].overhealDone then src.stats[dst.guid].overhealDone = {} src.stats[dst.guid].overhealDone.total = 0 end
-    if not dst.stats[src.guid].healTaken then dst.stats[src.guid].healTaken = {} dst.stats[src.guid].healTaken.total = 0 end
-    if not dst.stats[src.guid].overhealTaken then dst.stats[src.guid].overhealTaken = {} dst.stats[src.guid].overhealTaken.total = 0 end
-
-    if not src.stats[dst.guid].healDone[spell_id] then src.stats[dst.guid].healDone[spell_id] = {total=0} end
-    if not src.stats[dst.guid].overhealDone[spell_id] then src.stats[dst.guid].overhealDone[spell_id] = {total=0} end
-    if not dst.stats[src.guid].healTaken[spell_id] then dst.stats[src.guid].healTaken[spell_id] = {total=0} end
-    if not dst.stats[src.guid].overhealTaken[spell_id] then dst.stats[src.guid].overhealTaken[spell_id] = {total=0} end
-
-    if not src.stats[dst.guid].healDone[spell_id][event] then src.stats[dst.guid].healDone[spell_id][event] = {amount = 0} end
-    if not src.stats[dst.guid].overhealDone[spell_id][event] then src.stats[dst.guid].overhealDone[spell_id][event] = {amount = 0} end
-    if not dst.stats[src.guid].healTaken[spell_id][event] then dst.stats[src.guid].healTaken[spell_id][event] = {amount = 0} end
-    if not dst.stats[src.guid].overhealTaken[spell_id][event] then dst.stats[src.guid].overhealTaken[spell_id][event] = {amount = 0} end
-end
-
 local function trackHeal(src, dst, event, spell_id, amount, overheal)
     if not src or not dst then return end
-    src.stats[dst.guid].healDone.total = src.stats[dst.guid].healDone.total + amount
-    src.stats[dst.guid].overhealDone.total = src.stats[dst.guid].overhealDone.total + overheal
-    dst.stats[src.guid].healTaken.total = dst.stats[src.guid].healTaken.total + amount
-    dst.stats[src.guid].overhealTaken.total = dst.stats[src.guid].overhealTaken.total + overheal
 
-    src.stats[dst.guid].healDone[spell_id].total = src.stats[dst.guid].healDone[spell_id].total + amount
-    src.stats[dst.guid].overhealDone[spell_id].total = src.stats[dst.guid].overhealDone[spell_id].total + overheal
-    dst.stats[src.guid].healTaken[spell_id].total = dst.stats[src.guid].healTaken[spell_id].total + amount
-    dst.stats[src.guid].overhealTaken[spell_id].total = dst.stats[src.guid].overhealTaken[spell_id].total + overheal
+    local function validateHealStatsHolders(srcTable, dstTable, event, spell_id)
+        if not srcTable[dst.guid] then srcTable[dst.guid] = {} end
+        if not dstTable[src.guid] then dstTable[src.guid] = {} end
 
-    src.stats[dst.guid].healDone[spell_id][event].amount = src.stats[dst.guid].healDone[spell_id][event].amount + amount
-    src.stats[dst.guid].overhealDone[spell_id][event].amount = src.stats[dst.guid].overhealDone[spell_id][event].amount + overheal
-    dst.stats[src.guid].healTaken[spell_id][event].amount = dst.stats[src.guid].healTaken[spell_id][event].amount + amount
-    dst.stats[src.guid].overhealTaken[spell_id][event].amount = dst.stats[src.guid].overhealTaken[spell_id][event].amount + overheal
-end
+        if not srcTable[dst.guid].healDone then srcTable[dst.guid].healDone = {} srcTable[dst.guid].healDone.total = 0 end
+        if not srcTable[dst.guid].overhealDone then srcTable[dst.guid].overhealDone = {} srcTable[dst.guid].overhealDone.total = 0 end
+        if not dstTable[src.guid].healTaken then dstTable[src.guid].healTaken = {} dstTable[src.guid].healTaken.total = 0 end
+        if not dstTable[src.guid].overhealTaken then dstTable[src.guid].overhealTaken = {} dstTable[src.guid].overhealTaken.total = 0 end
 
-local function validateDmgStatsHolders(src, dst, event, spell_id)
-    if not src or not dst then return end
-    if not src.stats[dst.guid] then src.stats[dst.guid] = {} end
-    if not dst.stats[src.guid] then dst.stats[src.guid] = {} end
+        if not srcTable[dst.guid].healDone[spell_id] then srcTable[dst.guid].healDone[spell_id] = {total=0} end
+        if not srcTable[dst.guid].overhealDone[spell_id] then srcTable[dst.guid].overhealDone[spell_id] = {total=0} end
+        if not dstTable[src.guid].healTaken[spell_id] then dstTable[src.guid].healTaken[spell_id] = {total=0} end
+        if not dstTable[src.guid].overhealTaken[spell_id] then dstTable[src.guid].overhealTaken[spell_id] = {total=0} end
 
-    if not src.stats[dst.guid].dmgDone then src.stats[dst.guid].dmgDone = {} src.stats[dst.guid].dmgDone.total = 0 end
-    if not src.stats[dst.guid].overdmgDone then src.stats[dst.guid].overdmgDone = {} src.stats[dst.guid].overdmgDone.total = 0 end
-    if not dst.stats[src.guid].dmgTaken then dst.stats[src.guid].dmgTaken = {} dst.stats[src.guid].dmgTaken.total = 0 end
-    if not dst.stats[src.guid].overdmgTaken then dst.stats[src.guid].overdmgTaken = {} dst.stats[src.guid].overdmgTaken.total = 0 end
+        if not srcTable[dst.guid].healDone[spell_id][event] then srcTable[dst.guid].healDone[spell_id][event] = {amount = 0} end
+        if not srcTable[dst.guid].overhealDone[spell_id][event] then srcTable[dst.guid].overhealDone[spell_id][event] = {amount = 0} end
+        if not dstTable[src.guid].healTaken[spell_id][event] then dstTable[src.guid].healTaken[spell_id][event] = {amount = 0} end
+        if not dstTable[src.guid].overhealTaken[spell_id][event] then dstTable[src.guid].overhealTaken[spell_id][event] = {amount = 0} end
+    end
 
-    if not src.stats[dst.guid].dmgDone[spell_id] then src.stats[dst.guid].dmgDone[spell_id] = {total=0} end
-    if not src.stats[dst.guid].overdmgDone[spell_id] then src.stats[dst.guid].overdmgDone[spell_id] = {total=0} end
-    if not dst.stats[src.guid].dmgTaken[spell_id] then dst.stats[src.guid].dmgTaken[spell_id] = {total=0} end
-    if not dst.stats[src.guid].overdmgTaken[spell_id] then dst.stats[src.guid].overdmgTaken[spell_id] = {total=0} end
+    local function saveHealToTable(srcTable, dstTable)
+        srcTable[dst.guid].healDone.total = srcTable[dst.guid].healDone.total + amount
+        srcTable[dst.guid].overhealDone.total = srcTable[dst.guid].overhealDone.total + overheal
+        dstTable[src.guid].healTaken.total = dstTable[src.guid].healTaken.total + amount
+        dstTable[src.guid].overhealTaken.total = dstTable[src.guid].overhealTaken.total + overheal
 
-    if not src.stats[dst.guid].dmgDone[spell_id][event] then src.stats[dst.guid].dmgDone[spell_id][event] = {amount = 0} end
-    if not src.stats[dst.guid].overdmgDone[spell_id][event] then src.stats[dst.guid].overdmgDone[spell_id][event] = {amount = 0} end
-    if not dst.stats[src.guid].dmgTaken[spell_id][event] then dst.stats[src.guid].dmgTaken[spell_id][event] = {amount = 0} end
-    if not dst.stats[src.guid].overdmgTaken[spell_id][event] then dst.stats[src.guid].overdmgTaken[spell_id][event] = {amount = 0} end
+        srcTable[dst.guid].healDone[spell_id].total = srcTable[dst.guid].healDone[spell_id].total + amount
+        srcTable[dst.guid].overhealDone[spell_id].total = srcTable[dst.guid].overhealDone[spell_id].total + overheal
+        dstTable[src.guid].healTaken[spell_id].total = dstTable[src.guid].healTaken[spell_id].total + amount
+        dstTable[src.guid].overhealTaken[spell_id].total = dstTable[src.guid].overhealTaken[spell_id].total + overheal
+
+        srcTable[dst.guid].healDone[spell_id][event].amount = srcTable[dst.guid].healDone[spell_id][event].amount + amount
+        srcTable[dst.guid].overhealDone[spell_id][event].amount = srcTable[dst.guid].overhealDone[spell_id][event].amount + overheal
+        dstTable[src.guid].healTaken[spell_id][event].amount = dstTable[src.guid].healTaken[spell_id][event].amount + amount
+        dstTable[src.guid].overhealTaken[spell_id][event].amount = dstTable[src.guid].overhealTaken[spell_id][event].amount + overheal
+    end
+
+    validateHealStatsHolders(src.stats, dst.stats, event, spell_id)
+    saveHealToTable(src.stats, dst.stats)
+
+    local rules = WDMF.encounter.statRules
+    -- target related stat rules
+    if rules["ST_TARGET_HEALING"] then
+        local t = rules["ST_TARGET_HEALING"]
+        if t["RT_AURA_EXISTS"] then
+            for auraId,ruleId in pairs(t["RT_AURA_EXISTS"]) do
+                if hasAura(dst, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_AURA_NOT_EXISTS"] then
+            for auraId,ruleId in pairs(t["RT_AURA_NOT_EXISTS"]) do
+                if not hasAura(dst, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_UNIT_CASTING"] then
+            for targetSpellId,ruleId in pairs(t["RT_UNIT_CASTING"]) do
+                if isCasting(dst, targetSpellId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+    end
+    -- source related stat rules
+    if rules["ST_SOURCE_HEALING"] then
+        local t = rules["ST_SOURCE_HEALING"]
+        if t["RT_AURA_EXISTS"] then
+            for auraId,ruleId in pairs(t["RT_AURA_EXISTS"]) do
+                if hasAura(src, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_AURA_NOT_EXISTS"] then
+            for auraId,ruleId in pairs(t["RT_AURA_NOT_EXISTS"]) do
+                if not hasAura(src, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_UNIT_CASTING"] then
+            for targetSpellId,ruleId in pairs(t["RT_UNIT_CASTING"]) do
+                if isCasting(src, targetSpellId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+    end
 end
 
 local function trackDamage(src, dst, event, spell_id, amount, overdmg)
     if not src or not dst then return end
-    src.stats[dst.guid].dmgDone.total = src.stats[dst.guid].dmgDone.total + amount
-    src.stats[dst.guid].overdmgDone.total = src.stats[dst.guid].overdmgDone.total + overdmg
-    dst.stats[src.guid].dmgTaken.total = dst.stats[src.guid].dmgTaken.total + amount
-    dst.stats[src.guid].overdmgTaken.total = dst.stats[src.guid].overdmgTaken.total + overdmg
 
-    src.stats[dst.guid].dmgDone[spell_id].total = src.stats[dst.guid].dmgDone[spell_id].total + amount
-    src.stats[dst.guid].overdmgDone[spell_id].total = src.stats[dst.guid].overdmgDone[spell_id].total + overdmg
-    dst.stats[src.guid].dmgTaken[spell_id].total = dst.stats[src.guid].dmgTaken[spell_id].total + amount
-    dst.stats[src.guid].overdmgTaken[spell_id].total = dst.stats[src.guid].overdmgTaken[spell_id].total + overdmg
+    local function validateDmgStatsHolders(srcTable, dstTable, event, spell_id)
+        if not srcTable[dst.guid] then srcTable[dst.guid] = {} end
+        if not dstTable[src.guid] then dstTable[src.guid] = {} end
 
-    src.stats[dst.guid].dmgDone[spell_id][event].amount = src.stats[dst.guid].dmgDone[spell_id][event].amount + amount
-    src.stats[dst.guid].overdmgDone[spell_id][event].amount = src.stats[dst.guid].overdmgDone[spell_id][event].amount + overdmg
-    dst.stats[src.guid].dmgTaken[spell_id][event].amount = dst.stats[src.guid].dmgTaken[spell_id][event].amount + amount
-    dst.stats[src.guid].overdmgTaken[spell_id][event].amount = dst.stats[src.guid].overdmgTaken[spell_id][event].amount + overdmg
+        if not srcTable[dst.guid].dmgDone then srcTable[dst.guid].dmgDone = {} srcTable[dst.guid].dmgDone.total = 0 end
+        if not srcTable[dst.guid].overdmgDone then srcTable[dst.guid].overdmgDone = {} srcTable[dst.guid].overdmgDone.total = 0 end
+        if not dstTable[src.guid].dmgTaken then dstTable[src.guid].dmgTaken = {} dstTable[src.guid].dmgTaken.total = 0 end
+        if not dstTable[src.guid].overdmgTaken then dstTable[src.guid].overdmgTaken = {} dstTable[src.guid].overdmgTaken.total = 0 end
+
+        if not srcTable[dst.guid].dmgDone[spell_id] then srcTable[dst.guid].dmgDone[spell_id] = {total=0} end
+        if not srcTable[dst.guid].overdmgDone[spell_id] then srcTable[dst.guid].overdmgDone[spell_id] = {total=0} end
+        if not dstTable[src.guid].dmgTaken[spell_id] then dstTable[src.guid].dmgTaken[spell_id] = {total=0} end
+        if not dstTable[src.guid].overdmgTaken[spell_id] then dstTable[src.guid].overdmgTaken[spell_id] = {total=0} end
+
+        if not srcTable[dst.guid].dmgDone[spell_id][event] then srcTable[dst.guid].dmgDone[spell_id][event] = {amount = 0} end
+        if not srcTable[dst.guid].overdmgDone[spell_id][event] then srcTable[dst.guid].overdmgDone[spell_id][event] = {amount = 0} end
+        if not dstTable[src.guid].dmgTaken[spell_id][event] then dstTable[src.guid].dmgTaken[spell_id][event] = {amount = 0} end
+        if not dstTable[src.guid].overdmgTaken[spell_id][event] then dstTable[src.guid].overdmgTaken[spell_id][event] = {amount = 0} end
+    end
+
+    local function saveDmgToTable(srcTable, dstTable)
+        srcTable[dst.guid].dmgDone.total = srcTable[dst.guid].dmgDone.total + amount
+        srcTable[dst.guid].overdmgDone.total = srcTable[dst.guid].overdmgDone.total + overdmg
+        dstTable[src.guid].dmgTaken.total = dstTable[src.guid].dmgTaken.total + amount
+        dstTable[src.guid].overdmgTaken.total = dstTable[src.guid].overdmgTaken.total + overdmg
+
+        srcTable[dst.guid].dmgDone[spell_id].total = srcTable[dst.guid].dmgDone[spell_id].total + amount
+        srcTable[dst.guid].overdmgDone[spell_id].total = srcTable[dst.guid].overdmgDone[spell_id].total + overdmg
+        dstTable[src.guid].dmgTaken[spell_id].total = dstTable[src.guid].dmgTaken[spell_id].total + amount
+        dstTable[src.guid].overdmgTaken[spell_id].total = dstTable[src.guid].overdmgTaken[spell_id].total + overdmg
+
+        srcTable[dst.guid].dmgDone[spell_id][event].amount = srcTable[dst.guid].dmgDone[spell_id][event].amount + amount
+        srcTable[dst.guid].overdmgDone[spell_id][event].amount = srcTable[dst.guid].overdmgDone[spell_id][event].amount + overdmg
+        dstTable[src.guid].dmgTaken[spell_id][event].amount = dstTable[src.guid].dmgTaken[spell_id][event].amount + amount
+        dstTable[src.guid].overdmgTaken[spell_id][event].amount = dstTable[src.guid].overdmgTaken[spell_id][event].amount + overdmg
+    end
+
+    validateDmgStatsHolders(src.stats, dst.stats, event, spell_id)
+    saveDmgToTable(src.stats, dst.stats)
+
+    local rules = WDMF.encounter.statRules
+    local rules = WDMF.encounter.statRules
+    -- target related stat rules
+    if rules["ST_TARGET_DAMAGE"] then
+        local t = rules["ST_TARGET_DAMAGE"]
+        local targetName = WdLib:getShortName(dst.name, "norealm")
+        if t["RT_AURA_EXISTS"] and t["RT_AURA_EXISTS"][targetName] then
+            for auraId,ruleId in pairs(t["RT_AURA_EXISTS"][targetName]) do
+                if hasAura(dst, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_AURA_NOT_EXISTS"] and t["RT_AURA_NOT_EXISTS"][targetName] then
+            for auraId,ruleId in pairs(t["RT_AURA_NOT_EXISTS"][targetName]) do
+                if not hasAura(dst, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_UNIT_CASTING"] and t["RT_UNIT_CASTING"][targetName] then
+            for targetSpellId,ruleId in pairs(t["RT_UNIT_CASTING"][targetName]) do
+                if isCasting(dst, targetSpellId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+    end
+    -- source related stat rules
+    if rules["ST_SOURCE_DAMAGE"] then
+        local t = rules["ST_SOURCE_DAMAGE"]
+        if t["RT_AURA_EXISTS"] then
+            for auraId,ruleId in pairs(t["RT_AURA_EXISTS"]) do
+                if hasAura(src, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_AURA_NOT_EXISTS"] then
+            for auraId,ruleId in pairs(t["RT_AURA_NOT_EXISTS"]) do
+                if not hasAura(src, auraId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_UNIT_CASTING"] then
+            for targetSpellId,ruleId in pairs(t["RT_UNIT_CASTING"]) do
+                if isCasting(src, targetSpellId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+    end
 end
 
 local function debugEvent(...)
@@ -924,7 +1106,6 @@ function WDMF:ProcessEnvironmentDamage(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     local environmentType, amount = arg[12], arg[13]
     local spell_id = "Environment: "..environmentType
-    validateDmgStatsHolders(src, dst, event, spell_id, amount, 0)
     trackDamage(src, dst, event, spell_id, amount, 0)
 end
 
@@ -947,7 +1128,6 @@ function WDMF:ProcessWhiteDamage(src, dst, ...)
 
     if overkill > 0 then amount = amount - overkill end
     if overkill == -1 then overkill = 0 end
-    validateDmgStatsHolders(src, dst, event, spell_id, amount, overkill)
     trackDamage(src, dst, event, spell_id, amount, overkill)
 end
 
@@ -963,7 +1143,6 @@ function WDMF:ProcessSpellDamage(src, dst, ...)
     local spell_id, amount, overkill = tonumber(arg[12]), tonumber(arg[15]), tonumber(arg[16])
     if overkill > 0 then amount = amount - overkill end
     if overkill == -1 then overkill = 0 end
-    validateDmgStatsHolders(src, dst, event, spell_id, amount, overkill)
     trackDamage(src, dst, event, spell_id, amount, overkill)
 
     if event == "SPELL_DAMAGE" then
@@ -1048,7 +1227,6 @@ function WDMF:ProcessHealing(src, dst, ...)
     local amount, overheal, absorb = tonumber(arg[15]), tonumber(arg[16]), tonumber(arg[17])
     amount = amount - overheal
 
-    validateHealStatsHolders(src, dst, event, spell_id)
     trackHeal(src, dst, event, spell_id, amount, overheal)
 end
 
@@ -1082,7 +1260,6 @@ function WDMF:ProcessAbsorbs(src, dst, ...)
     local aura_caster = getEntities(aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags)
     if not aura_caster then return end
 
-    validateHealStatsHolders(aura_caster, dst, event, aura_id)
     trackHeal(aura_caster, dst, event, aura_id, amount, 0)
 end
 
@@ -1139,6 +1316,37 @@ function WDMF:ProcessTests(...)
 end
 
 function WDMF:LoadRules()
+    local function getStatRuleDescription(rule)
+        local function getRangeRuleDescription(rangeRule, data)
+            if rangeRule == "RT_AURA_EXISTS" then
+                return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+            elseif rangeRule == "RT_AURA_NOT_EXISTS" then
+                return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+            elseif rangeRule == "RT_UNIT_CASTING" then
+                return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+            elseif rangeRule == "RT_CUSTOM" then
+                local startEventMsg = WD.GetEventDescription(data.startEvent[1], data.startEvent[2][1], data.startEvent[2][2])
+                local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
+                return string.format(WD_TRACKER_RT_CUSTOM_DESC, startEventMsg, endEventMsg)
+            end
+        end
+
+        if rule.arg0 == "ST_TARGET_DAMAGE" then
+            local msg = string.format(WD_RULE_ST_TARGET_DAMAGE, rule.targetUnit)
+            return msg.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_TARGET_HEALING" then
+            return WD_RULE_ST_TARGET_HEALING.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_TARGET_INTERRUPTS" then
+            return WD_RULE_ST_TARGET_INTERRUPTS.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_SOURCE_DAMAGE" then
+            return WD_RULE_ST_SOURCE_DAMAGE.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_SOURCE_HEALING" then
+            return WD_RULE_ST_SOURCE_HEALING.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        elseif rule.arg0 == "ST_SOURCE_INTERRUPTS" then
+            return WD_RULE_ST_SOURCE_INTERRUPTS.." "..getRangeRuleDescription(rule.arg1[1], rule.arg1[2])
+        end
+    end
+
     local function fillEventByType(event, rType, arg0, arg1, p)
         if rType == "EV_DAMAGETAKEN" then
             event[arg0] = {}
@@ -1200,8 +1408,8 @@ function WDMF:LoadRules()
 
     local function getActiveStatRules(journalId)
         local rules = {}
-        for i=1,#WD.db.profile.statRules do
-            local r = WD.db.profile.statRules[i]
+        for rule_id=1,#WD.db.profile.statRules do
+            local r = WD.db.profile.statRules[rule_id]
             if r.isActive == true and (r.journalId == journalId or r.journalId == -1) then
                 if not rules[r.ruleType] then rules[r.ruleType] = {} end
                 if r.ruleType == "RL_QUALITY" then
@@ -1254,6 +1462,41 @@ function WDMF:LoadRules()
                     fillEventByType(eventData.resultEv[resultName], resultName, resultArg0, resultArg1, 0)
                     eventData.resultEv[resultName].reason = {reasonName, reasonArg0, reasonArg1}
                     data[#data+1] = eventData
+                elseif r.ruleType == "RL_STATISTICS" then
+                    local statType = r.arg0
+                    if not rules[statType] then rules[statType] = {} end
+                    local rangeType = r.arg1[1]
+                    if not rules[statType][rangeType] then rules[statType][rangeType] = {} end
+                    if rangeType == "RT_AURA_EXISTS" or
+                       rangeType == "RT_AURA_NOT_EXISTS" or
+                       rangeType == "RT_UNIT_CASTING"
+                    then
+                        local spellId = r.arg1[2]
+                        if not self.tracker.statRules then self.tracker.statRules = {} end
+                        if statType == "ST_TARGET_DAMAGE" then
+                            local unitName = r.targetUnit
+                            if not rules[statType][rangeType][unitName] then rules[statType][rangeType][unitName] = {} end
+                            if not rules[statType][rangeType][unitName][spellId] then rules[statType][rangeType][unitName][spellId] = rule_id end
+                        else
+                            if not rules[statType][rangeType][spellId] then rules[statType][rangeType][spellId] = rule_id end
+                        end
+                        self.tracker.statRules[rule_id] = { id = rule_id, data = r, description = getStatRuleDescription(r) }
+                    --[[elseif rangeType == "RT_CUSTOM" then
+                        local data = rules["RL_RANGE_RULE"][rangeType]
+                        local eventData = { startEv = {}, endEv = {}, resultEv = {}, isActiveForGUID = {} }
+                        local sEvName, eEvName, rEvName = r.arg0[2].startEvent[1], r.arg0[2].endEvent[1], r.arg1[1]
+                        eventData.startEv[sEvName] = {}
+                        eventData.endEv[eEvName] = {}
+                        eventData.resultEv[rEvName] = {}
+                        fillEventByType(eventData.startEv[sEvName], sEvName, r.arg0[2].startEvent[2][1], r.arg0[2].startEvent[2][2], 0)
+                        fillEventByType(eventData.endEv[eEvName], eEvName, r.arg0[2].endEvent[2][1], r.arg0[2].endEvent[2][2], 0)
+                        fillEventByType(eventData.resultEv[rEvName], rEvName, r.arg1[2][1], r.arg1[2][2], 0)
+                        eventData.resultEv[rEvName].range = {rangeType, {
+                            {sEvName, r.arg0[2].startEvent[2][1], r.arg0[2].startEvent[2][2]},
+                            {eEvName, r.arg0[2].endEvent[2][1], r.arg0[2].endEvent[2][2]}
+                        }}
+                        data[#data+1] = eventData]]
+                    end
                 end
             end
         end

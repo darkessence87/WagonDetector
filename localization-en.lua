@@ -94,6 +94,12 @@ WD_RULE_POTIONS = "used potion"
 WD_RULE_FLASKS = "no flask buff"
 WD_RULE_FOOD = "no food buff"
 WD_RULE_RUNES = "no rune buff"
+WD_RULE_ST_TARGET_DAMAGE = "damage |cfffffffftaken|r by |cffff0000%s|r"
+WD_RULE_ST_TARGET_HEALING = "healing |cfffffffftaken|r"
+WD_RULE_ST_TARGET_INTERRUPTS = "interrupted |cffffffffby|r"
+WD_RULE_ST_SOURCE_DAMAGE = "damage |cffffffffdone|r"
+WD_RULE_ST_SOURCE_HEALING = "healing |cffffffffdone|r"
+WD_RULE_ST_SOURCE_INTERRUPTS = "interrupts |cffffffffdone|r"
 
 WD_RULE_ERROR_OLD_VERSION = "Rule's version is too old: %s. Minimal version supported: %s"
 

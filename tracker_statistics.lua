@@ -17,11 +17,52 @@ local ruleTypes = {
     "TOTAL_TAKEN",
 }
 
+local function getSelectedPull()
+    if WD.db.profile.tracker.selected and
+       WD.db.profile.tracker.selected > 0 and #WD.db.profile.tracker > 0 and
+       WD.db.profile.tracker.selected <= #WD.db.profile.tracker
+    then
+        return WD.db.profile.tracker[WD.db.profile.tracker.selected]
+    end
+    return nil
+end
+
+local function getSelectedRule()
+    local pull = getSelectedPull()
+    if not pull then return nil end
+    if pull.statRules and pull.selectedRule and pull.statRules[pull.selectedRule] then
+        return pull.statRules[pull.selectedRule]
+    else
+        return pull.selectedRule
+    end
+    return nil
+end
+
+local function getSelectedRuleType()
+    local pull = getSelectedPull()
+    if not pull then return nil end
+    if pull.statRules and pull.selectedRule and pull.statRules[pull.selectedRule] then
+        return pull.statRules[pull.selectedRule].data.arg0
+    else
+        return pull.selectedRule
+    end
+    return nil
+end
+
 local function getCurrentFilter()
-    local ruleType = WD.db.profile.tracker.selectedRule
-    if ruleType == "TOTAL_DONE" then
+    local ruleType = getSelectedRuleType()
+    if not ruleType then return nil end
+    if ruleType == "TOTAL_DONE" or
+       ruleType == "ST_SOURCE_DAMAGE" or
+       ruleType == "ST_SOURCE_HEALING" or
+       ruleType == "ST_SOURCE_INTERRUPTS"
+    then
         return "done"
-    elseif ruleType == "TOTAL_TAKEN" then
+    elseif ruleType == "TOTAL_TAKEN" or
+       ruleType == "ST_TARGET_DAMAGE" or
+       ruleType == "ST_TARGET_HEALING" or
+       ruleType == "ST_TARGET_INTERRUPTS"
+    then
         return "taken"
     end
     print("Unknown rule type:"..ruleType)
@@ -29,11 +70,20 @@ local function getCurrentFilter()
 end
 
 local function getPopupLabelByMode(mode)
-    local ruleType = WD.db.profile.tracker.selectedRule
-    if ruleType == "TOTAL_DONE" then
+    local ruleType = getSelectedRuleType()
+    if not ruleType then return nil end
+    if ruleType == "TOTAL_DONE" or
+       ruleType == "ST_SOURCE_DAMAGE" or
+       ruleType == "ST_SOURCE_HEALING" or
+       ruleType == "ST_SOURCE_INTERRUPTS"
+    then
         if mode == "heal" then return "Total healing done by %s" end
         if mode == "dmg" then return "Total damage done by %s" end
-    elseif ruleType == "TOTAL_TAKEN" then
+    elseif ruleType == "TOTAL_TAKEN" or
+       ruleType == "ST_TARGET_DAMAGE" or
+       ruleType == "ST_TARGET_HEALING" or
+       ruleType == "ST_TARGET_INTERRUPTS"
+    then
         if mode == "heal" then return "Total healing taken by %s" end
         if mode == "dmg" then return "Total damage taken by %s" end
     end
@@ -978,6 +1028,7 @@ local function initPullsMenu()
             WD.db.profile.tracker.selected = selected.index
             WDTS.lastSelectedUnitHeal = nil
             WDTS.lastSelectedUnitDmg = nil
+            WDTS.buttons["select_rule"]:Refresh()
             WD:RefreshUnitStatistics()
         end
         local i = 1
@@ -998,6 +1049,7 @@ local function initPullsMenu()
     local frame = WDTS.buttons["select_pull"]
     function frame:Refresh()
         WdLib:updateDropDownMenu(self, getPullName(), getPulls())
+        WDTS.buttons["select_rule"]:Refresh()
     end
 
     -- clear current pull history button
@@ -1034,31 +1086,50 @@ local function initPullsMenu()
 end
 
 local function initRulesMenu()
-    local function getRuleName()
-        if WD.db.profile.tracker and not WD.db.profile.tracker.selectedRule then
-            WD.db.profile.tracker.selectedRule = "TOTAL_DONE"
+    local function getRuleName(selectedPull)
+        if not selectedPull then
+            selectedPull = getSelectedPull()
         end
-        return WD.db.profile.tracker.selectedRule or "TOTAL_DONE"
+        if selectedPull then
+            if selectedPull.statRules and selectedPull.statRules[selectedPull.selectedRule] then
+                return selectedPull.statRules[selectedPull.selectedRule].description
+            elseif selectedPull.selectedRule then
+                return selectedPull.selectedRule
+            else
+                selectedPull.selectedRule = "TOTAL_DONE"
+                return selectedPull.selectedRule
+            end
+        end
+        return "No pull selected"
     end
 
     local function getRules()
+        local pull = getSelectedPull()
+        if not pull then return {} end
+
         local items = {}
         local function onSelect(frame, selected)
-            WD.db.profile.tracker.selectedRule = selected.name
+            local pull = getSelectedPull()
+            pull.selectedRule = selected.id
+            WDTS.buttons["select_rule"]:SetText(getRuleName(pull))
             WDTS.lastSelectedUnitHeal = nil
             WDTS.lastSelectedUnitDmg = nil
             WD:RefreshUnitStatistics()
         end
         for i=1,#ruleTypes do
-            table.insert(items, {name = ruleTypes[i], index = i, func = onSelect})
+            table.insert(items, {name = ruleTypes[i], index = i, id = ruleTypes[i], func = onSelect})
         end
-        if WD.db.profile.tracker.statRules then
+
+        if WD.db.profile.tracker.selected and
+           WD.db.profile.tracker.selected > 0 and #WD.db.profile.tracker > 0 and
+           WD.db.profile.tracker.selected <= #WD.db.profile.tracker and
+           WD.db.profile.tracker[WD.db.profile.tracker.selected].statRules
+        then
+            local t = WD.db.profile.tracker[WD.db.profile.tracker.selected].statRules
             local i = #items + 1
-            for k,v in pairs(WD.db.profile.tracker.statRules) do
-                if type(v) == "table" then
-                    table.insert(items, {name = v.pullName, index = i, func = onSelect})
-                    i = i + 1
-                end
+            for k,v in pairs(t) do
+                table.insert(items, {name = "Rule ID: "..k, index = i, func = onSelect, id = k, hover = v.description})
+                i = i + 1
             end
         end
         return items
@@ -1066,8 +1137,8 @@ local function initRulesMenu()
 
     -- select rule button
     WDTS.buttons["select_rule"] = WdLib:createDropDownMenu(WDTS, getRuleName(), getRules())
-    WDTS.buttons["select_rule"]:SetSize(200, 20)
-    WDTS.buttons["select_rule"]:SetPoint("TOPLEFT", WDTS, "TOPLEFT", 401, -5)
+    WDTS.buttons["select_rule"]:SetSize(400, 20)
+    WDTS.buttons["select_rule"]:SetPoint("TOPLEFT", WDTS, "TOPLEFT", 386, -5)
     WDTS.buttons["select_rule"]:SetScript("OnShow", function(self) self.txt:SetText(getRuleName()) end)
     local frame = WDTS.buttons["select_rule"]
     function frame:Refresh()
@@ -1079,24 +1150,36 @@ local function initRulesMenu()
     WDTS.buttons["select_rule"].label:SetPoint("RIGHT", WDTS.buttons["select_rule"], "LEFT", -2, 0)
 end
 
-local function filterBySelectedRule(v, mode)
+local function filterBySelectedRule(v, mode, ruleId)
     local rule = getCurrentFilter()
     if not v or not v.stats or not rule or not mode then return nil end
-    if v.name == "Environment" then return true end
+
     local function validate(unit)
-        for guid,info in pairs(unit.stats) do
-            if mode == "heal" and rule == "done" and ((info.healDone and info.healDone.total > 0) or (info.overhealDone and info.overhealDone.total > 0)) then
+        local function validateStats(stats)
+            if not stats then return nil end
+            for _,info in pairs(stats) do
+                if mode == "heal" and rule == "done" and ((info.healDone and info.healDone.total > 0) or (info.overhealDone and info.overhealDone.total > 0)) then
+                    return true
+                end
+                if mode == "heal" and rule == "taken" and ((info.healTaken and info.healTaken.total > 0) or (info.overhealTaken and info.overhealTaken.total > 0)) then
+                    return true
+                end
+                if mode == "dmg" and rule == "done" and ((info.dmgDone and info.dmgDone.total > 0) or (info.overdmgDone and info.overdmgDone.total > 0)) then
+                    return true
+                end
+                if mode == "dmg" and rule == "taken" and ((info.dmgTaken and info.dmgTaken.total > 0) or (info.overdmgTaken and info.overdmgTaken.total > 0)) then
+                    return true
+                end
+            end
+            return nil
+        end
+        if ruleId then
+            if unit.ruleStats and unit.ruleStats[ruleId] then
                 return true
             end
-            if mode == "heal" and rule == "taken" and ((info.healTaken and info.healTaken.total > 0) or (info.overhealTaken and info.overhealTaken.total > 0)) then
-                return true
-            end
-            if mode == "dmg" and rule == "done" and ((info.dmgDone and info.dmgDone.total > 0) or (info.overdmgDone and info.overdmgDone.total > 0)) then
-                return true
-            end
-            if mode == "dmg" and rule == "taken" and ((info.dmgTaken and info.dmgTaken.total > 0) or (info.overdmgTaken and info.overdmgTaken.total > 0)) then
-                return true
-            end
+        else
+            if unit.name == "Environment" then return true end
+            return validateStats(unit.stats)
         end
         return nil
     end
@@ -1204,7 +1287,7 @@ local function merge(parentTable, petTable, petName)
     parentTable.total = parentTable.total + petTable.total
 end
 
-local function mergeSpells(parent, pet)
+local function mergeSpells(parent, pet, ruleId)
     local function mergeDoneData(parentUnit, targetGuid, petData)
         if not parentUnit.stats[targetGuid] then parentUnit.stats[targetGuid] = {} end
         local t = parentUnit.stats[targetGuid]
@@ -1238,8 +1321,16 @@ local function mergeSpells(parent, pet)
         end
     end
 
-    for targetGuid,petData in pairs(pet.stats) do
-        mergeDoneData(parent, targetGuid, petData)
+    if ruleId then
+        if pet.ruleStats and pet.ruleStats[ruleId] then
+            for targetGuid,petData in pairs(pet.ruleStats[ruleId].stats) do
+                mergeDoneData(parent, targetGuid, petData)
+            end
+        end
+    else
+        for targetGuid,petData in pairs(pet.stats) do
+            mergeDoneData(parent, targetGuid, petData)
+        end
     end
 end
 
@@ -1269,17 +1360,26 @@ local function getUnitStatistics(mode)
     else
         WdLib:table_wipe(WDTS.cache.units[mode])
     end
-    local total = 0
-    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
-        return WDTS.cache.units[mode], total
+
+    local ruleType = getSelectedRuleType()
+    if not ruleType then
+        return WDTS.cache.units[mode], 0
     end
 
     local units = WDTS.cache.units[mode]
-    local ruleType = WD.db.profile.tracker.selectedRule
+    local total = 0
 
-    local function loadUnit(unit)
-        if filterBySelectedRule(unit, mode) then
+    local function loadUnit(unit, ruleId)
+        --if filterBySelectedRule(unit, mode, ruleId) then
             unit = WdLib:table_deepcopy(unit)
+            if ruleId then
+                unit.stats = {}
+                if unit.ruleStats and unit.ruleStats[ruleId] then
+                    for k,v in pairs(unit.ruleStats[ruleId].stats) do
+                        unit.stats[k] = v
+                    end
+                end
+            end
             for guid in pairs(unit.stats) do
                 unit.stats[guid].healTaken = nil
                 unit.stats[guid].overhealTaken = nil
@@ -1287,13 +1387,14 @@ local function getUnitStatistics(mode)
                 unit.stats[guid].overdmgTaken = nil
             end
             return unit
-        end
-        return nil
+        --end
+        --return nil
     end
 
+    local pull = getSelectedPull()
     if ruleType == "TOTAL_DONE" or ruleType == "TOTAL_TAKEN" then
         -- load npc
-        for npcId,data in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].npc) do
+        for npcId,data in pairs(pull.npc) do
             for _,npc in pairs(data) do
                 if type(npc) == "table" then
                     local unit = loadUnit(npc)
@@ -1304,7 +1405,7 @@ local function getUnitStatistics(mode)
             end
         end
         -- load players
-        for guid,pl in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].players) do
+        for guid,pl in pairs(pull.players) do
             if type(pl) == "table" then
                 local unit = loadUnit(pl)
                 if unit then
@@ -1313,7 +1414,7 @@ local function getUnitStatistics(mode)
             end
         end
         -- load pets
-        for parentGuid,info in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected].pets) do
+        for parentGuid,info in pairs(pull.pets) do
             for npcId,data in pairs(info) do
                 for k,pet in pairs(data) do
                     local parent = findUnitByGuid(mode, parentGuid)
@@ -1324,6 +1425,54 @@ local function getUnitStatistics(mode)
                         if petAsParent.guid ~= pet.guid then
                             if petAsParent.type == "pet" then
                                 local petUnit = loadUnit(pet)
+                                if petUnit then
+                                    local currId = WdLib:getUnitNumber(petAsParent.name)
+                                    if currId then
+                                        petUnit.name = petUnit.name.."-"..currId
+                                    end
+                                    units[#units+1] = petUnit
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    elseif ruleType then
+        local rule = getSelectedRule()
+        local ruleId = rule.id
+        -- load npc
+        for npcId,data in pairs(pull.npc) do
+            for _,npc in pairs(data) do
+                if type(npc) == "table" then
+                    local unit = loadUnit(npc, ruleId)
+                    if unit then
+                        units[#units+1] = unit
+                    end
+                end
+            end
+        end
+        -- load players
+        for guid,pl in pairs(pull.players) do
+            if type(pl) == "table" then
+                local unit = loadUnit(pl, ruleId)
+                if unit then
+                    units[#units+1] = unit
+                end
+            end
+        end
+        -- load pets
+        for parentGuid,info in pairs(pull.pets) do
+            for npcId,data in pairs(info) do
+                for k,pet in pairs(data) do
+                    local parent = findUnitByGuid(mode, parentGuid)
+                    if parent then
+                        mergeSpells(parent, pet, ruleId)
+                    else
+                        local petAsParent = findParentPet(parentGuid, pet)
+                        if petAsParent.guid ~= pet.guid then
+                            if petAsParent.type == "pet" then
+                                local petUnit = loadUnit(pet, ruleId)
                                 if petUnit then
                                     local currId = WdLib:getUnitNumber(petAsParent.name)
                                     if currId then

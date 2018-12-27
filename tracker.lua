@@ -40,6 +40,7 @@ local function createExistingEntity(v)
     v.casts.current_spell_id = 0
     v.casts.current_spell_interrupted = 0
     v.stats = {}
+    v.spawnedAt = WDMF.encounter.startTime
     return v
 end
 
@@ -282,7 +283,7 @@ end
 local function updatePlayer(player)
 end
 
-local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
+local function getEntities(timestamp, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
     if not src_name then
         src_guid = "Environment-0-0-0-0-0-0000000000"
     end
@@ -299,6 +300,9 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
             src_name = WdLib:getFullName(src_name)
             src = loadEntity(src_guid, src_name, "player")
         end
+        if src then
+            src.spawnedAt = timestamp
+        end
     else
         updateUnitName(src, src_name)
         updateUnitClass(src)
@@ -312,6 +316,9 @@ local function getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_gu
         elseif dst_name then
             dst_name = WdLib:getFullName(dst_name)
             dst = loadEntity(dst_guid, dst_name, "player")
+        end
+        if dst then
+            dst.spawnedAt = timestamp
         end
     else
         updateUnitName(dst, dst_name)
@@ -1268,7 +1275,7 @@ function WDMF:ProcessAbsorbs(src, dst, ...)
         local spell_id = arg[12]
         aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags, aura_id, _, _, amount = select(15, ...)
     end
-    local aura_caster = getEntities(aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags)
+    local aura_caster = getEntities(timestamp, aura_caster_guid, aura_caster_name, aura_caster_flags, aura_caster_raid_flags)
     if not aura_caster then return end
 
     trackHeal(aura_caster, dst, event, aura_id, amount, 0)
@@ -1281,6 +1288,8 @@ function WDMF:ProcessDeaths(src, dst, ...)
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "UNIT_DIED" then
+        dst.diedAt = timestamp
+
         for guid in pairs(self.tracker.players) do
             if guid == dst.guid then
                 self.encounter.deaths = self.encounter.deaths + 1
@@ -1688,15 +1697,15 @@ end
 
 function WDMF:Tracker_OnEvent(...)
     debugEvent(...)
-    local _, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
+    local timestamp, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
     if callbacks[event] then
         if event == "SPELL_SUMMON" then
-            local src = getEntities(src_guid, src_name, src_flags, src_raid_flags)
+            local src = getEntities(timestamp, src_guid, src_name, src_flags, src_raid_flags)
             callbacks[event](self, src, nil, ...)
         elseif event:match("TEST_") then
             callbacks[event](self, ...)
         else
-            local src, dst = getEntities(src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
+            local src, dst = getEntities(timestamp, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
             callbacks[event](self, src, dst, ...)
         end
     end

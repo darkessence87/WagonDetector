@@ -48,34 +48,48 @@ function WDDebuffMonitor:initInfoTable()
     r:Hide()
 end
 
-local function getFilteredDebuffs(auras)
+local function calculateLifetime(pull, unit)
+    local fromTime = unit.spawnedAt or pull.startTime or 0
+    local toTime = unit.diedAt or pull.endTime or 0
+    return toTime - fromTime
+end
+
+local function calculateUptime(v, totalV)
+    if not v or not totalV or totalV == 0 then return nil end
+    return WdLib:float_round_to(v * 100 / totalV, 1)
+end
+
+local function calculateAuraDuration(pull, unit, aura, index)
+    if unit.diedAt or pull.endTime then
+        local toTime = unit.diedAt or pull.endTime or 0
+        if toTime > 0 then
+            local t = (toTime - aura.applied) / 1000
+            return WdLib:float_round_to(t * 1000, 2)
+        end
+    end
+    if index > 1 then
+        return 0
+    end
+    return nil
+end
+
+local function getFilteredDebuffs(unit)
     local result = {}
     local pull = WDDAM:GetParent().GetSelectedPull()
     if not pull then return result end
-    local pullDuration = 0
-    if pull.endTime and pull.startTime then
-        pullDuration = pull.endTime - pull.startTime
-    end
 
-    local function calculateUptime(v, totalV)
-        if not v or not totalV or totalV == 0 then return nil end
-        return WdLib:float_round_to(v * 100 / totalV, 1)
-    end
+    local maxDuration = calculateLifetime(pull, unit)
 
-    for auraId,auraInfo in pairs(auras) do
+    for auraId,auraInfo in pairs(unit.auras) do
         local byCaster = {}
         for i=1,#auraInfo do
             if auraInfo[i].isBuff == false then
                 local caster = auraInfo[i].caster
                 local duration = auraInfo[i].duration
                 if not duration then
-                    if pull.endTime then
-                        local t = (pull.endTime - auraInfo[i].applied) / 1000
-                        duration = WdLib:float_round_to(t * 1000, 2)
-                    elseif i > 1 then
-                        duration = 0
-                    else
-                        duration = pullDuration
+                    duration = calculateAuraDuration(pull, unit, auraInfo[i], i)
+                    if not duration then
+                        duration = maxDuration
                     end
                 end
 
@@ -87,10 +101,10 @@ local function getFilteredDebuffs(auras)
             end
         end
         for casterGuid,info in pairs(byCaster) do
-            if info.duration > pullDuration then
-                info.duration = pullDuration
+            if info.duration > maxDuration then
+                info.duration = maxDuration
             end
-            result[#result+1] = { N = info.count, id = auraId, data = { uptime = calculateUptime(info.duration, pullDuration) or 0, caster = casterGuid } }
+            result[#result+1] = { N = info.count, id = auraId, data = { uptime = calculateUptime(info.duration, maxDuration) or 0, caster = casterGuid } }
         end
     end
     return result
@@ -104,7 +118,7 @@ local function getDebuffStatusText(v)
     else
         casterName = "|cffffffffEnvironment|r"
     end
-    return string.format(WD_TRACKER_AURA_CASTED_BY, casterName)
+    return casterName
 end
 
 local function updateDebuffInfo()
@@ -115,7 +129,7 @@ local function updateDebuffInfo()
     local auras = {}
     if WDDAM.lastSelectedButton then
         local v = WDDAM.lastSelectedButton:GetParent().info
-        auras = getFilteredDebuffs(v.auras)
+        auras = getFilteredDebuffs(v)
     end
 
     local func = function(a, b)

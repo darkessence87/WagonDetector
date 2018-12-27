@@ -349,10 +349,19 @@ function WDDmgStatsMonitor:refreshInfo()
             if total > 0 then percent = v.total * 100 / total end
             local amount = WdLib:shortNumber(v.total).." ("..WdLib:float_round_to(percent, 1).."%)"
 
-            local f = WdLib:addNextColumn(WDDSM.unitsDmg, parent, index, "LEFT", row..". "..unitName)
+            local pull = WDDSM:GetParent().GetSelectedPull()
+            if v.spawnedAt < pull.startTime then
+                v.spawnedAt = pull.startTime
+            end
+            if v.spawnedAt > pull.endTime then
+                v.spawnedAt = pull.endTime
+            end
+            local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
+            local rowText = row..". "..unitName.." ("..lifeTime..")"
+            local f = WdLib:addNextColumn(WDDSM.unitsDmg, parent, index, "LEFT", rowText)
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
 
-            f.txt:SetSize(200, 20)
+            f.txt:SetSize(300, 20)
             f.txt:SetPoint("LEFT", 2, 0)
             f.txt2 = WdLib:createFontDefault(f, "RIGHT", amount)
             f.txt2:SetSize(100, 20)
@@ -376,7 +385,16 @@ function WDDmgStatsMonitor:refreshInfo()
             if total > 0 then percent = v.total * 100 / total end
             local amount = WdLib:shortNumber(v.total).." ("..WdLib:float_round_to(percent, 1).."%)"
 
-            f.txt:SetText(row..". "..unitName)
+            local pull = WDDSM:GetParent().GetSelectedPull()
+            if v.spawnedAt < pull.startTime then
+                v.spawnedAt = pull.startTime
+            end
+            if v.spawnedAt > pull.endTime then
+                v.spawnedAt = pull.endTime
+            end
+            local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
+            local rowText = row..". "..unitName.." ("..lifeTime..")"
+            f.txt:SetText(rowText)
             f.txt2:SetText(amount)
 
             f:SetScript("OnClick", function(self) WDDSM.lastSelectedButton = self; updateUnitDmgButtons() end)

@@ -135,11 +135,25 @@ end
 
 local function loadAuras(p)
     for index=1,40 do
-        local _, _, _, _, duration, expirationTime, _, _, _, spellId = UnitAura(p.unit, index)
+        local _, _, _, _, duration, expirationTime, _, _, _, spellId = UnitBuff(p.unit, index)
         if spellId then
             if not p.auras[spellId] then p.auras[spellId] = {} end
             local appliedAt = expirationTime - duration
-            p.auras[spellId][#p.auras[spellId]+1] = { caster = p.guid, applied = appliedAt }
+            if appliedAt < WDMF.encounter.startTime then
+                appliedAt = WDMF.encounter.startTime
+            end
+            p.auras[spellId][#p.auras[spellId]+1] = { caster = p.guid, applied = appliedAt, isBuff = true }
+        end
+    end
+    for index=1,40 do
+        local _, _, _, _, duration, expirationTime, _, _, _, spellId = UnitDebuff(p.unit, index)
+        if spellId then
+            if not p.auras[spellId] then p.auras[spellId] = {} end
+            local appliedAt = expirationTime - duration
+            if appliedAt < WDMF.encounter.startTime then
+                appliedAt = WDMF.encounter.startTime
+            end
+            p.auras[spellId][#p.auras[spellId]+1] = { caster = p.guid, applied = appliedAt, isBuff = false }
         end
     end
 end
@@ -624,7 +638,6 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
             end
         end
 
-        --WD:RefreshTrackedCreatures()
         unit.casts.current_spell_interrupted = 1
     end
 end
@@ -722,8 +735,6 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
             end
         end
     end
-
-    --WD:RefreshTrackedDispels()
 end
 
 local function trackHeal(src, dst, event, spell_id, amount, overheal)
@@ -1007,7 +1018,7 @@ end
 function WDMF:ProcessAuras(src, dst, ...)
     if not dst then return end
     local arg = {...}
-    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    local timestamp, event, src_name, dst_name, spell_id, auraType = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12]), arg[15]
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1016,9 +1027,9 @@ function WDMF:ProcessAuras(src, dst, ...)
         if not dst.auras[spell_id] then dst.auras[spell_id] = {} end
         local auras = dst.auras[spell_id]
         if src then
-            auras[#auras+1] = { caster = src.guid, applied = timestamp }
+            auras[#auras+1] = { caster = src.guid, applied = timestamp, isBuff = auraType == "BUFF" }
         else
-            auras[#auras+1] = { caster = "Environment", applied = timestamp }
+            auras[#auras+1] = { caster = "Environment", applied = timestamp, isBuff = auraType == "BUFF" }
         end
 
         -- interrupts
@@ -1659,20 +1670,20 @@ function WDMF:Tracker_OnStartEncounter()
     self:ProcessPull()
 
     WD:RefreshTrackerPulls()
-    WD:RefreshTrackedCreatures()
-    WD:RefreshTrackedDispels()
-    WD:RefreshUnitStatistics()
+    WD:RefreshBasicMonitors()
+    WD:RefreshBasicStatsMonitors()
 end
 
 function WDMF:Tracker_OnStopEncounter()
     if not WD.db.profile.tracker or #WD.db.profile.tracker == 0 then return end
     local n = WD.db.profile.tracker[#WD.db.profile.tracker].pullName
     WD.db.profile.tracker[#WD.db.profile.tracker].pullName = n.." ("..WdLib:getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)..")"
+    WD.db.profile.tracker[#WD.db.profile.tracker].startTime = self.encounter.startTime
+    WD.db.profile.tracker[#WD.db.profile.tracker].endTime = self.encounter.endTime
 
     WD:RefreshTrackerPulls()
-    WD:RefreshTrackedCreatures()
-    WD:RefreshTrackedDispels()
-    WD:RefreshUnitStatistics()
+    WD:RefreshBasicMonitors()
+    WD:RefreshBasicStatsMonitors()
 end
 
 function WDMF:Tracker_OnEvent(...)

@@ -46,6 +46,7 @@ WD_BUTTON_ENCOUNTER = "Encounter"
 
 WD_BUTTON_MAIN_MODULE = "Main options"
 WD_BUTTON_ENCOUNTERS_MODULE = "Encounters"
+WD_BUTTON_TRACKING_AURAS_MODULE = "Auras monitor"
 WD_BUTTON_TRACKING_RULES_MODULE = "Tracking rules config"
 WD_BUTTON_TRACKING_OVERVIEW_MODULE = "Dispel/interrupt monitor"
 WD_BUTTON_TRACKING_STATS_MODULE = "Tracked statistics"
@@ -103,6 +104,7 @@ WD_RULE_ST_SOURCE_INTERRUPTS = "interrupts |cffffffffdone|r"
 
 WD_RULE_ERROR_OLD_VERSION = "Rule's version is too old: %s. Minimal version supported: %s"
 
+WD_TRACKER_AURA_CASTED_BY = "Casted by %s"
 WD_TRACKER_INTERRUPTED_BY = "Interrupted by %s's %s in %s sec"
 WD_TRACKER_DISPELLED_BY = "Dispelled/stolen by %s's %s in %s sec"
 WD_TRACKER_CASTED_IN = "|cffff0000Casted in %s sec!|r"

@@ -177,10 +177,12 @@ local function createModuleFrame(name)
         WD:InitHistoryModule(m)
     elseif name == "raid_overview" then
         WD:InitRaidOverviewModule(m)
+    elseif name == "tracker_auras" then
+        WD:InitBasicMonitorModule(m, "buffs", "debuffs")
     elseif name == "tracker_overview" then
-        WD:InitTrackerOverviewModule(m)
+        WD:InitBasicMonitorModule(m, "dispel", "interrupt")
     elseif name == "tracker_statistics" then
-        WD:InitTrackerStatisticsModule(m)
+        WD:InitBasicStatsMonitorModule(m)
     elseif name == "help" then
         WD:InitHelpModule(m)
     end
@@ -237,6 +239,10 @@ function WD:CreateGuiFrame()
             local statRulesF = createModuleFrame("encounters_statistics")
             i = i + 1
             createModuleButton(statRulesF, WD_BUTTON_TRACKING_RULES_MODULE, x, y + i * dy)
+
+            local aurasF = createModuleFrame("tracker_auras")
+            i = i + 1
+            createModuleButton(aurasF, WD_BUTTON_TRACKING_AURAS_MODULE, x, y + i * dy)
 
             local trackerF = createModuleFrame("tracker_overview")
             i = i + 1

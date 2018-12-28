@@ -56,7 +56,7 @@ function WDDispelMonitor:init(parent, name)
 end
 
 function WDDispelMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "dispel", "Dispel info", 1, -300, 300, 20)
+    WD.Monitor.initMainTable(self, "dispel", "Dispel info", 1, -310, 300, 20)
     WDDM.dispels = WDDM.tables["dispel"]
 end
 

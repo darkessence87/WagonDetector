@@ -72,7 +72,7 @@ function WDHealStatsMonitor:init(parent, name)
 end
 
 function WDHealStatsMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "heal_info", "Source units", 1, -30, 300, 20)
+    WD.Monitor.initMainTable(self, "heal_info", "Source units", 1, -50, 300, 20)
 end
 
 function WDHealStatsMonitor:initDataTable()

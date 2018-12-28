@@ -72,7 +72,7 @@ function WDDmgStatsMonitor:init(parent, name)
 end
 
 function WDDmgStatsMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "dmg_info", "Source units", 1, -300, 300, 20)
+    WD.Monitor.initMainTable(self, "dmg_info", "Source units", 1, -310, 300, 20)
 end
 
 function WDDmgStatsMonitor:initDataTable()

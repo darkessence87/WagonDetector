@@ -21,6 +21,22 @@ function WDMonitor:initMainTable(tName, headerName, x, y, w, h)
     self.frame.mainTable.headers = {}
     self.frame.mainTable.members = {}
     table.insert(self.frame.mainTable.headers, WdLib:createTableHeader(self.frame:GetParent(), headerName, x, y, w, h))
+
+    self.playersFilter = WdLib:createCheckButton(self.frame:GetParent())
+    self.playersFilter:SetPoint("BOTTOMLEFT", self.frame.mainTable.headers[1], "TOPLEFT", 1, 2)
+    self.playersFilter:SetChecked(true)
+    self.playersFilter:SetScript("OnClick", function() print('clicky clicky') end)
+    self.playersFilter.txt = WdLib:createFont(self.playersFilter, "LEFT", "players")
+    self.playersFilter.txt:SetSize(50, 20)
+    self.playersFilter.txt:SetPoint("LEFT", self.playersFilter, "RIGHT", 5, 0)
+
+    self.npcFilter = WdLib:createCheckButton(self.frame:GetParent())
+    self.npcFilter:SetPoint("TOPLEFT", self.playersFilter.txt, "TOPRIGHT", 1, 0)
+    self.npcFilter:SetChecked(true)
+    self.npcFilter:SetScript("OnClick", function() print('clicky clicky') end)
+    self.npcFilter.txt = WdLib:createFont(self.npcFilter, "LEFT", "npc")
+    self.npcFilter.txt:SetSize(35, 20)
+    self.npcFilter.txt:SetPoint("LEFT", self.npcFilter, "RIGHT", 5, 0)
 end
 
 function WDMonitor:initDataTable(tName, columns)

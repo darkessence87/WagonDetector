@@ -102,7 +102,7 @@ function WDDebuffMonitor:init(parent, name)
 end
 
 function WDDebuffMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "debuffs", "Debuffs info", 1, -300, 300, 20)
+    WD.Monitor.initMainTable(self, "debuffs", "Debuffs info", 1, -310, 300, 20)
 end
 
 function WDDebuffMonitor:initDataTable()

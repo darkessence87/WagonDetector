@@ -102,7 +102,7 @@ function WDBuffMonitor:init(parent, name)
 end
 
 function WDBuffMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "buffs", "Buffs info", 1, -30, 300, 20)
+    WD.Monitor.initMainTable(self, "buffs", "Buffs info", 1, -50, 300, 20)
 end
 
 function WDBuffMonitor:initDataTable()

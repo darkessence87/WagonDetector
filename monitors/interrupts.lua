@@ -48,7 +48,7 @@ function WDInterruptMonitor:init(parent, name)
 end
 
 function WDInterruptMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "interrupts", "Casts info", 1, -30, 300, 20)
+    WD.Monitor.initMainTable(self, "interrupts", "Casts info", 1, -50, 300, 20)
     WDIM.creatures = WDIM.tables["interrupts"]
 end
 

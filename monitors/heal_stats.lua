@@ -20,34 +20,19 @@ function WDHealStatsMonitor:init(parent, name)
 end
 
 function WDHealStatsMonitor:initButtons()
-    WDHSM.unitsHeal = CreateFrame("Frame", nil, WDHSM)
-    WDHSM.unitsHeal.headers = {}
-    WDHSM.unitsHeal.members = {}
-    table.insert(WDHSM.unitsHeal.headers, WdLib:createTableHeader(WDHSM:GetParent(), "Source units", 1, -30, 300, 20))
+    WD.Monitor.initButtons(self, "heal_info", "Source units", 1, -30, 300, 20)
+    WDHSM.unitsHeal = WDHSM.tables["heal_info"]
 end
 
 function WDHealStatsMonitor:initInfoTable()
-    WDHSM.data["heal_info"] = CreateFrame("Frame", nil, WDHSM)
-    local r = WDHSM.data["heal_info"]
-    r:SetPoint("TOPLEFT", WDHSM.unitsHeal.headers[1], "TOPRIGHT", 1, 0)
-    r:SetSize(550, 300)
-
-    r.headers = {}
-    r.members = {}
-
-    -- headers
-    local h = WdLib:createTableHeader(r, "Heal done", 0, 0, 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Overheal done", 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Heal taken", 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Overheal taken", 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Target unit", 250, 20)
-    table.insert(r.headers, h)
-
-    r:Hide()
+    local columns = {
+        [1] = {"Heal done",      120},
+        [2] = {"Overheal done",  120},
+        [3] = {"Heal taken",     120},
+        [4] = {"Overheal taken", 120},
+        [5] = {"Target unit",    250},
+    }
+    WD.Monitor.initInfoTable(self, "heal_info", columns)
 end
 
 local function healDoneSortFunction(a, b)

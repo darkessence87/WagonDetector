@@ -13,27 +13,6 @@ setmetatable(WDBuffMonitor, {
     end,
 })
 
-function WDBuffMonitor:init(parent, name)
-    WD.Monitor.init(self, parent, name)
-    WDBAM = self.frame
-    WDBAM.parent = self
-end
-
-function WDBuffMonitor:initButtons()
-    WD.Monitor.initButtons(self, "buffs", "Buffs info", 1, -30, 300, 20)
-    WDBAM.buffs = WDBAM.tables["buffs"]
-end
-
-function WDBuffMonitor:initInfoTable()
-    local columns = {
-        [1] = {"Buff",      300},
-        [2] = {"Uptime",    70},
-        [3] = {"Count",     40},
-        [4] = {"Casted by", 300},
-    }
-    WD.Monitor.initInfoTable(self, "buffs", columns)
-end
-
 local function calculateLifetime(pull, unit)
     local fromTime = unit.spawnedAt or pull.startTime or 0
     local toTime = unit.diedAt or pull.endTime or 0
@@ -225,9 +204,28 @@ local function getUnitsWithBuffs()
     return units
 end
 
-function WDBuffMonitor:refreshInfo()
-    if not WDBAM then return end
+function WDBuffMonitor:init(parent, name)
+    WD.Monitor.init(self, parent, name)
+    WDBAM = self.frame
+    WDBAM.parent = self
+end
 
+function WDBuffMonitor:initButtons()
+    WD.Monitor.initButtons(self, "buffs", "Buffs info", 1, -30, 300, 20)
+    WDBAM.buffs = WDBAM.tables["buffs"]
+end
+
+function WDBuffMonitor:initInfoTable()
+    local columns = {
+        [1] = {"Buff",      300},
+        [2] = {"Uptime",    70},
+        [3] = {"Count",     40},
+        [4] = {"Casted by", 300},
+    }
+    WD.Monitor.initInfoTable(self, "buffs", columns)
+end
+
+function WDBuffMonitor:refreshInfo()
     local units = getUnitsWithBuffs()
 
     if WDBAM.lastSelectedButton and #units == 0 then

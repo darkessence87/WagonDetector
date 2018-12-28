@@ -20,34 +20,19 @@ function WDDmgStatsMonitor:init(parent, name)
 end
 
 function WDDmgStatsMonitor:initButtons()
-    WDDSM.unitsDmg = CreateFrame("Frame", nil, WDDSM)
-    WDDSM.unitsDmg.headers = {}
-    WDDSM.unitsDmg.members = {}
-    table.insert(WDDSM.unitsDmg.headers, WdLib:createTableHeader(WDDSM:GetParent(), "Source units", 1, -300, 300, 20))
+    WD.Monitor.initButtons(self, "dmg_info", "Source units", 1, -300, 300, 20)
+    WDDSM.unitsDmg = WDDSM.tables["dmg_info"]
 end
 
 function WDDmgStatsMonitor:initInfoTable()
-    WDDSM.data["dmg_info"] = CreateFrame("Frame", nil, WDDSM)
-    local r = WDDSM.data["dmg_info"]
-    r:SetPoint("TOPLEFT", WDDSM.unitsDmg.headers[1], "TOPRIGHT", 1, 0)
-    r:SetSize(550, 300)
-
-    r.headers = {}
-    r.members = {}
-
-    -- headers
-    local h = WdLib:createTableHeader(r, "Damage done", 0, 0, 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Overkill done", 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Damage taken", 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Overkill taken", 120, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Target unit", 250, 20)
-    table.insert(r.headers, h)
-
-    r:Hide()
+    local columns = {
+        [1] = {"Damage done",      120},
+        [2] = {"Overkill done",    120},
+        [3] = {"Damage taken",     120},
+        [4] = {"Overkill taken",   120},
+        [5] = {"Target unit",       250},
+    }
+    WD.Monitor.initInfoTable(self, "dmg_info", columns)
 end
 
 local function dmgDoneSortFunction(a, b)

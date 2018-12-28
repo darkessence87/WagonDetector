@@ -813,6 +813,7 @@ function WdLib:generateSpellHover(frame, searchIn, textLines)
 end
 
 function WdLib:generateHover(frame, textLines)
+    if not textLines then return end
     frame:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         if type(textLines) == "table" then

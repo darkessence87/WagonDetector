@@ -821,8 +821,8 @@ local function createMonitor(parent, name)
     end
 
     if monitor then
-        monitor:initButtons()
-        monitor:initInfoTable()
+        monitor:initMainTable()
+        monitor:initDataTable()
         WDMB.monitors[name] = monitor
     end
 end

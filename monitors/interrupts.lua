@@ -13,29 +13,6 @@ setmetatable(WDInterruptMonitor, {
     end,
 })
 
-function WDInterruptMonitor:init(parent, name)
-    WD.Monitor.init(self, parent, name)
-    WDIM = self.frame
-    WDIM.parent = self
-end
-
-function WDInterruptMonitor:initButtons()
-    WD.Monitor.initButtons(self, "interrupts", "Casts info", 1, -30, 300, 20)
-    WDIM.creatures = WDIM.tables["interrupts"]
-end
-
-function WDInterruptMonitor:initInfoTable()
-    local columns = {
-        [1] = {"Spell",         170},
-        [2] = {WD_BUTTON_TIME,  70},
-        [3] = {"N",             25},
-        [4] = {"Status",        400},
-        [5] = {"Quality",       50},
-    }
-    WD.Monitor.initInfoTable(self, "interrupts", columns)
-    WdLib:generateHover(WDIM.data["interrupts"].headers[5], WD_TRACKER_QUALITY_DESC)
-end
-
 local function getInterruptStatusText(v)
     if v.status == "INTERRUPTED" then
         local interrupterName = UNKNOWNOBJECT
@@ -55,85 +32,6 @@ local function getInterruptStatusText(v)
     return v.status
 end
 
-local function updateInterruptsInfo()
-    for _,v in pairs(WDIM.data["interrupts"].members) do
-        v:Hide()
-    end
-
-    local casts = {}
-    if WDIM.lastSelectedButton then
-        local v = WDIM.lastSelectedButton:GetParent().info
-        for spellId,castInfo in pairs(v.casts) do
-            if type(castInfo) == "table" then
-                for i=1,#castInfo do
-                    casts[#casts+1] = { N = i, id = spellId, data = castInfo[i] }
-                end
-            end
-        end
-    end
-
-    local maxHeight = 210
-    local topLeftPosition = { x = 30, y = -51 }
-    local rowsN = #casts
-    local columnsN = 5
-
-    local function createFn(parent, row, index)
-        local spellId = casts[row].id
-        local N = casts[row].N
-        local v = casts[row].data
-        if index == 1 then
-            local f = WdLib:addNextColumn(WDIM.data["interrupts"], parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(spellId))
-            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
-            return f
-        elseif index == 2 then
-            return WdLib:addNextColumn(WDIM.data["interrupts"], parent, index, "CENTER", v.timestamp)
-        elseif index == 3 then
-            return WdLib:addNextColumn(WDIM.data["interrupts"], parent, index, "CENTER", N)
-        elseif index == 4 then
-            local f = WdLib:addNextColumn(WDIM.data["interrupts"], parent, index, "LEFT", getInterruptStatusText(v))
-            WdLib:generateSpellHover(f, getInterruptStatusText(v))
-            return f
-        elseif index == 5 then
-            return WdLib:addNextColumn(WDIM.data["interrupts"], parent, index, "CENTER", v.percent or 0)
-        end
-    end
-
-    local function updateFn(f, row, index)
-        local spellId = casts[row].id
-        local N = casts[row].N
-        local v = casts[row].data
-        if index == 1 then
-            f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(spellId))
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
-        elseif index == 2 then
-            f.txt:SetText(v.timestamp)
-        elseif index == 3 then
-            f.txt:SetText(N)
-        elseif index == 4 then
-            f.txt:SetText(getInterruptStatusText(v))
-            WdLib:generateSpellHover(f, getInterruptStatusText(v))
-        elseif index == 5 then
-            f.txt:SetText(v.percent or 0)
-        end
-    end
-
-    WdLib:updateScrollableTable(WDIM.data["interrupts"], maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
-
-    WDIM.data["interrupts"]:Show()
-end
-
-local function updateCreatureButtons()
-    for _,v in pairs(WDIM.creatures.members) do
-        v.column[1].t:SetColorTexture(.2, .2, .2, 1)
-    end
-
-    if WDIM.lastSelectedButton then
-        WDIM.lastSelectedButton.t:SetColorTexture(.2, .6, .2, 1)
-    end
-    updateInterruptsInfo()
-end
-
 local function isCastedNpc(v)
     for spell_id,castInfo in pairs(v.casts) do
         if type(castInfo) == "table" and #castInfo > 0 then
@@ -143,7 +41,30 @@ local function isCastedNpc(v)
     return nil
 end
 
-local function getCastedCreatures()
+function WDInterruptMonitor:init(parent, name)
+    WD.Monitor.init(self, parent, name)
+    WDIM = self.frame
+    WDIM.parent = self
+end
+
+function WDInterruptMonitor:initMainTable()
+    WD.Monitor.initMainTable(self, "interrupts", "Casts info", 1, -30, 300, 20)
+    WDIM.creatures = WDIM.tables["interrupts"]
+end
+
+function WDInterruptMonitor:initDataTable()
+    local columns = {
+        [1] = {"Spell",         170},
+        [2] = {WD_BUTTON_TIME,  70},
+        [3] = {"N",             25},
+        [4] = {"Status",        400},
+        [5] = {"Quality",       50},
+    }
+    WD.Monitor.initDataTable(self, "interrupts", columns)
+    WdLib:generateHover(WDIM.dataTable.headers[5], WD_TRACKER_QUALITY_DESC)
+end
+
+function WDInterruptMonitor:getMainTableData()
     local creatures = {}
     if not WD.db.profile.tracker or not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
         return creatures
@@ -193,67 +114,93 @@ local function getCastedCreatures()
     return creatures
 end
 
-function WDInterruptMonitor:refreshInfo()
-    if not WDIM then return end
+function WDInterruptMonitor:getMainTableSortFunction()
+    return function(a, b)
+        return a.name < b.name
+    end
+end
 
-    local creatures = getCastedCreatures()
+function WDInterruptMonitor:getMainTableRowText(v)
+    local unitName = WdLib:getColoredName(v.name, v.class)
+    if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+    return unitName
+end
 
-    if WDIM.lastSelectedButton and #creatures == 0 then
-        WDIM.lastSelectedButton = nil
-        updateInterruptsInfo()
+function WDInterruptMonitor:getMainTableRowHover(v)
+    if v.parentName then
+        return {"id: "..v.npc_id, "Summoned by: |cffffff00"..v.parentName.."|r"}
+    else
+        return "id: "..v.npc_id
+    end
+    return nil
+end
+
+function WDInterruptMonitor:updateDataTable()
+    for _,v in pairs(WDIM.dataTable.members) do
+        v:Hide()
+    end
+
+    local casts = {}
+    if WDIM.lastSelectedButton then
+        local v = WDIM.lastSelectedButton:GetParent().info
+        for spellId,castInfo in pairs(v.casts) do
+            if type(castInfo) == "table" then
+                for i=1,#castInfo do
+                    casts[#casts+1] = { N = i, id = spellId, data = castInfo[i] }
+                end
+            end
+        end
     end
 
     local maxHeight = 210
     local topLeftPosition = { x = 30, y = -51 }
-    local rowsN = #creatures
-    local columnsN = 1
-
-    local func = function(a, b)
-        return a.name < b.name
-    end
-    table.sort(creatures, func)
+    local rowsN = #casts
+    local columnsN = 5
 
     local function createFn(parent, row, index)
-        local v = creatures[row]
-        parent.info = v
+        local spellId = casts[row].id
+        local N = casts[row].N
+        local v = casts[row].data
         if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
-            local f = WdLib:addNextColumn(WDIM.creatures, parent, index, "LEFT", unitName)
+            local f = WdLib:addNextColumn(WDIM.dataTable, parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(spellId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            f:EnableMouse(true)
-            f:SetScript("OnClick", function(self) WDIM.lastSelectedButton = self; updateCreatureButtons() end)
-            if v.parentName then
-                WdLib:generateHover(f, {"id: "..v.npc_id, "Summoned by: |cffffff00"..v.parentName.."|r"})
-            else
-                WdLib:generateHover(f, "id: "..v.npc_id)
-            end
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
             return f
+        elseif index == 2 then
+            return WdLib:addNextColumn(WDIM.dataTable, parent, index, "CENTER", v.timestamp)
+        elseif index == 3 then
+            return WdLib:addNextColumn(WDIM.dataTable, parent, index, "CENTER", N)
+        elseif index == 4 then
+            local f = WdLib:addNextColumn(WDIM.dataTable, parent, index, "LEFT", getInterruptStatusText(v))
+            WdLib:generateSpellHover(f, getInterruptStatusText(v))
+            return f
+        elseif index == 5 then
+            return WdLib:addNextColumn(WDIM.dataTable, parent, index, "CENTER", v.percent or 0)
         end
     end
 
     local function updateFn(f, row, index)
-        local v = creatures[row]
-        f:GetParent().info = v
+        local spellId = casts[row].id
+        local N = casts[row].N
+        local v = casts[row].data
         if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
-            f.txt:SetText(unitName)
-            f:SetScript("OnClick", function(self) WDIM.lastSelectedButton = self; updateCreatureButtons() end)
-            if v.parentName then
-                WdLib:generateHover(f, {"id: "..v.npc_id, "Summoned by: |cffffff00"..v.parentName.."|r"})
-            else
-                WdLib:generateHover(f, "id: "..v.npc_id)
-            end
+            f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(spellId))
+            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
+        elseif index == 2 then
+            f.txt:SetText(v.timestamp)
+        elseif index == 3 then
+            f.txt:SetText(N)
+        elseif index == 4 then
+            f.txt:SetText(getInterruptStatusText(v))
+            WdLib:generateSpellHover(f, getInterruptStatusText(v))
+        elseif index == 5 then
+            f.txt:SetText(v.percent or 0)
         end
     end
 
-    WdLib:updateScrollableTable(WDIM.creatures, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib:updateScrollableTable(WDIM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
-    if not WDIM.lastSelectedButton and #creatures > 0 then
-        WDIM.lastSelectedButton = WDIM.creatures.members[1].column[1]
-    end
-    updateCreatureButtons()
+    WDIM.dataTable:Show()
 end
 
 WD.InterruptMonitor = WDInterruptMonitor

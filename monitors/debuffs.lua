@@ -13,27 +13,6 @@ setmetatable(WDDebuffMonitor, {
     end,
 })
 
-function WDDebuffMonitor:init(parent, name)
-    WD.Monitor.init(self, parent, name)
-    WDDAM = self.frame
-    WDDAM.parent = self
-end
-
-function WDDebuffMonitor:initButtons()
-    WD.Monitor.initButtons(self, "debuffs", "Debuffs info", 1, -300, 300, 20)
-    WDDAM.debuffs = WDDAM.tables["debuffs"]
-end
-
-function WDDebuffMonitor:initInfoTable()
-    local columns = {
-        [1] = {"Debuff",    300},
-        [2] = {"Uptime",    70},
-        [3] = {"Count",     40},
-        [4] = {"Casted by", 300},
-    }
-    WD.Monitor.initInfoTable(self, "debuffs", columns)
-end
-
 local function calculateLifetime(pull, unit)
     local fromTime = unit.spawnedAt or pull.startTime or 0
     local toTime = unit.diedAt or pull.endTime or 0
@@ -107,8 +86,84 @@ local function getDebuffStatusText(v)
     return casterName
 end
 
-local function updateDebuffInfo()
-    for _,v in pairs(WDDAM.data["debuffs"].members) do
+local function hasDebuff(unit)
+    for _,auraInfo in pairs(unit.auras) do
+        for i=1,#auraInfo do
+            if auraInfo[i].isBuff == false then return true end
+        end
+    end
+    return nil
+end
+
+function WDDebuffMonitor:init(parent, name)
+    WD.Monitor.init(self, parent, name)
+    WDDAM = self.frame
+    WDDAM.parent = self
+end
+
+function WDDebuffMonitor:initMainTable()
+    WD.Monitor.initMainTable(self, "debuffs", "Debuffs info", 1, -300, 300, 20)
+end
+
+function WDDebuffMonitor:initDataTable()
+    local columns = {
+        [1] = {"Debuff",    300},
+        [2] = {"Uptime",    70},
+        [3] = {"Count",     40},
+        [4] = {"Casted by", 300},
+    }
+    WD.Monitor.initDataTable(self, "debuffs", columns)
+end
+
+function WDDebuffMonitor:getMainTableData()
+    local units = {}
+    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
+        return units
+    end
+    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
+        if k == "npc" then
+            for npcId,data in pairs(v) do
+                for guid,npc in pairs(data) do
+                    if type(npc) == "table" then
+                        if hasDebuff(npc) then
+                            npc.npc_id = npcId
+                            units[#units+1] = npc
+                        end
+                    end
+                end
+            end
+        elseif k == "players" then
+            for guid,raider in pairs(v) do
+                if hasDebuff(raider) then
+                    units[#units+1] = raider
+                end
+            end
+        end
+    end
+    return units
+end
+
+function WDDebuffMonitor:getMainTableSortFunction()
+    return function(a, b)
+        return a.name < b.name
+    end
+end
+
+function WDDebuffMonitor:getMainTableRowText(v)
+    local unitName = WdLib:getColoredName(v.name, v.class)
+    if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+    return unitName
+end
+
+function WDDebuffMonitor:getMainTableRowHover(v)
+    if v.type == "creature" then
+        return "id: "..v.npc_id
+    end
+    return nil
+end
+
+function WDDebuffMonitor:updateDataTable()
+    for _,v in pairs(WDDAM.dataTable.members) do
         v:Hide()
     end
 
@@ -140,16 +195,16 @@ local function updateDebuffInfo()
         local N = auras[row].N
         local v = auras[row].data
         if index == 1 then
-            local f = WdLib:addNextColumn(WDDAM.data["debuffs"], parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
+            local f = WdLib:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
             WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId))
             return f
         elseif index == 2 then
-            return WdLib:addNextColumn(WDDAM.data["debuffs"], parent, index, "RIGHT", v.uptime.." %")
+            return WdLib:addNextColumn(WDDAM.dataTable, parent, index, "RIGHT", v.uptime.." %")
         elseif index == 3 then
-            return WdLib:addNextColumn(WDDAM.data["debuffs"], parent, index, "CENTER", N)
+            return WdLib:addNextColumn(WDDAM.dataTable, parent, index, "CENTER", N)
         elseif index == 4 then
-            local f = WdLib:addNextColumn(WDDAM.data["debuffs"], parent, index, "LEFT", getDebuffStatusText(v))
+            local f = WdLib:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", getDebuffStatusText(v))
             WdLib:generateSpellHover(f, getDebuffStatusText(v))
             return f
         end
@@ -172,116 +227,9 @@ local function updateDebuffInfo()
         end
     end
 
-    WdLib:updateScrollableTable(WDDAM.data["debuffs"], maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib:updateScrollableTable(WDDAM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
-    WDDAM.data["debuffs"]:Show()
-end
-
-local function updateUnitButtons()
-    for _,v in pairs(WDDAM.debuffs.members) do
-        v.column[1].t:SetColorTexture(.2, .2, .2, 1)
-    end
-
-    if WDDAM.lastSelectedButton then
-        WDDAM.lastSelectedButton.t:SetColorTexture(.2, .6, .2, 1)
-    end
-    updateDebuffInfo()
-end
-
-local function hasDebuff(unit)
-    for _,auraInfo in pairs(unit.auras) do
-        for i=1,#auraInfo do
-            if auraInfo[i].isBuff == false then return true end
-        end
-    end
-    return nil
-end
-
-local function getUnitsWithDebuffs()
-    local units = {}
-    if not WD.db.profile.tracker or not WD.db.profile.tracker.selected or WD.db.profile.tracker.selected > #WD.db.profile.tracker or #WD.db.profile.tracker == 0 then
-        return units
-    end
-    for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
-        if k == "npc" then
-            for npcId,data in pairs(v) do
-                for guid,npc in pairs(data) do
-                    if type(npc) == "table" then
-                        if hasDebuff(npc) then
-                            npc.npc_id = npcId
-                            units[#units+1] = npc
-                        end
-                    end
-                end
-            end
-        elseif k == "players" then
-            for guid,raider in pairs(v) do
-                if hasDebuff(raider) then
-                    units[#units+1] = raider
-                end
-            end
-        end
-    end
-    return units
-end
-
-function WDDebuffMonitor:refreshInfo()
-    if not WDDAM then return end
-
-    local units = getUnitsWithDebuffs()
-
-    if WDDAM.lastSelectedButton and #units == 0 then
-        WDDAM.lastSelectedButton = nil
-        updateDebuffInfo()
-    end
-
-    local maxHeight = 210
-    local topLeftPosition = { x = 30, y = -51 }
-    local rowsN = #units
-    local columnsN = 1
-
-    local func = function(a, b)
-        return a.name < b.name
-    end
-    table.sort(units, func)
-
-    local function createFn(parent, row, index)
-        local v = units[row]
-        parent.info = v
-        if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
-            local f = WdLib:addNextColumn(WDDAM.debuffs, parent, index, "LEFT", unitName)
-            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            f:EnableMouse(true)
-            f:SetScript("OnClick", function(self) WDDAM.lastSelectedButton = self; updateUnitButtons() end)
-            if v.type == "creature" then
-                WdLib:generateHover(f, "id: "..v.npc_id)
-            end
-            return f
-        end
-    end
-
-    local function updateFn(f, row, index)
-        local v = units[row]
-        f:GetParent().info = v
-        if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
-            f.txt:SetText(unitName)
-            f:SetScript("OnClick", function(self) WDDAM.lastSelectedButton = self; updateUnitButtons() end)
-            if v.type == "creature" then
-                WdLib:generateHover(f, "id: "..v.npc_id)
-            end
-        end
-    end
-
-    WdLib:updateScrollableTable(WDDAM.debuffs, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
-
-    if not WDDAM.lastSelectedButton and #units > 0 then
-        WDDAM.lastSelectedButton = WDDAM.debuffs.members[1].column[1]
-    end
-    updateUnitButtons()
+    WDDAM.dataTable:Show()
 end
 
 WD.DebuffMonitor = WDDebuffMonitor

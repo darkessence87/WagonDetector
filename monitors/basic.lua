@@ -13,21 +13,20 @@ function WDMonitor:init(parent, name)
     self.name = name
     self.frame = CreateFrame("Frame", nil, parent)
     self.frame.buttons = {}
-    self.frame.data = {}
     self.frame.tables = {}
 end
 
-function WDMonitor:initButtons(tName, headerName, x, y, w, h)
-    self.frame.tables[tName] = CreateFrame("Frame", nil, self.frame)
-    self.frame.tables[tName].headers = {}
-    self.frame.tables[tName].members = {}
-    table.insert(self.frame.tables[tName].headers, WdLib:createTableHeader(self.frame:GetParent(), headerName, x, y, w, h))
+function WDMonitor:initMainTable(tName, headerName, x, y, w, h)
+    self.frame.mainTable = CreateFrame("Frame", nil, self.frame)
+    self.frame.mainTable.headers = {}
+    self.frame.mainTable.members = {}
+    table.insert(self.frame.mainTable.headers, WdLib:createTableHeader(self.frame:GetParent(), headerName, x, y, w, h))
 end
 
-function WDMonitor:initInfoTable(tName, columns)
-    self.frame.data[tName] = CreateFrame("Frame", nil, self.frame)
-    local r = self.frame.data[tName]
-    r:SetPoint("TOPLEFT", self.frame.tables[tName].headers[1], "TOPRIGHT", 1, 0)
+function WDMonitor:initDataTable(tName, columns)
+    self.frame.dataTable = CreateFrame("Frame", nil, self.frame)
+    local r = self.frame.dataTable
+    r:SetPoint("TOPLEFT", self.frame.mainTable.headers[1], "TOPRIGHT", 1, 0)
     r:SetSize(550, 300)
 
     r.headers = {}
@@ -44,8 +43,62 @@ function WDMonitor:initInfoTable(tName, columns)
     r:Hide()
 end
 
+function WDMonitor:updateMainTableData()
+    for _,v in pairs(self.frame.mainTable.members) do
+        v.column[1].t:SetColorTexture(.2, .2, .2, 1)
+    end
+
+    if self.frame.lastSelectedButton then
+        self.frame.lastSelectedButton.t:SetColorTexture(.2, .6, .2, 1)
+    end
+    self:updateDataTable()
+end
+
 function WDMonitor:refreshInfo()
-    print('WDMonitor : refreshInfo is not overriden')
+    local dataRows = self:getMainTableData()
+    table.sort(dataRows, self:getMainTableSortFunction())
+
+    if self.frame.lastSelectedButton and #dataRows == 0 then
+        self.frame.lastSelectedButton = nil
+        self:updateDataTable()
+    end
+
+    local maxHeight = 210
+    local topLeftPosition = { x = 30, y = -51 }
+    local rowsN = #dataRows
+    local columnsN = 1
+
+    local function createFn(parent, row, index)
+        local v = dataRows[row]
+        parent.info = v
+        if index == 1 then
+            local rowText = self:getMainTableRowText(v)
+            local f = WdLib:addNextColumn(self.frame.mainTable, parent, index, "LEFT", rowText)
+            f:EnableMouse(true)
+            f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            f:SetScript("OnClick", function(rowFrame) self.frame.lastSelectedButton = rowFrame; self:updateMainTableData() end)
+            WdLib:generateHover(f, self:getMainTableRowHover(v))
+            return f
+        end
+    end
+
+    local function updateFn(f, row, index)
+        local v = dataRows[row]
+        f:GetParent().info = v
+        if index == 1 then
+            f.txt:SetText(self:getMainTableRowText(v))
+            f:SetScript("OnClick", function(rowFrame) self.frame.lastSelectedButton = rowFrame; self:updateMainTableData() end)
+            WdLib:generateHover(f, self:getMainTableRowHover(v))
+        end
+    end
+
+    WdLib:updateScrollableTable(self.frame.mainTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+
+    if not self.frame.lastSelectedButton and #dataRows > 0 then
+        self.frame.lastSelectedButton = self.frame.mainTable.members[1].column[1]
+    end
+
+    self:updateMainTableData()
 end
 
 function WDMonitor:findNpc(guid)
@@ -189,8 +242,8 @@ local function createMonitor(parent, name)
     end
 
     if monitor then
-        monitor:initButtons()
-        monitor:initInfoTable()
+        monitor:initMainTable()
+        monitor:initDataTable()
         WDMB.monitors[name] = monitor
     end
 end
@@ -232,6 +285,23 @@ function WD:InitBasicMonitorModule(parent, module1, module2)
     createMonitor(parent, module2)
 
     parent:SetScript("OnShow", function(self) self:OnUpdate() end)
+end
+
+-- must be overriden by child classes
+function WDMonitor:getMainTableData()
+    print('WDMonitor:getMainTableData() is not overriden')
+end
+function WDMonitor:getMainTableSortFunction()
+    print('WDMonitor:getMainTableSortFunction() is not overriden')
+end
+function WDMonitor:getMainTableRowText()
+    print('WDMonitor:getMainTableRowText() is not overriden')
+end
+function WDMonitor:getMainTableRowHover()
+    print('WDMonitor:getMainTableRowHover() is not overriden')
+end
+function WDMonitor:updateDataTable()
+    print('WDMonitor:updateDataTable() is not overriden')
 end
 
 WD.Monitor = WDMonitor

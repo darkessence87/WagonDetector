@@ -20,37 +20,20 @@ function WDInterruptMonitor:init(parent, name)
 end
 
 function WDInterruptMonitor:initButtons()
-    WDIM.creatures = CreateFrame("Frame", nil, WDIM)
-    WDIM.creatures.headers = {}
-    WDIM.creatures.members = {}
-    table.insert(WDIM.creatures.headers, WdLib:createTableHeader(WDIM:GetParent(), "Casts info", 1, -30, 300, 20))
+    WD.Monitor.initButtons(self, "interrupts", "Casts info", 1, -30, 300, 20)
+    WDIM.creatures = WDIM.tables["interrupts"]
 end
 
 function WDInterruptMonitor:initInfoTable()
-    WDIM.data["interrupts"] = CreateFrame("Frame", nil, WDIM)
-    local r = WDIM.data["interrupts"]
-    r:SetPoint("TOPLEFT", WDIM.creatures.headers[1], "TOPRIGHT", 1, 0)
-    r:SetSize(550, 300)
-    --r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
-    --r.bg:SetAllPoints()
-
-    r.headers = {}
-    r.members = {}
-
-    -- headers
-    local h = WdLib:createTableHeader(r, "Spell", 0, 0, 170, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, WD_BUTTON_TIME, 70, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "N", 25, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Status", 400, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Quality", 50, 20)
-    WdLib:generateHover(h, WD_TRACKER_QUALITY_DESC)
-    table.insert(r.headers, h)
-
-    r:Hide()
+    local columns = {
+        [1] = {"Spell",         170},
+        [2] = {WD_BUTTON_TIME,  70},
+        [3] = {"N",             25},
+        [4] = {"Status",        400},
+        [5] = {"Quality",       50},
+    }
+    WD.Monitor.initInfoTable(self, "interrupts", columns)
+    WdLib:generateHover(WDIM.data["interrupts"].headers[5], WD_TRACKER_QUALITY_DESC)
 end
 
 local function getInterruptStatusText(v)

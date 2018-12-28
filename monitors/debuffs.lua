@@ -20,32 +20,18 @@ function WDDebuffMonitor:init(parent, name)
 end
 
 function WDDebuffMonitor:initButtons()
-    WDDAM.debuffs = CreateFrame("Frame", nil, WDDAM)
-    WDDAM.debuffs.headers = {}
-    WDDAM.debuffs.members = {}
-    table.insert(WDDAM.debuffs.headers, WdLib:createTableHeader(WDDAM:GetParent(), "Debuffs info", 1, -300, 300, 20))
+    WD.Monitor.initButtons(self, "debuffs", "Debuffs info", 1, -300, 300, 20)
+    WDDAM.debuffs = WDDAM.tables["debuffs"]
 end
 
 function WDDebuffMonitor:initInfoTable()
-    WDDAM.data["debuffs"] = CreateFrame("Frame", nil, WDDAM)
-    local r = WDDAM.data["debuffs"]
-    r:SetPoint("TOPLEFT", WDDAM.debuffs.headers[1], "TOPRIGHT", 1, 0)
-    r:SetSize(550, 300)
-
-    r.headers = {}
-    r.members = {}
-
-    -- headers
-    local h = WdLib:createTableHeader(r, "Debuff", 0, 0, 250, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Uptime", 70, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Count", 40, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Casted by", 250, 20)
-    table.insert(r.headers, h)
-
-    r:Hide()
+    local columns = {
+        [1] = {"Debuff",    300},
+        [2] = {"Uptime",    70},
+        [3] = {"Count",     40},
+        [4] = {"Casted by", 300},
+    }
+    WD.Monitor.initInfoTable(self, "debuffs", columns)
 end
 
 local function calculateLifetime(pull, unit)
@@ -114,7 +100,7 @@ local function getDebuffStatusText(v)
     local casterName = UNKNOWNOBJECT
     local caster = WDDAM.parent:findEntityByGUID(v.caster)
     if caster then
-        casterName = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
+        casterName = WdLib:getColoredName(WdLib:getShortName(caster.name), caster.class)
     else
         casterName = "|cffffffffEnvironment|r"
     end

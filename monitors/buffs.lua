@@ -20,32 +20,18 @@ function WDBuffMonitor:init(parent, name)
 end
 
 function WDBuffMonitor:initButtons()
-    WDBAM.buffs = CreateFrame("Frame", nil, WDBAM)
-    WDBAM.buffs.headers = {}
-    WDBAM.buffs.members = {}
-    table.insert(WDBAM.buffs.headers, WdLib:createTableHeader(WDBAM:GetParent(), "Buffs info", 1, -30, 300, 20))
+    WD.Monitor.initButtons(self, "buffs", "Buffs info", 1, -30, 300, 20)
+    WDBAM.buffs = WDBAM.tables["buffs"]
 end
 
 function WDBuffMonitor:initInfoTable()
-    WDBAM.data["buffs"] = CreateFrame("Frame", nil, WDBAM)
-    local r = WDBAM.data["buffs"]
-    r:SetPoint("TOPLEFT", WDBAM.buffs.headers[1], "TOPRIGHT", 1, 0)
-    r:SetSize(550, 300)
-
-    r.headers = {}
-    r.members = {}
-
-    -- headers
-    local h = WdLib:createTableHeader(r, "Buff", 0, 0, 250, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Uptime", 70, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Count", 40, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Casted by", 250, 20)
-    table.insert(r.headers, h)
-
-    r:Hide()
+    local columns = {
+        [1] = {"Buff",      300},
+        [2] = {"Uptime",    70},
+        [3] = {"Count",     40},
+        [4] = {"Casted by", 300},
+    }
+    WD.Monitor.initInfoTable(self, "buffs", columns)
 end
 
 local function calculateLifetime(pull, unit)
@@ -114,7 +100,7 @@ local function getBuffStatusText(v)
     local casterName = UNKNOWNOBJECT
     local caster = WDBAM.parent:findEntityByGUID(v.caster)
     if caster then
-        casterName = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
+        casterName = WdLib:getColoredName(WdLib:getShortName(caster.name), caster.class)
     else
         casterName = "|cffffffffEnvironment|r"
     end

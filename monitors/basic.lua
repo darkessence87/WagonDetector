@@ -14,14 +14,34 @@ function WDMonitor:init(parent, name)
     self.frame = CreateFrame("Frame", nil, parent)
     self.frame.buttons = {}
     self.frame.data = {}
+    self.frame.tables = {}
 end
 
-function WDMonitor:initButtons()
-    print('WDMonitor : initButtons is not overriden')
+function WDMonitor:initButtons(tName, headerName, x, y, w, h)
+    self.frame.tables[tName] = CreateFrame("Frame", nil, self.frame)
+    self.frame.tables[tName].headers = {}
+    self.frame.tables[tName].members = {}
+    table.insert(self.frame.tables[tName].headers, WdLib:createTableHeader(self.frame:GetParent(), headerName, x, y, w, h))
 end
 
-function WDMonitor:initInfoTable()
-    print('WDMonitor : initInfoTable is not overriden')
+function WDMonitor:initInfoTable(tName, columns)
+    self.frame.data[tName] = CreateFrame("Frame", nil, self.frame)
+    local r = self.frame.data[tName]
+    r:SetPoint("TOPLEFT", self.frame.tables[tName].headers[1], "TOPRIGHT", 1, 0)
+    r:SetSize(550, 300)
+
+    r.headers = {}
+    r.members = {}
+
+    -- headers
+    local h = WdLib:createTableHeader(r, columns[1][1], 0, 0, columns[1][2], 20)
+    table.insert(r.headers, h)
+    for i=2,#columns do
+        h = WdLib:createTableHeaderNext(r, h, columns[i][1], columns[i][2], 20)
+        table.insert(r.headers, h)
+    end
+
+    r:Hide()
 end
 
 function WDMonitor:refreshInfo()

@@ -351,10 +351,10 @@ function WDDmgStatsMonitor:refreshInfo()
 
             local pull = WDDSM:GetParent().GetSelectedPull()
             if v.spawnedAt < pull.startTime then
-                v.spawnedAt = pull.startTime
+                --v.spawnedAt = pull.startTime
             end
-            if v.spawnedAt > pull.endTime then
-                v.spawnedAt = pull.endTime
+            if pull.endTime and v.spawnedAt > pull.endTime then
+                --v.spawnedAt = pull.endTime
             end
             local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
             local rowText = row..". "..unitName.." ("..lifeTime..")"
@@ -387,10 +387,10 @@ function WDDmgStatsMonitor:refreshInfo()
 
             local pull = WDDSM:GetParent().GetSelectedPull()
             if v.spawnedAt < pull.startTime then
-                v.spawnedAt = pull.startTime
+                --v.spawnedAt = pull.startTime
             end
-            if v.spawnedAt > pull.endTime then
-                v.spawnedAt = pull.endTime
+            if pull.endTime and v.spawnedAt > pull.endTime then
+                --v.spawnedAt = pull.endTime
             end
             local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
             local rowText = row..". "..unitName.." ("..lifeTime..")"

@@ -31,6 +31,7 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     v.casts.current_spell_id = 0
     v.casts.current_spell_interrupted = 0
     v.stats = {}
+    v.spawnedAt = WDMF.encounter.startTime
     return v
 end
 
@@ -136,25 +137,29 @@ end
 
 local function loadAuras(p)
     for index=1,40 do
-        local _, _, _, _, duration, expirationTime, _, _, _, spellId = UnitBuff(p.unit, index)
+        local _, _, _, _, duration, expirationTime, casterUnitId, _, _, spellId = UnitBuff(p.unit, index)
         if spellId then
             if not p.auras[spellId] then p.auras[spellId] = {} end
             local appliedAt = expirationTime - duration
             if appliedAt < WDMF.encounter.startTime then
                 appliedAt = WDMF.encounter.startTime
             end
-            p.auras[spellId][#p.auras[spellId]+1] = { caster = p.guid, applied = appliedAt, isBuff = true }
+            local guid = p.guid
+            if casterUnitId then guid = UnitGUID(casterUnitId) end
+            p.auras[spellId][#p.auras[spellId]+1] = { caster = guid, applied = appliedAt, isBuff = true }
         end
     end
     for index=1,40 do
-        local _, _, _, _, duration, expirationTime, _, _, _, spellId = UnitDebuff(p.unit, index)
+        local _, _, _, _, duration, expirationTime, casterUnitId, _, _, spellId = UnitDebuff(p.unit, index)
         if spellId then
             if not p.auras[spellId] then p.auras[spellId] = {} end
             local appliedAt = expirationTime - duration
             if appliedAt < WDMF.encounter.startTime then
                 appliedAt = WDMF.encounter.startTime
             end
-            p.auras[spellId][#p.auras[spellId]+1] = { caster = p.guid, applied = appliedAt, isBuff = false }
+            local guid = p.guid
+            if casterUnitId then guid = UnitGUID(casterUnitId) end
+            p.auras[spellId][#p.auras[spellId]+1] = { caster = guid, applied = appliedAt, isBuff = false }
         end
     end
 end
@@ -1017,6 +1022,7 @@ function WDMF:ProcessSummons(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_SUMMON" then
         local pet = loadPet(dst_guid, dst_name, src.guid, src.name)
+        pet.spawnedAt = timestamp
         if not src.pets then src.pets = {} end
         src.pets[#src.pets+1] = pet.guid
     end
@@ -1662,12 +1668,10 @@ end
 function WDMF:Tracker_OnStartEncounter()
     self.tracker = {}
     self.tracker.pullName = self.encounter.pullName
+    self.tracker.startTime = self.encounter.startTime
     self.tracker.npc = {}
     self.tracker.pets = {}
     self.tracker.players = {}
-    if WD.db.profile.tracker.npc then WD.db.profile.tracker.npc = nil end
-    if WD.db.profile.tracker.pets then WD.db.profile.tracker.pets = nil end
-    if WD.db.profile.tracker.players then WD.db.profile.tracker.players = nil end
 
     if #WD.db.profile.tracker == WD.MaxPullsToBeSaved then
         table.remove(WD.db.profile.tracker, 1)
@@ -1687,7 +1691,6 @@ function WDMF:Tracker_OnStopEncounter()
     if not WD.db.profile.tracker or #WD.db.profile.tracker == 0 then return end
     local n = WD.db.profile.tracker[#WD.db.profile.tracker].pullName
     WD.db.profile.tracker[#WD.db.profile.tracker].pullName = n.." ("..WdLib:getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)..")"
-    WD.db.profile.tracker[#WD.db.profile.tracker].startTime = self.encounter.startTime
     WD.db.profile.tracker[#WD.db.profile.tracker].endTime = self.encounter.endTime
 
     WD:RefreshTrackerPulls()

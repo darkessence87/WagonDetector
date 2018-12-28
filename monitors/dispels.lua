@@ -20,32 +20,18 @@ function WDDispelMonitor:init(parent, name)
 end
 
 function WDDispelMonitor:initButtons()
-    WDDM.dispels = CreateFrame("Frame", nil, WDDM)
-    WDDM.dispels.headers = {}
-    WDDM.dispels.members = {}
-    table.insert(WDDM.dispels.headers, WdLib:createTableHeader(WDDM:GetParent(), "Dispel info", 1, -300, 300, 20))
+    WD.Monitor.initButtons(self, "dispel", "Dispel info", 1, -300, 300, 20)
+    WDDM.dispels = WDDM.tables["dispel"]
 end
 
 function WDDispelMonitor:initInfoTable()
-    WDDM.data["dispel"] = CreateFrame("Frame", nil, WDDM)
-    local r = WDDM.data["dispel"]
-    r:SetPoint("TOPLEFT", WDDM.dispels.headers[1], "TOPRIGHT", 1, 0)
-    r:SetSize(550, 300)
-
-    r.headers = {}
-    r.members = {}
-
-    -- headers
-    local h = WdLib:createTableHeader(r, "Aura", 0, 0, 170, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, WD_BUTTON_TIME, 70, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "N", 25, 20)
-    table.insert(r.headers, h)
-    h = WdLib:createTableHeaderNext(r, h, "Status", 450, 20)
-    table.insert(r.headers, h)
-
-    r:Hide()
+    local columns = {
+        [1] = {"Aura",          170},
+        [2] = {WD_BUTTON_TIME,  70},
+        [3] = {"N",             25},
+        [4] = {"Status",        450},
+    }
+    WD.Monitor.initInfoTable(self, "dispel", columns)
 end
 
 local function getDispelledAuras(auras)

@@ -19,6 +19,10 @@ function WDStatsMonitor:init(parent, name)
     self.frame.cache.units = {}
 end
 
+function WDStatsMonitor:mergeSpells()
+    print('WDStatsMonitor:mergeSpells() is not overriden')
+end
+
 function WDStatsMonitor:findParentPet(parentGuid, pet)
     local parent = self:findEntityByGUID(parentGuid)
     if not parent then return pet end
@@ -465,7 +469,7 @@ function WDStatsMonitor:merge(parentTable, petTable, petName)
     parentTable.total = parentTable.total + petTable.total
 end
 
-function WDStatsMonitor:loadUnits(units, ruleId)
+function WDStatsMonitor:loadUnits(mode, units, ruleId)
     local pull = self.frame:GetParent():GetSelectedPull()
     local function loadUnit(unit, ruleId)
         unit = WdLib:table_deepcopy(unit)
@@ -547,11 +551,11 @@ function WDStatsMonitor:getUnitStatistics(mode)
     local total = 0
 
     if ruleType == "TOTAL_DONE" or ruleType == "TOTAL_TAKEN" then
-        self:loadUnits(units)
+        self:loadUnits(mode, units)
     elseif ruleType then
         local rule = self:getSelectedRule()
         local ruleId = rule.id
-        self:loadUnits(units, ruleId)
+        self:loadUnits(mode, units, ruleId)
     end
 
     for i=1,#units do

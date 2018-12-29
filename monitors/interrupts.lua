@@ -71,7 +71,7 @@ function WDInterruptMonitor:getMainTableData()
     end
 
     for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
-        if k == "npc" then
+        if k == "npc" and self.npcFilter:GetChecked() then
             for npcId,data in pairs(v) do
                 for _,npc in pairs(data) do
                     if type(npc) == "table" then

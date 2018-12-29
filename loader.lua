@@ -118,9 +118,9 @@ function WD:SlashHandler(msg, box)
     if cmd == "config" then
         self:OpenConfig()
     elseif cmd == "starttest" then
-        self.mainFrame:OnEvent("ENCOUNTER_START", 0, "Test")
+        self.mainFrame:OnEvent("ENCOUNTER_START", 0, "Test", 10, 10)
     elseif cmd == "stoptest" then
-        self.mainFrame:OnEvent("ENCOUNTER_END")
+        self.mainFrame:OnEvent("ENCOUNTER_END", 0, "Test", 10, 10, 1)
     elseif cmd == "wipe" then
         self:ResetGuildStatistics()
     elseif cmd == "interrupt" then

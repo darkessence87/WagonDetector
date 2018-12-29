@@ -31,7 +31,7 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     v.casts.current_spell_id = 0
     v.casts.current_spell_interrupted = 0
     v.stats = {}
-    v.spawnedAt = WDMF.encounter.startTime
+    v.spawnedAt = WDMF.tracker.startTime
     return v
 end
 
@@ -41,13 +41,13 @@ local function createExistingEntity(v)
     v.casts.current_spell_id = 0
     v.casts.current_spell_interrupted = 0
     v.stats = {}
-    v.spawnedAt = WDMF.encounter.startTime
+    v.spawnedAt = WDMF.tracker.startTime
     return v
 end
 
 local function findNpc(guid)
     if not WDMF.tracker or not WDMF.tracker.npc then return nil end
-    if not guid or tonumber(guid) or not guid:match("Creature") then return nil end
+    if not guid or tonumber(guid) then return nil end
     local npcId = WdLib:getNpcId(guid)
     local holder = WDMF.tracker.npc[npcId]
     local index = WdLib:findEntityIndex(holder, guid)
@@ -141,8 +141,8 @@ local function loadAuras(p)
         if spellId then
             if not p.auras[spellId] then p.auras[spellId] = {} end
             local appliedAt = expirationTime - duration
-            if appliedAt < WDMF.encounter.startTime then
-                appliedAt = WDMF.encounter.startTime
+            if appliedAt < WDMF.tracker.startTime then
+                appliedAt = WDMF.tracker.startTime
             end
             local guid = p.guid
             if casterUnitId then guid = UnitGUID(casterUnitId) end
@@ -154,8 +154,8 @@ local function loadAuras(p)
         if spellId then
             if not p.auras[spellId] then p.auras[spellId] = {} end
             local appliedAt = expirationTime - duration
-            if appliedAt < WDMF.encounter.startTime then
-                appliedAt = WDMF.encounter.startTime
+            if appliedAt < WDMF.tracker.startTime then
+                appliedAt = WDMF.tracker.startTime
             end
             local guid = p.guid
             if casterUnitId then guid = UnitGUID(casterUnitId) end
@@ -620,7 +620,7 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
         local diff = (timestamp - unit.casts.current_timestamp) * 1000
         unit.casts[target_spell_id].count = i
         unit.casts[target_spell_id][i] = {}
-        unit.casts[target_spell_id][i].timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+        unit.casts[target_spell_id][i].timestamp = WdLib:getTimedDiff(self.tracker.startTime, timestamp)
         unit.casts[target_spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
         unit.casts[target_spell_id][i].percent = WdLib:float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
@@ -673,7 +673,7 @@ local function finishCast(self, unit, timestamp, spell_id, result)
                 unit.casts[spell_id].count = i
                 unit.casts[spell_id][i] = {}
                 unit.casts[spell_id][i].status = result
-                unit.casts[spell_id][i].timestamp = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+                unit.casts[spell_id][i].timestamp = WdLib:getTimedDiff(self.tracker.startTime, timestamp)
                 unit.casts[spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
             end
         end
@@ -690,10 +690,10 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
 
     if not unit.auras[target_aura_id] then
         local aura = {}
-        aura.applied = self.encounter.startTime
+        aura.applied = self.tracker.startTime
         aura.removed = timestamp
         aura.caster = unit.guid
-        aura.dispelledAt = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+        aura.dispelledAt = WdLib:getTimedDiff(self.tracker.startTime, timestamp)
         aura.dispelledIn = WdLib:float_round_to(timestamp - aura.applied, 2)
         aura.dispell_id = source_spell_id
         aura.dispeller = dispeller.guid
@@ -1006,7 +1006,7 @@ end
 local function debugEvent(...)
     if WD.DebugEnabled == false then return end
     local info = ChatTypeInfo["COMBAT_MISC_INFO"];
-    local timestamp, event, hideCaster, srcGUID, srcName, srcFlags, srcRaidFlags, dstGUID, dstName, dstFlags, dstRaidFlags = ...
+    local _, event, hideCaster, srcGUID, srcName, srcFlags, srcRaidFlags, dstGUID, dstName, dstFlags, dstRaidFlags = ...
     local message = format("%s, %s, %s, 0x%x, 0x%x, %s, %s, 0x%x, 0x%x", event, srcGUID, srcName or "nil", srcFlags, srcRaidFlags, dstGUID, dstName or "nil", dstFlags, dstRaidFlags);
     for i = 11, select("#", ...) do
         message = message..", "..tostring(select(i, ...));
@@ -1017,12 +1017,12 @@ end
 function WDMF:ProcessSummons(src, dst, ...)
     if not src then return end
     local arg = {...}
-    local timestamp, event, src_name, dst_guid, dst_name, spell_id = arg[1], arg[2], arg[5], arg[8], arg[9], tonumber(arg[12])
+    local _, event, src_name, dst_guid, dst_name, spell_id = arg[1], arg[2], arg[5], arg[8], arg[9], tonumber(arg[12])
     if not dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_SUMMON" then
         local pet = loadPet(dst_guid, dst_name, src.guid, src.name)
-        pet.spawnedAt = timestamp
+        pet.spawnedAt = GetTime()
         if not src.pets then src.pets = {} end
         src.pets[#src.pets+1] = pet.guid
     end
@@ -1031,7 +1031,8 @@ end
 function WDMF:ProcessAuras(src, dst, ...)
     if not dst then return end
     local arg = {...}
-    local timestamp, event, src_name, dst_name, spell_id, auraType = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12]), arg[15]
+    local _, event, src_name, dst_name, spell_id, auraType = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12]), arg[15]
+    local timestamp = GetTime()
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1088,7 +1089,8 @@ function WDMF:ProcessCasts(src, dst, ...)
     if not src then return end
     local rules = self.encounter.rules
     local arg = {...}
-    local timestamp, event, src_guid, src_name, dst_name, spell_id = arg[1], arg[2], arg[4], arg[5], arg[9], tonumber(arg[12])
+    local _, event, src_guid, src_name, dst_name, spell_id = arg[1], arg[2], arg[4], arg[5], arg[9], tonumber(arg[12])
+    local timestamp = GetTime()
     if not src and src_name then return end
     if not dst and dst_name then return end
 
@@ -1122,7 +1124,7 @@ end
 function WDMF:ProcessEnvironmentDamage(src, dst, ...)
     if not dst then return end
     local arg = {...}
-    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    local _, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1136,7 +1138,7 @@ end
 function WDMF:ProcessWhiteDamage(src, dst, ...)
     if not dst then return end
     local arg = {...}
-    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    local _, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1158,7 +1160,8 @@ end
 function WDMF:ProcessSpellDamage(src, dst, ...)
     if not src or not dst then return end
     local arg = {...}
-    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    local _, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    local timestamp = GetTime()
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1242,7 +1245,7 @@ function WDMF:ProcessHealing(src, dst, ...)
     if not src or not dst then return end
     local rules = self.encounter.rules
     local arg = {...}
-    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    local _, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1258,7 +1261,7 @@ function WDMF:ProcessLeechEffects(src, dst, ...)
     if not src or not dst then return end
     local rules = self.encounter.rules
     local arg = {...}
-    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    local _, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1269,7 +1272,8 @@ function WDMF:ProcessAbsorbs(src, dst, ...)
     if not dst then return end
     local rules = self.encounter.rules
     local arg = {...}
-    local timestamp, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    local _, event, src_name, dst_name = arg[1], arg[2], arg[5], arg[9]
+    local timestamp = GetTime()
     if not src and src_name then return end
     if not dst and dst_name then return end
     -------------------------------------------------------------------
@@ -1290,7 +1294,8 @@ end
 function WDMF:ProcessDeaths(src, dst, ...)
     if not dst then return end
     local arg = {...}
-    local timestamp, event, dst_name, spell_id = arg[1], arg[2], arg[9], tonumber(arg[12])
+    local _, event, dst_name, spell_id = arg[1], arg[2], arg[9], tonumber(arg[12])
+    local timestamp = GetTime()
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "UNIT_DIED" then
@@ -1305,13 +1310,21 @@ function WDMF:ProcessDeaths(src, dst, ...)
 
         processRulesByEventType(timestamp, dst, "EV_DEATH_UNIT", WdLib:getShortName(dst_name))
     end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_INSTAKILL" then
+        if src then
+            trackDamage(src, dst, event, spell_id, 0, 1)
+        end
+        debugEvent(...)
+    end
 end
 
 function WDMF:ProcessDispels(src, dst, ...)
     if not src then return end
     local rules = self.encounter.rules
     local arg = {...}
-    local timestamp, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    local _, event, src_name, dst_name, spell_id = arg[1], arg[2], arg[5], arg[9], tonumber(arg[12])
+    local timestamp = GetTime()
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
@@ -1533,8 +1546,11 @@ function WDMF:LoadRules()
     -- search journalId for encounter
     local journalId = WD.FindEncounterJournalIdByCombatId(self.encounter.id)
     if not journalId then
-        journalId = WD.FindEncounterJournalIdByName("ALL")
-        print("Unknown name for encounterId:"..self.encounter.id)
+        journalId = WD.FindEncounterJournalIdByName(self.encounter.encounterName)
+        if not journalId then
+            journalId = WD.FindEncounterJournalIdByName("ALL")
+            print("Unknown name for encounterId:"..self.encounter.id)
+        end
     end
 
     self.encounter.rules = getActiveRules(journalId)
@@ -1547,16 +1563,16 @@ function WDMF:CheckConsumables(player)
     local role = WD:GetRole(guid)
     local noflask, nofood, norune = nil, nil, nil
     if rules[role] and rules[role]["EV_FLASKS"] and not hasAnyAura(player, WD.Spells.flasks) then
-        WDMF:AddFail(time(), guid, 0, WD.GetEventDescription("EV_FLASKS"), rules[role]["EV_FLASKS"].points)
+        WDMF:AddFail(GetTime(), guid, 0, WD.GetEventDescription("EV_FLASKS"), rules[role]["EV_FLASKS"].points)
     end
     if rules[role] and rules[role]["EV_FOOD"] and not hasAnyAura(player, WD.Spells.food) then
-        WDMF:AddFail(time(), guid, 0, WD.GetEventDescription("EV_FOOD"), rules[role]["EV_FOOD"].points)
+        WDMF:AddFail(GetTime(), guid, 0, WD.GetEventDescription("EV_FOOD"), rules[role]["EV_FOOD"].points)
     end
     if rules[role] and rules[role]["EV_RUNES"] and not hasAnyAura(player, WD.Spells.runes) then
-        WDMF:AddFail(time(), guid, 0, WD.GetEventDescription("EV_RUNES"), rules[role]["EV_RUNES"].points)
+        WDMF:AddFail(GetTime(), guid, 0, WD.GetEventDescription("EV_RUNES"), rules[role]["EV_RUNES"].points)
     end
     if rules[role] and rules[role]["EV_POTIONS"] and hasAnyAura(player, WD.Spells.potions) then
-        WDMF:AddSuccess(time(), guid, 0, WD.GetEventDescription("EV_POTIONS"), rules[role]["EV_POTIONS"].points)
+        WDMF:AddSuccess(GetTime(), guid, 0, WD.GetEventDescription("EV_POTIONS"), rules[role]["EV_POTIONS"].points)
     end
 end
 
@@ -1572,7 +1588,7 @@ function WDMF:Init()
     registerCallback(self.ProcessAbsorbs,           "SPELL_ABSORBED")
     --registerCallback(self.ProcessLeaching,          "SPELL_LEECH", "SPELL_PERIODIC_LEECH", "SPELL_DRAIN", "SPELL_PERIODIC_DRAIN")
     registerCallback(self.ProcessDispels,           "SPELL_DISPEL", "SPELL_STOLEN")
-    registerCallback(self.ProcessDeaths,            "UNIT_DIED", "UNIT_DESTROYED", "UNIT_DISSIPATES")
+    registerCallback(self.ProcessDeaths,            "UNIT_DIED", "UNIT_DESTROYED", "UNIT_DISSIPATES", "SPELL_INSTAKILL")
 
     -- internal events
     registerCallback(self.ProcessTests,             "TEST_UNIT_PET")
@@ -1651,6 +1667,30 @@ function WDMF:UpdateRaidMember(unitId)
     updateByUnitId(unitId)
 end
 
+function WDMF:CreateBoss(unitId)
+    local function createInternalEntity(unitId)
+        if not UnitIsVisible(unitId) then return nil end
+        local name = WdLib:getUnitName(unitId)
+        if name == UNKNOWNOBJECT then return nil end
+        local _,class = UnitClass(unitId)
+
+        local p = {}
+        p.name = name
+        p.unit = unitId
+        p.class = class
+        p.guid = UnitGUID(p.unit)
+        p.rt = 0
+
+        return p
+    end
+
+    local boss = createInternalEntity(unitId)
+    if boss then
+        boss.type = "creature"
+        self:LoadExistingNpc(boss)
+    end
+end
+
 function WDMF:ProcessPull()
     if UnitInRaid("player") ~= nil then
         for i=1, GetNumGroupMembers() do
@@ -1663,9 +1703,14 @@ function WDMF:ProcessPull()
     else
         self:CreateRaidMember("player", "pet")
     end
+
+    -- load bosses
+    for i=1,4 do
+        self:CreateBoss("boss"..i)
+    end
 end
 
-function WDMF:Tracker_OnStartEncounter()
+function WDMF:Tracker_OnStartEncounter(raidSz)
     self.tracker = {}
     self.tracker.pullName = self.encounter.pullName
     self.tracker.startTime = self.encounter.startTime
@@ -1690,8 +1735,8 @@ end
 function WDMF:Tracker_OnStopEncounter()
     if not WD.db.profile.tracker or #WD.db.profile.tracker == 0 then return end
     local n = WD.db.profile.tracker[#WD.db.profile.tracker].pullName
-    WD.db.profile.tracker[#WD.db.profile.tracker].pullName = n.." ("..WdLib:getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)..")"
     WD.db.profile.tracker[#WD.db.profile.tracker].endTime = self.encounter.endTime
+    WD.db.profile.tracker[#WD.db.profile.tracker].pullName = n.." ("..WdLib:getTimedDiffShort(self.tracker.startTime, self.tracker.endTime)..")"
 
     WD:RefreshTrackerPulls()
     WD:RefreshBasicMonitors()
@@ -1699,16 +1744,16 @@ function WDMF:Tracker_OnStopEncounter()
 end
 
 function WDMF:Tracker_OnEvent(...)
-    debugEvent(...)
-    local timestamp, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
+    --debugEvent(...)
+    local _, event, _, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags = ...
     if callbacks[event] then
         if event == "SPELL_SUMMON" then
-            local src = getEntities(timestamp, src_guid, src_name, src_flags, src_raid_flags)
+            local src = getEntities(GetTime(), src_guid, src_name, src_flags, src_raid_flags)
             callbacks[event](self, src, nil, ...)
         elseif event:match("TEST_") then
             callbacks[event](self, ...)
         else
-            local src, dst = getEntities(timestamp, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
+            local src, dst = getEntities(GetTime(), src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
             callbacks[event](self, src, dst, ...)
         end
     end
@@ -1753,6 +1798,30 @@ function WDMF:LoadExistingPlayer(v)
         WDMF.tracker.players[v.guid] = {}
         WDMF.tracker.players[v.guid] = createExistingEntity(v)
         loadAuras(v)
+    end
+end
+
+function WDMF:LoadExistingNpc(npc)
+    if not npc then return end
+    local npcId = WdLib:getNpcId(npc.guid)
+    local holder = WDMF.tracker.npc[npcId]
+    if not holder then
+        WDMF.tracker.npc[npcId] = {}
+        holder = WDMF.tracker.npc[npcId]
+        holder[#holder+1] = createExistingEntity(npc)
+        loadAuras(npc)
+        return
+    end
+
+    local index = WdLib:findEntityIndex(holder, npc.guid)
+    if not index then
+        if #holder == 1 then
+            holder[1].name = holder[1].name.."-1"
+        end
+        npc = createExistingEntity(npc)
+        holder[#holder+1] = npc
+        loadAuras(npc)
+        return
     end
 end
 

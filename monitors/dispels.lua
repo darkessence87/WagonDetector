@@ -76,7 +76,7 @@ function WDDispelMonitor:getMainTableData()
         return units
     end
     for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
-        if k == "npc" then
+        if k == "npc" and self.npcFilter:GetChecked() then
             for npcId,data in pairs(v) do
                 for guid,npc in pairs(data) do
                     if type(npc) == "table" then
@@ -87,7 +87,7 @@ function WDDispelMonitor:getMainTableData()
                     end
                 end
             end
-        elseif k == "players" then
+        elseif k == "players" and self.playersFilter:GetChecked() then
             for guid,raider in pairs(v) do
                 if isDispelledUnit(raider) then
                     units[#units+1] = raider

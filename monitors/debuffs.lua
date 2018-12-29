@@ -38,7 +38,18 @@ local function calculateAuraDuration(pull, unit, aura, index)
     return nil
 end
 
-local function getFilteredDebuffs(unit)
+local function getCasterName(v)
+    local casterName = UNKNOWNOBJECT
+    local caster = WDDAM.parent:findEntityByGUID(v.caster)
+    if caster then
+        casterName = WdLib:getColoredName(WdLib:getShortName(caster.name), caster.class)
+    else
+        casterName = "|cffffffffEnvironment|r"
+    end
+    return casterName
+end
+
+local function getFilteredDebuffs(unit, filter)
     local result = {}
     local pull = WDDAM:GetParent().GetSelectedPull()
     if not pull then return result end
@@ -50,18 +61,20 @@ local function getFilteredDebuffs(unit)
         for i=1,#auraInfo do
             if auraInfo[i].isBuff == false then
                 local caster = auraInfo[i].caster
-                local duration = auraInfo[i].duration
-                if not duration then
-                    duration = calculateAuraDuration(pull, unit, auraInfo[i], i)
+                if not filter or (filter and getCasterName(auraInfo[i]):match(filter)) then
+                    local duration = auraInfo[i].duration
                     if not duration then
-                        duration = maxDuration
+                        duration = calculateAuraDuration(pull, unit, auraInfo[i], i)
+                        if not duration then
+                            duration = maxDuration
+                        end
                     end
-                end
 
-                if not byCaster[caster] then byCaster[caster] = {duration=0, count=0} end
-                if duration > 0 then
-                    byCaster[caster].duration = byCaster[caster].duration + duration
-                    byCaster[caster].count = byCaster[caster].count + 1
+                    if not byCaster[caster] then byCaster[caster] = {duration=0, count=0} end
+                    if duration > 0 then
+                        byCaster[caster].duration = byCaster[caster].duration + duration
+                        byCaster[caster].count = byCaster[caster].count + 1
+                    end
                 end
             end
         end
@@ -73,17 +86,6 @@ local function getFilteredDebuffs(unit)
         end
     end
     return result
-end
-
-local function getDebuffStatusText(v)
-    local casterName = UNKNOWNOBJECT
-    local caster = WDDAM.parent:findEntityByGUID(v.caster)
-    if caster then
-        casterName = WdLib:getColoredName(WdLib:getShortName(caster.name), caster.class)
-    else
-        casterName = "|cffffffffEnvironment|r"
-    end
-    return casterName
 end
 
 local function hasDebuff(unit)
@@ -102,7 +104,7 @@ function WDDebuffMonitor:init(parent, name)
 end
 
 function WDDebuffMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "debuffs", "Debuffs info", 1, -310, 300, 20)
+    WD.Monitor.initMainTable(self, "debuffs", "Gained debuffs info", 1, -310, 300, 20)
 end
 
 function WDDebuffMonitor:initDataTable()
@@ -113,6 +115,14 @@ function WDDebuffMonitor:initDataTable()
         [4] = {"Casted by", 300},
     }
     WD.Monitor.initDataTable(self, "debuffs", columns)
+
+    self.nameFilter = WdLib:createEditBox(self.frame:GetParent())
+    self.nameFilter:SetSize(self.frame.dataTable.headers[4]:GetSize())
+    self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[4], "TOPLEFT", 0, 1)
+    self.nameFilter:SetMaxLetters(15)
+    self.nameFilter:SetScript("OnChar", function(f) self:updateDataTable() end)
+    self.nameFilter:SetScript("OnEnterPressed", function(f) f:ClearFocus() self:updateDataTable() end)
+    self.nameFilter:SetScript("OnEscapePressed", function(f) f:ClearFocus() end)
 end
 
 function WDDebuffMonitor:getMainTableData()
@@ -121,7 +131,7 @@ function WDDebuffMonitor:getMainTableData()
         return units
     end
     for k,v in pairs(WD.db.profile.tracker[WD.db.profile.tracker.selected]) do
-        if k == "npc" then
+        if k == "npc" and self.npcFilter:GetChecked() then
             for npcId,data in pairs(v) do
                 for guid,npc in pairs(data) do
                     if type(npc) == "table" then
@@ -132,7 +142,7 @@ function WDDebuffMonitor:getMainTableData()
                     end
                 end
             end
-        elseif k == "players" then
+        elseif k == "players" and self.playersFilter:GetChecked() then
             for guid,raider in pairs(v) do
                 if hasDebuff(raider) then
                     units[#units+1] = raider
@@ -170,7 +180,7 @@ function WDDebuffMonitor:updateDataTable()
     local auras = {}
     if WDDAM.lastSelectedButton then
         local v = WDDAM.lastSelectedButton:GetParent().info
-        auras = getFilteredDebuffs(v)
+        auras = getFilteredDebuffs(v, self.nameFilter:GetText())
     end
 
     local func = function(a, b)
@@ -204,8 +214,8 @@ function WDDebuffMonitor:updateDataTable()
         elseif index == 3 then
             return WdLib:addNextColumn(WDDAM.dataTable, parent, index, "CENTER", N)
         elseif index == 4 then
-            local f = WdLib:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", getDebuffStatusText(v))
-            WdLib:generateSpellHover(f, getDebuffStatusText(v))
+            local f = WdLib:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", getCasterName(v))
+            WdLib:generateSpellHover(f, getCasterName(v))
             return f
         end
     end
@@ -222,8 +232,8 @@ function WDDebuffMonitor:updateDataTable()
         elseif index == 3 then
             f.txt:SetText(N)
         elseif index == 4 then
-            f.txt:SetText(getDebuffStatusText(v))
-            WdLib:generateSpellHover(f, getDebuffStatusText(v))
+            f.txt:SetText(getCasterName(v))
+            WdLib:generateSpellHover(f, getCasterName(v))
         end
     end
 

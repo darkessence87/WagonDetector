@@ -322,11 +322,17 @@ function WD:AddHistory(v)
     refreshHistoryFrame()
 end
 
-function WD:AddPullHistory(encounter)
-    if WD.db.profile.encounters[encounter] then
-        WD.db.profile.encounters[encounter] = WD.db.profile.encounters[encounter] + 1
+function WD:AddPullHistory(encounter, difficulty)
+    -- support old statistics
+    if WD.db.profile.encounters[encounter] and tonumber(WD.db.profile.encounters[encounter]) then
+        WD.db.profile.encounters[encounter] = nil
+    end
+
+    if not WD.db.profile.encounters[encounter] then WD.db.profile.encounters[encounter] = {} end
+    if not WD.db.profile.encounters[encounter][difficulty] then
+        WD.db.profile.encounters[encounter][difficulty] = 1
     else
-        WD.db.profile.encounters[encounter] = 1
+        WD.db.profile.encounters[encounter][difficulty] = WD.db.profile.encounters[encounter][difficulty] + 1
     end
 end
 

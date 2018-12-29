@@ -441,7 +441,7 @@ end
 function WdLib:createListItemButton(parent, name, index)
     local button = WdLib:createButton(parent)
     button:SetPoint("TOPLEFT", parent, "TOPRIGHT", 1, index * -21)
-    button:SetSize(175, 20)
+    button:SetSize(200, 20)
     button.txt = WdLib:createFont(button, "LEFT", name)
     button.txt:SetPoint("LEFT", button, "LEFT", 5, 0)
     return button
@@ -531,25 +531,23 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
             if v.items then
                 if not self.items[i] or not self.items[i].drop then
                     local item = WdLib:createDropDownMenu(self, v.name, v.items, parent)
-                    item:SetSize(175, 20)
+                    item:SetSize(200, 20)
                     item:SetPoint("TOPLEFT", self, "TOPRIGHT", 1, (i - 1) * -21)
                     self.items[i] = {}
                     self.items[i].drop = item
                 else
                     if self.items[i].item then self.items[i].item.locked = true end
-                    --self.items[i].drop:SetSize(self:GetWidth(), 20)
                     self.items[i].drop.locked = nil
                     WdLib:updateDropDownMenu(self.items[i].drop, v.name, v.items, parent)
                 end
             else
                 if not self.items[i] or not self.items[i].item then
                     local item = WdLib:createListItemButton(self, v.name, i - 1)
-                    --item:SetSize(self:GetWidth(), 20)
+                    item:SetSize(200, 20)
                     self.items[i] = {}
                     self.items[i].item = item
                 end
                 if self.items[i].drop then self.items[i].drop.locked = true end
-                --self.items[i].item:SetSize(self:GetWidth(), 20)
                 self.items[i].item.locked = nil
                 self.items[i].item.data = v
                 self.items[i].item.txt:SetText(v.name)
@@ -574,7 +572,7 @@ function WdLib:updateDropDownMenu(self, name, items, parent)
         local width = frame:GetWidth() + 2
         local height = #items * frame:GetHeight() + #items + 1
         if not self.bg then
-            self.bg = WdLib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
+            self.bg = WdLib:createColorTexture(self, "FULLSCREEN", 0, 0, 0, 1)
         end
         self.bg:SetSize(width, height)
         self.bg:SetPoint("TOPLEFT", frame, "TOPLEFT", -1, 1)
@@ -813,7 +811,7 @@ function WdLib:generateSpellHover(frame, searchIn, textLines)
 end
 
 function WdLib:generateHover(frame, textLines)
-    if not textLines then return end
+    if not textLines then frame:SetScript("OnEnter", function() end) return end
     frame:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         if type(textLines) == "table" then
@@ -925,6 +923,38 @@ function WdLib:findEntityIndex(holder, guid)
     if not holder then return nil end
     for i=1,#holder do
         if holder[i] and holder[i].guid == guid then return i end
+    end
+    return nil
+end
+
+function WdLib:getDifficultyName(id)
+    local normal = {1,3,4,9,12,14}
+    local heroic = {2,5,6,11,15}
+    local mythic = {16,23}
+    local lfr    = {7,17}
+    local challenge = {8}
+    local event  = {18,19,20,30}
+    local timewalk = {24,33}
+    local function inTable(id, t)
+        for i=1,#t do
+            if t[i] == id then return true end
+        end
+        return nil
+    end
+    if inTable(id, mythic) then
+        return "M"
+    elseif inTable(id, heroic) then
+        return "H"
+    elseif inTable(id, normal) then
+        return "N"
+    elseif inTable(id, lfr) then
+        return "LFR"
+    elseif inTable(id, challenge) then
+        return "CM"
+    elseif inTable(id, event) then
+        return "E"
+    elseif inTable(id, timewalk) then
+        return "TW"
     end
     return nil
 end

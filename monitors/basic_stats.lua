@@ -465,21 +465,8 @@ function WDStatsMonitor:merge(parentTable, petTable, petName)
     parentTable.total = parentTable.total + petTable.total
 end
 
-function WDStatsMonitor:getUnitStatistics(mode)
-    if not self.frame.cache.units[mode] then
-        self.frame.cache.units[mode] = {}
-    else
-        WdLib:table_wipe(self.frame.cache.units[mode])
-    end
-
-    local ruleType = self:getSelectedRuleType()
-    if not ruleType then
-        return self.frame.cache.units[mode], 0
-    end
-
-    local units = self.frame.cache.units[mode]
-    local total = 0
-
+function WDStatsMonitor:loadUnits(units, ruleId)
+    local pull = self.frame:GetParent():GetSelectedPull()
     local function loadUnit(unit, ruleId)
         unit = WdLib:table_deepcopy(unit)
         if ruleId then
@@ -497,101 +484,74 @@ function WDStatsMonitor:getUnitStatistics(mode)
         return unit
     end
 
-    local pull = self.frame:GetParent():GetSelectedPull()
-    if ruleType == "TOTAL_DONE" or ruleType == "TOTAL_TAKEN" then
-        -- load npc
-        for npcId,data in pairs(pull.npc) do
-            for _,npc in pairs(data) do
-                if type(npc) == "table" then
-                    local unit = loadUnit(npc)
-                    if unit then
-                        units[#units+1] = unit
-                    end
-                end
-            end
-        end
-        -- load players
-        for guid,pl in pairs(pull.players) do
-            if type(pl) == "table" then
-                local unit = loadUnit(pl)
+    -- load npc
+    for npcId,data in pairs(pull.npc) do
+        for _,npc in pairs(data) do
+            if type(npc) == "table" then
+                local unit = loadUnit(npc, ruleId)
                 if unit then
                     units[#units+1] = unit
                 end
             end
         end
-        -- load pets
-        for parentGuid,info in pairs(pull.pets) do
-            for npcId,data in pairs(info) do
-                for k,pet in pairs(data) do
-                    local parent = self:findUnitByGuid(mode, parentGuid)
-                    if parent then
-                        self:mergeSpells(parent, pet)
-                    else
-                        local petAsParent = self:findParentPet(parentGuid, pet)
-                        if petAsParent.guid ~= pet.guid then
-                            if petAsParent.type == "pet" then
-                                local petUnit = loadUnit(pet)
-                                if petUnit then
-                                    local currId = WdLib:getUnitNumber(petAsParent.name)
-                                    if currId then
-                                        petUnit.name = petUnit.name.."-"..currId
-                                    end
-                                    units[#units+1] = petUnit
+    end
+    -- load players
+    for guid,pl in pairs(pull.players) do
+        if type(pl) == "table" then
+            local unit = loadUnit(pl, ruleId)
+            if unit then
+                units[#units+1] = unit
+            end
+        end
+    end
+    -- load pets
+    for parentGuid,info in pairs(pull.pets) do
+        for npcId,data in pairs(info) do
+            for k,pet in pairs(data) do
+                local parent = self:findUnitByGuid(mode, parentGuid)
+                if parent then
+                    self:mergeSpells(parent, pet, ruleId)
+                else
+                    local petAsParent = self:findParentPet(parentGuid, pet)
+                    if petAsParent.guid ~= pet.guid then
+                        if petAsParent.type == "pet" then
+                            local petUnit = loadUnit(pet, ruleId)
+                            if petUnit then
+                                local currId = WdLib:getUnitNumber(petAsParent.name)
+                                if currId then
+                                    petUnit.name = petUnit.name.."-"..currId
                                 end
+                                units[#units+1] = petUnit
                             end
                         end
                     end
                 end
             end
         end
+    end
+end
+
+function WDStatsMonitor:getUnitStatistics(mode)
+    if not self.frame.cache.units[mode] then
+        self.frame.cache.units[mode] = {}
+    else
+        WdLib:table_wipe(self.frame.cache.units[mode])
+    end
+
+    local ruleType = self:getSelectedRuleType()
+    if not ruleType then
+        return self.frame.cache.units[mode], 0
+    end
+
+    local units = self.frame.cache.units[mode]
+    local total = 0
+
+    if ruleType == "TOTAL_DONE" or ruleType == "TOTAL_TAKEN" then
+        self:loadUnits(units)
     elseif ruleType then
         local rule = self:getSelectedRule()
         local ruleId = rule.id
-        -- load npc
-        for npcId,data in pairs(pull.npc) do
-            for _,npc in pairs(data) do
-                if type(npc) == "table" then
-                    local unit = loadUnit(npc, ruleId)
-                    if unit then
-                        units[#units+1] = unit
-                    end
-                end
-            end
-        end
-        -- load players
-        for guid,pl in pairs(pull.players) do
-            if type(pl) == "table" then
-                local unit = loadUnit(pl, ruleId)
-                if unit then
-                    units[#units+1] = unit
-                end
-            end
-        end
-        -- load pets
-        for parentGuid,info in pairs(pull.pets) do
-            for npcId,data in pairs(info) do
-                for k,pet in pairs(data) do
-                    local parent = self:findUnitByGuid(mode, parentGuid)
-                    if parent then
-                        self:mergeSpells(parent, pet, ruleId)
-                    else
-                        local petAsParent = self:findParentPet(parentGuid, pet)
-                        if petAsParent.guid ~= pet.guid then
-                            if petAsParent.type == "pet" then
-                                local petUnit = loadUnit(pet, ruleId)
-                                if petUnit then
-                                    local currId = WdLib:getUnitNumber(petAsParent.name)
-                                    if currId then
-                                        petUnit.name = petUnit.name.."-"..currId
-                                    end
-                                    units[#units+1] = petUnit
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
+        self:loadUnits(units, ruleId)
     end
 
     for i=1,#units do
@@ -602,7 +562,18 @@ function WDStatsMonitor:getUnitStatistics(mode)
         total = total + units[i].total
     end
 
-    return units, total
+    -- filter out
+    local result = {}
+    for i=1,#units do
+        if self.npcFilter:GetChecked() and (units[i].type == "creature" or units[i].type == "pet") then
+            result[#result+1] = units[i]
+        end
+        if self.playersFilter:GetChecked() and units[i].type == "player" then
+            result[#result+1] = units[i]
+        end
+    end
+
+    return result, total
 end
 
 function WDStatsMonitor:compareData(v, w)

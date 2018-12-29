@@ -39,6 +39,16 @@ local function saveFuckups()
     WD:RefreshGuildRosterFrame()
 end
 
+local function debugEvent(event, ...)
+    if WD.DebugEnabled == false then return end
+    local info = ChatTypeInfo["COMBAT_MISC_INFO"];
+    local message = event
+    for i = 1, select("#", ...) do
+        message = message..", "..tostring(select(i, ...));
+    end
+    ChatFrame1:AddMessage(message, info.r, info.g, info.b);
+end
+
 function WDMF:AddSuccess(timestamp, guid, mark, msg, points)
     if not WD.cache.raidroster[guid] then return end
     local name = WD.cache.raidroster[guid].name
@@ -138,15 +148,18 @@ end
 
 function WDMF:OnEvent(event, ...)
     if event == "ENCOUNTER_START" then
-        local encounterID, name = ...
+        debugEvent(event, ...)
+        local encounterID, name, difficulty, raidSz = ...
         self:ResetEncounter()
-        self:StartEncounter(encounterID, name)
+        self:StartEncounter(encounterID, name, raidSz, difficulty)
         self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         self:RegisterEvent("UNIT_PET")
     elseif event == "ENCOUNTER_END" then
+        debugEvent(event, ...)
+        local _,_,_,_,isKill = ...
         self:UnregisterEvent("UNIT_PET")
         self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        self:StopEncounter()
+        self:StopEncounter(isKill)
 
         if WD.db.profile.autoTrack == false then
             self:StopPull()
@@ -164,35 +177,45 @@ function WDMF:OnEvent(event, ...)
 end
 
 function WDMF:IsEncounterValid(encounterId)
+    if WD.DebugEnabled == true then return true end
     if UnitInRaid("player") == nil and UnitInParty("player") == false and encounterId ~= 0 then return nil end
     return true
 end
 
-function WDMF:StartEncounter(encounterID, encounterName)
+function WDMF:StartEncounter(encounterID, encounterName, raidSz, difficulty)
     local pullId = 1
-    if WD.db.profile.encounters[encounterName] then
-        pullId = WD.db.profile.encounters[encounterName] + 1
+    if WD.db.profile.encounters[encounterName] and
+       type(WD.db.profile.encounters[encounterName]) == "table" and
+       WD.db.profile.encounters[encounterName][difficulty]
+    then
+        pullId = WD.db.profile.encounters[encounterName][difficulty] + 1
     end
 
     if self:IsEncounterValid(encounterID) then
         WdLib:sendMessage(string.format(WD_ENCOUNTER_START, encounterName, pullId, encounterID))
-        WD:AddPullHistory(encounterName)
+        WD:AddPullHistory(encounterName, difficulty)
 
         self.isActive = 1
 
         self.encounter.id = encounterID
+        self.encounter.encounterName = encounterName
+
+        local mode = WdLib:getDifficultyName(difficulty)
+        if mode then
+            encounterName = "("..mode..") "..encounterName
+        end
         self.encounter.pullName = encounterName.."-"..pullId
         self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
-        self.encounter.startTime = time()
+        self.encounter.startTime = GetTime()
 
-        self:Tracker_OnStartEncounter()
+        self:Tracker_OnStartEncounter(raidSz)
     end
 end
 
-function WDMF:StopEncounter()
+function WDMF:StopEncounter(isKill)
     if self.isActive == 0 then return end
 
-    self.encounter.endTime = time()
+    self.encounter.endTime = GetTime()
 
     if self.isBlockedByAnother == 0 then
         if WD.db.profile.sendFailImmediately == false then
@@ -209,7 +232,7 @@ function WDMF:StopEncounter()
         WD:RefreshGuildRosterFrame()
     end
 
-    self:Tracker_OnStopEncounter()
+    self:Tracker_OnStopEncounter(isKill)
 
     self.isActive = 0
     self.isBlockedByAnother = 0

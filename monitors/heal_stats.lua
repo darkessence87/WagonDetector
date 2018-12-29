@@ -72,18 +72,26 @@ function WDHealStatsMonitor:init(parent, name)
 end
 
 function WDHealStatsMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "heal_info", "Source units", 1, -50, 300, 20)
+    WD.Monitor.initMainTable(self, "heal_info", "Source units", 1, -50, 380, 20)
 end
 
 function WDHealStatsMonitor:initDataTable()
     local columns = {
-        [1] = {"Heal done",      120},
-        [2] = {"Overheal done",  120},
-        [3] = {"Heal taken",     120},
-        [4] = {"Overheal taken", 120},
+        [1] = {"Heal done",      100},
+        [2] = {"Overheal done",  100},
+        [3] = {"Heal taken",     100},
+        [4] = {"Overheal taken", 100},
         [5] = {"Target unit",    250},
     }
     WD.Monitor.initDataTable(self, "heal_info", columns)
+
+    self.nameFilter = WdLib:createEditBox(self.frame:GetParent())
+    self.nameFilter:SetSize(self.frame.dataTable.headers[5]:GetSize())
+    self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[5], "TOPLEFT", 0, 1)
+    self.nameFilter:SetMaxLetters(15)
+    self.nameFilter:SetScript("OnChar", function(f) self:updateDataTable() end)
+    self.nameFilter:SetScript("OnEnterPressed", function(f) f:ClearFocus() self:updateDataTable() end)
+    self.nameFilter:SetScript("OnEscapePressed", function(f) f:ClearFocus() end)
 end
 
 function WDHealStatsMonitor:mergeSpells(parent, pet, ruleId)
@@ -162,12 +170,15 @@ function WDHealStatsMonitor:updateDataTable()
                     targetName = WdLib:getColoredName(targetName, classId)
                 end
                 local sourceName = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
-                chart[#chart+1] = {
-                    id = targetName,
-                    data = info,
-                    source = sourceName,
-                    class = classId,
-                }
+                local filter = self.nameFilter:GetText()
+                if not filter or (filter and targetName:match(filter)) then
+                    chart[#chart+1] = {
+                        id = targetName,
+                        data = info,
+                        source = sourceName,
+                        class = classId,
+                    }
+                end
             end
         end
         if #chart > 0 then
@@ -296,7 +307,7 @@ function WDHealStatsMonitor:refreshInfo()
 
     if WDHSM.lastSelectedButton and #units == 0 then
         WDHSM.lastSelectedButton = nil
-        updateHealInfo()
+        self:updateDataTable()
     end
 
     local maxHeight = 210

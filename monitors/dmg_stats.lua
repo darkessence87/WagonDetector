@@ -72,18 +72,26 @@ function WDDmgStatsMonitor:init(parent, name)
 end
 
 function WDDmgStatsMonitor:initMainTable()
-    WD.Monitor.initMainTable(self, "dmg_info", "Source units", 1, -310, 300, 20)
+    WD.Monitor.initMainTable(self, "dmg_info", "Source units", 1, -310, 380, 20)
 end
 
 function WDDmgStatsMonitor:initDataTable()
     local columns = {
-        [1] = {"Damage done",      120},
-        [2] = {"Overkill done",    120},
-        [3] = {"Damage taken",     120},
-        [4] = {"Overkill taken",   120},
+        [1] = {"Damage done",      100},
+        [2] = {"Overkill done",    100},
+        [3] = {"Damage taken",     100},
+        [4] = {"Overkill taken",   100},
         [5] = {"Target unit",       250},
     }
     WD.Monitor.initDataTable(self, "dmg_info", columns)
+
+    self.nameFilter = WdLib:createEditBox(self.frame:GetParent())
+    self.nameFilter:SetSize(self.frame.dataTable.headers[5]:GetSize())
+    self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[5], "TOPLEFT", 0, 1)
+    self.nameFilter:SetMaxLetters(15)
+    self.nameFilter:SetScript("OnChar", function(f) self:updateDataTable() end)
+    self.nameFilter:SetScript("OnEnterPressed", function(f) f:ClearFocus() self:updateDataTable() end)
+    self.nameFilter:SetScript("OnEscapePressed", function(f) f:ClearFocus() end)
 end
 
 function WDDmgStatsMonitor:mergeSpells(parent, pet, ruleId)
@@ -162,12 +170,15 @@ function WDDmgStatsMonitor:updateDataTable()
                     targetName = WdLib:getColoredName(targetName, classId)
                 end
                 local sourceName = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
-                chart[#chart+1] = {
-                    id = targetName,
-                    data = info,
-                    source = sourceName,
-                    class = classId,
-                }
+                local filter = self.nameFilter:GetText()
+                if not filter or (filter and targetName:match(filter)) then
+                    chart[#chart+1] = {
+                        id = targetName,
+                        data = info,
+                        source = sourceName,
+                        class = classId,
+                    }
+                end
             end
         end
         if #chart > 0 then
@@ -324,10 +335,10 @@ function WDDmgStatsMonitor:refreshInfo()
 
             local pull = WDDSM:GetParent().GetSelectedPull()
             if v.spawnedAt < pull.startTime then
-                --v.spawnedAt = pull.startTime
+                v.spawnedAt = pull.startTime
             end
             if pull.endTime and v.spawnedAt > pull.endTime then
-                --v.spawnedAt = pull.endTime
+                v.spawnedAt = pull.endTime
             end
             local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
             local rowText = row..". "..unitName.." ("..lifeTime..")"
@@ -360,10 +371,10 @@ function WDDmgStatsMonitor:refreshInfo()
 
             local pull = WDDSM:GetParent().GetSelectedPull()
             if v.spawnedAt < pull.startTime then
-                --v.spawnedAt = pull.startTime
+                v.spawnedAt = pull.startTime
             end
             if pull.endTime and v.spawnedAt > pull.endTime then
-                --v.spawnedAt = pull.endTime
+                v.spawnedAt = pull.endTime
             end
             local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
             local rowText = row..". "..unitName.." ("..lifeTime..")"

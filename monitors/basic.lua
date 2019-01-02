@@ -20,21 +20,21 @@ function WDMonitor:initMainTable(tName, headerName, x, y, w, h)
     self.frame.mainTable = CreateFrame("Frame", nil, self.frame)
     self.frame.mainTable.headers = {}
     self.frame.mainTable.members = {}
-    table.insert(self.frame.mainTable.headers, WdLib:createTableHeader(self.frame:GetParent(), headerName, x, y, w, h))
+    table.insert(self.frame.mainTable.headers, WdLib.gui:createTableHeader(self.frame:GetParent(), headerName, x, y, w, h))
 
-    self.playersFilter = WdLib:createCheckButton(self.frame:GetParent())
+    self.playersFilter = WdLib.gui:createCheckButton(self.frame:GetParent())
     self.playersFilter:SetPoint("BOTTOMLEFT", self.frame.mainTable.headers[1], "TOPLEFT", 1, 2)
     self.playersFilter:SetChecked(true)
     self.playersFilter:SetScript("OnClick", function() self:refreshInfo() end)
-    self.playersFilter.txt = WdLib:createFont(self.playersFilter, "LEFT", "players")
+    self.playersFilter.txt = WdLib.gui:createFont(self.playersFilter, "LEFT", "players")
     self.playersFilter.txt:SetSize(50, 20)
     self.playersFilter.txt:SetPoint("LEFT", self.playersFilter, "RIGHT", 5, 0)
 
-    self.npcFilter = WdLib:createCheckButton(self.frame:GetParent())
+    self.npcFilter = WdLib.gui:createCheckButton(self.frame:GetParent())
     self.npcFilter:SetPoint("TOPLEFT", self.playersFilter.txt, "TOPRIGHT", 1, 0)
     self.npcFilter:SetChecked(true)
     self.npcFilter:SetScript("OnClick", function() self:refreshInfo() end)
-    self.npcFilter.txt = WdLib:createFont(self.npcFilter, "LEFT", "npc")
+    self.npcFilter.txt = WdLib.gui:createFont(self.npcFilter, "LEFT", "npc")
     self.npcFilter.txt:SetSize(35, 20)
     self.npcFilter.txt:SetPoint("LEFT", self.npcFilter, "RIGHT", 5, 0)
 end
@@ -49,10 +49,10 @@ function WDMonitor:initDataTable(tName, columns)
     r.members = {}
 
     -- headers
-    local h = WdLib:createTableHeader(r, columns[1][1], 0, 0, columns[1][2], 20)
+    local h = WdLib.gui:createTableHeader(r, columns[1][1], 0, 0, columns[1][2], 20)
     table.insert(r.headers, h)
     for i=2,#columns do
-        h = WdLib:createTableHeaderNext(r, h, columns[i][1], columns[i][2], 20)
+        h = WdLib.gui:createTableHeaderNext(r, h, columns[i][1], columns[i][2], 20)
         table.insert(r.headers, h)
     end
 
@@ -89,11 +89,11 @@ function WDMonitor:refreshInfo()
         parent.info = v
         if index == 1 then
             local rowText = self:getMainTableRowText(v)
-            local f = WdLib:addNextColumn(self.frame.mainTable, parent, index, "LEFT", rowText)
+            local f = WdLib.gui:addNextColumn(self.frame.mainTable, parent, index, "LEFT", rowText)
             f:EnableMouse(true)
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
             f:SetScript("OnClick", function(rowFrame) self.frame.lastSelectedButton = rowFrame; self:updateMainTableData() end)
-            WdLib:generateHover(f, self:getMainTableRowHover(v))
+            WdLib.gui:generateHover(f, self:getMainTableRowHover(v))
             return f
         end
     end
@@ -104,11 +104,11 @@ function WDMonitor:refreshInfo()
         if index == 1 then
             f.txt:SetText(self:getMainTableRowText(v))
             f:SetScript("OnClick", function(rowFrame) self.frame.lastSelectedButton = rowFrame; self:updateMainTableData() end)
-            WdLib:generateHover(f, self:getMainTableRowHover(v))
+            WdLib.gui:generateHover(f, self:getMainTableRowHover(v))
         end
     end
 
-    WdLib:updateScrollableTable(self.frame.mainTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(self.frame.mainTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     if not self.frame.lastSelectedButton and #dataRows > 0 then
         self.frame.lastSelectedButton = self.frame.mainTable.members[1].column[1]
@@ -121,9 +121,9 @@ function WDMonitor:findNpc(guid)
     if not WD.db.profile.tracker or not WD.db.profile.tracker.selected then return nil end
     local t = WD.db.profile.tracker[WD.db.profile.tracker.selected]
     if not guid then return nil end
-    local npcId = WdLib:getNpcId(guid)
+    local npcId = WdLib.gen:getNpcId(guid)
     local holder = t.npc[npcId]
-    local index = WdLib:findEntityIndex(holder, guid)
+    local index = WdLib.gen:findEntityIndex(holder, guid)
     if index then return holder[index] end
     return nil
 end
@@ -134,7 +134,7 @@ function WDMonitor:findPet(guid)
     if not guid then return nil end
     for parentGuid,infoByNpcId in pairs(t.pets) do
         for name,infoByGuid in pairs(infoByNpcId) do
-            local index = WdLib:findEntityIndex(infoByGuid, guid)
+            local index = WdLib.gen:findEntityIndex(infoByGuid, guid)
             if index then return infoByGuid[index] end
         end
     end
@@ -203,17 +203,17 @@ local function initPullsMenu(parent)
     end
 
     -- select pull button
-    parent.buttons["select_pull"] = WdLib:createDropDownMenu(parent, getPullName(), getPulls())
+    parent.buttons["select_pull"] = WdLib.gui:createDropDownMenu(parent, getPullName(), getPulls())
     parent.buttons["select_pull"]:SetSize(200, 20)
     parent.buttons["select_pull"]:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -5)
     parent.buttons["select_pull"]:SetScript("OnShow", function(self) self.txt:SetText(getPullName()) end)
     local frame = parent.buttons["select_pull"]
     function frame:Refresh()
-        WdLib:updateDropDownMenu(self, getPullName(), getPulls())
+        WdLib.gui:updateDropDownMenu(self, getPullName(), getPulls())
     end
 
     -- clear current pull history button
-    parent.buttons["clear_current_pull"] = WdLib:createButton(parent)
+    parent.buttons["clear_current_pull"] = WdLib.gui:createButton(parent)
     parent.buttons["clear_current_pull"]:SetSize(90, 20)
     parent.buttons["clear_current_pull"]:SetScript("OnClick", function()
         if WD.db.profile.tracker and WD.db.profile.tracker.selected and WD.db.profile.tracker.selected > 0 then
@@ -227,18 +227,18 @@ local function initPullsMenu(parent)
         WD:RefreshTrackerPulls()
         refreshMonitors(true)
     end)
-    parent.buttons["clear_current_pull"].txt = WdLib:createFont(parent.buttons["clear_current_pull"], "CENTER", WD_TRACKER_BUTTON_CLEAR_SELECTED)
+    parent.buttons["clear_current_pull"].txt = WdLib.gui:createFont(parent.buttons["clear_current_pull"], "CENTER", WD_TRACKER_BUTTON_CLEAR_SELECTED)
     parent.buttons["clear_current_pull"].txt:SetAllPoints()
 
     -- clear pulls history button
-    parent.buttons["clear_pulls"] = WdLib:createButton(parent)
+    parent.buttons["clear_pulls"] = WdLib.gui:createButton(parent)
     parent.buttons["clear_pulls"]:SetSize(90, 20)
     parent.buttons["clear_pulls"]:SetScript("OnClick", function()
-        WdLib:table_wipe(WD.db.profile.tracker)
+        WdLib.gen:table_wipe(WD.db.profile.tracker)
         WD:RefreshTrackerPulls()
         refreshMonitors(true)
     end)
-    parent.buttons["clear_pulls"].txt = WdLib:createFont(parent.buttons["clear_pulls"], "CENTER", WD_TRACKER_BUTTON_CLEAR)
+    parent.buttons["clear_pulls"].txt = WdLib.gui:createFont(parent.buttons["clear_pulls"], "CENTER", WD_TRACKER_BUTTON_CLEAR)
     parent.buttons["clear_pulls"].txt:SetAllPoints()
 
     parent.buttons["clear_pulls"]:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -5, -5)
@@ -266,14 +266,14 @@ end
 
 function WD:RefreshTrackerPulls()
     if WD.guiFrame.module["tracker_auras"] then
-        WD.guiFrame.module["tracker_auras"].buttons["select_pull"]:Refresh()
+        WD.guiFrame.module["tracker_auras"].frame.buttons["select_pull"]:Refresh()
     end
-    if WD.guiFrame.module["tracker_overview"] then
-        WD.guiFrame.module["tracker_overview"].buttons["select_pull"]:Refresh()
+    if WD.guiFrame.module["tracker_casts"] then
+        WD.guiFrame.module["tracker_casts"].frame.buttons["select_pull"]:Refresh()
     end
     if WD.guiFrame.module["tracker_statistics"] then
-        WD.guiFrame.module["tracker_statistics"].buttons["select_pull"]:Refresh()
-        WD.guiFrame.module["tracker_statistics"].buttons["select_rule"]:Refresh()
+        WD.guiFrame.module["tracker_statistics"].frame.buttons["select_pull"]:Refresh()
+        WD.guiFrame.module["tracker_statistics"].frame.buttons["select_rule"]:Refresh()
     end
 end
 

@@ -28,14 +28,14 @@ end
 local function getDispelStatusText(v)
     local dispellerName = UNKNOWNOBJECT
     if type(v.dispeller) == "table" then
-        dispellerName = WdLib:getColoredName(WdLib:getShortName(v.dispeller.name, "noRealm"), v.dispeller.class)
+        dispellerName = WdLib.gen:getColoredName(WdLib.gen:getShortName(v.dispeller.name, "noRealm"), v.dispeller.class)
     else
         local dispeller = WDDM.parent:findEntityByGUID(v.dispeller)
         if dispeller then
-            dispellerName = WdLib:getColoredName(WdLib:getShortName(dispeller.name, "noRealm"), dispeller.class)
+            dispellerName = WdLib.gen:getColoredName(WdLib.gen:getShortName(dispeller.name, "noRealm"), dispeller.class)
         end
     end
-    return string.format(WD_TRACKER_DISPELLED_BY, dispellerName, WdLib:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
+    return string.format(WD_TRACKER_DISPELLED_BY, dispellerName, WdLib.gui:getSpellLinkByIdWithTexture(v.dispell_id), v.dispelledIn)
 end
 
 local function isDispelledUnit(v)
@@ -105,8 +105,8 @@ function WDDispelMonitor:getMainTableSortFunction()
 end
 
 function WDDispelMonitor:getMainTableRowText(v)
-    local unitName = WdLib:getColoredName(v.name, v.class)
-    if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+    local unitName = WdLib.gen:getColoredName(v.name, v.class)
+    if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
     return unitName
 end
 
@@ -138,23 +138,23 @@ function WDDispelMonitor:updateDataTable()
         local N = auras[row].N
         local v = auras[row].data
         if index == 1 then
-            local f = WdLib:addNextColumn(WDDM.dataTable, parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
+            local f = WdLib.gui:addNextColumn(WDDM.dataTable, parent, index, "LEFT", WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
             local caster = WDDM.parent:findEntityByGUID(v.caster)
             if caster then
-                caster = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
+                caster = WdLib.gen:getColoredName(WdLib.gen:getShortName(caster.name, "noRealm"), caster.class)
             else
                 caster = "|cffffffffEnvironment|r"
             end
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "|cffffff00Casted by:|r "..caster)
+            WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId), "|cffffff00Casted by:|r "..caster)
             return f
         elseif index == 2 then
-            return WdLib:addNextColumn(WDDM.dataTable, parent, index, "CENTER", v.dispelledAt)
+            return WdLib.gui:addNextColumn(WDDM.dataTable, parent, index, "CENTER", v.dispelledAt)
         elseif index == 3 then
-            return WdLib:addNextColumn(WDDM.dataTable, parent, index, "CENTER", N)
+            return WdLib.gui:addNextColumn(WDDM.dataTable, parent, index, "CENTER", N)
         elseif index == 4 then
-            local f = WdLib:addNextColumn(WDDM.dataTable, parent, index, "LEFT", getDispelStatusText(v))
-            WdLib:generateSpellHover(f, getDispelStatusText(v))
+            local f = WdLib.gui:addNextColumn(WDDM.dataTable, parent, index, "LEFT", getDispelStatusText(v))
+            WdLib.gui:generateSpellHover(f, getDispelStatusText(v))
             return f
         end
     end
@@ -164,25 +164,25 @@ function WDDispelMonitor:updateDataTable()
         local N = auras[row].N
         local v = auras[row].data
         if index == 1 then
-            f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
+            f.txt:SetText(WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             local caster = WDDM.parent:findEntityByGUID(v.caster)
             if caster then
-                caster = WdLib:getColoredName(WdLib:getShortName(caster.name, "noRealm"), caster.class)
+                caster = WdLib.gen:getColoredName(WdLib.gen:getShortName(caster.name, "noRealm"), caster.class)
             else
                 caster = "|cffffffffEnvironment|r"
             end
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId), "|cffffff00Casted by:|r "..caster)
+            WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId), "|cffffff00Casted by:|r "..caster)
         elseif index == 2 then
             f.txt:SetText(v.dispelledAt)
         elseif index == 3 then
             f.txt:SetText(N)
         elseif index == 4 then
             f.txt:SetText(getDispelStatusText(v))
-            WdLib:generateSpellHover(f, getDispelStatusText(v))
+            WdLib.gui:generateSpellHover(f, getDispelStatusText(v))
         end
     end
 
-    WdLib:updateScrollableTable(WDDM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDDM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     WDDM.dataTable:Show()
 end

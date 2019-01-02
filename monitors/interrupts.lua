@@ -17,14 +17,14 @@ local function getInterruptStatusText(v)
     if v.status == "INTERRUPTED" then
         local interrupterName = UNKNOWNOBJECT
         if type(v.interrupter) == "table" then
-            interrupterName = WdLib:getColoredName(WdLib:getShortName(v.interrupter.name, "noRealm"), v.interrupter.class)
+            interrupterName = WdLib.gen:getColoredName(WdLib.gen:getShortName(v.interrupter.name, "noRealm"), v.interrupter.class)
         else
             local interrupter = WDIM.parent:findEntityByGUID(v.interrupter)
             if interrupter then
-                interrupterName = WdLib:getColoredName(WdLib:getShortName(interrupter.name, "noRealm"), interrupter.class)
+                interrupterName = WdLib.gen:getColoredName(WdLib.gen:getShortName(interrupter.name, "noRealm"), interrupter.class)
             end
         end
-        return string.format(WD_TRACKER_INTERRUPTED_BY, interrupterName, WdLib:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
+        return string.format(WD_TRACKER_INTERRUPTED_BY, interrupterName, WdLib.gui:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
         return string.format(WD_TRACKER_CASTED_IN, v.timediff)
     end
@@ -61,7 +61,7 @@ function WDInterruptMonitor:initDataTable()
         [5] = {"Quality",       50},
     }
     WD.Monitor.initDataTable(self, "interrupts", columns)
-    WdLib:generateHover(WDIM.dataTable.headers[5], WD_TRACKER_QUALITY_DESC)
+    WdLib.gui:generateHover(WDIM.dataTable.headers[5], WD_TRACKER_QUALITY_DESC)
 end
 
 function WDInterruptMonitor:getMainTableData()
@@ -76,7 +76,7 @@ function WDInterruptMonitor:getMainTableData()
                 for _,npc in pairs(data) do
                     if type(npc) == "table" then
                         if isCastedNpc(npc) then
-                            local npcCopy = WdLib:table_deepcopy(npc)
+                            local npcCopy = WdLib.gen:table_deepcopy(npc)
                             npcCopy.npc_id = npcId
                             creatures[#creatures+1] = npcCopy
                         end
@@ -88,9 +88,9 @@ function WDInterruptMonitor:getMainTableData()
                 if parentGuid:match("Creature") then
                     for npcId,data in pairs(info) do
                         for _,pet in pairs(data) do
-                            --print(WdLib:table_tostring(pet))
+                            --print(WdLib.gen:table_tostring(pet))
                             if isCastedNpc(pet) then
-                                local petCopy = WdLib:table_deepcopy(pet)
+                                local petCopy = WdLib.gen:table_deepcopy(pet)
                                 petCopy.npc_id = npcId
                                 petCopy.name = "[pet] "..petCopy.name
                                 creatures[#creatures+1] = petCopy
@@ -103,7 +103,7 @@ function WDInterruptMonitor:getMainTableData()
             for guid,pl in pairs(v) do
                 if type(pl) == "table" then
                     if isCastedNpc(pl) then
-                        local plCopy = WdLib:table_deepcopy(pl)
+                        local plCopy = WdLib.gen:table_deepcopy(pl)
                         plCopy.npc_id = "player"
                         creatures[#creatures+1] = plCopy
                     end
@@ -121,8 +121,8 @@ function WDInterruptMonitor:getMainTableSortFunction()
 end
 
 function WDInterruptMonitor:getMainTableRowText(v)
-    local unitName = WdLib:getColoredName(v.name, v.class)
-    if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+    local unitName = WdLib.gen:getColoredName(v.name, v.class)
+    if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
     return unitName
 end
 
@@ -162,20 +162,20 @@ function WDInterruptMonitor:updateDataTable()
         local N = casts[row].N
         local v = casts[row].data
         if index == 1 then
-            local f = WdLib:addNextColumn(WDIM.dataTable, parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(spellId))
+            local f = WdLib.gui:addNextColumn(WDIM.dataTable, parent, index, "LEFT", WdLib.gui:getSpellLinkByIdWithTexture(spellId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
+            WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(spellId))
             return f
         elseif index == 2 then
-            return WdLib:addNextColumn(WDIM.dataTable, parent, index, "CENTER", v.timestamp)
+            return WdLib.gui:addNextColumn(WDIM.dataTable, parent, index, "CENTER", v.timestamp)
         elseif index == 3 then
-            return WdLib:addNextColumn(WDIM.dataTable, parent, index, "CENTER", N)
+            return WdLib.gui:addNextColumn(WDIM.dataTable, parent, index, "CENTER", N)
         elseif index == 4 then
-            local f = WdLib:addNextColumn(WDIM.dataTable, parent, index, "LEFT", getInterruptStatusText(v))
-            WdLib:generateSpellHover(f, getInterruptStatusText(v))
+            local f = WdLib.gui:addNextColumn(WDIM.dataTable, parent, index, "LEFT", getInterruptStatusText(v))
+            WdLib.gui:generateSpellHover(f, getInterruptStatusText(v))
             return f
         elseif index == 5 then
-            return WdLib:addNextColumn(WDIM.dataTable, parent, index, "CENTER", v.percent or 0)
+            return WdLib.gui:addNextColumn(WDIM.dataTable, parent, index, "CENTER", v.percent or 0)
         end
     end
 
@@ -184,21 +184,21 @@ function WDInterruptMonitor:updateDataTable()
         local N = casts[row].N
         local v = casts[row].data
         if index == 1 then
-            f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(spellId))
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(spellId))
+            f.txt:SetText(WdLib.gui:getSpellLinkByIdWithTexture(spellId))
+            WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(spellId))
         elseif index == 2 then
             f.txt:SetText(v.timestamp)
         elseif index == 3 then
             f.txt:SetText(N)
         elseif index == 4 then
             f.txt:SetText(getInterruptStatusText(v))
-            WdLib:generateSpellHover(f, getInterruptStatusText(v))
+            WdLib.gui:generateSpellHover(f, getInterruptStatusText(v))
         elseif index == 5 then
             f.txt:SetText(v.percent or 0)
         end
     end
 
-    WdLib:updateScrollableTable(WDIM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDIM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     WDIM.dataTable:Show()
 end

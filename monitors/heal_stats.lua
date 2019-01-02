@@ -85,7 +85,7 @@ function WDHealStatsMonitor:initDataTable()
     }
     WD.Monitor.initDataTable(self, "heal_info", columns)
 
-    self.nameFilter = WdLib:createEditBox(self.frame:GetParent())
+    self.nameFilter = WdLib.gui:createEditBox(self.frame:GetParent())
     self.nameFilter:SetSize(self.frame.dataTable.headers[5]:GetSize())
     self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[5], "TOPLEFT", 0, 1)
     self.nameFilter:SetMaxLetters(15)
@@ -163,13 +163,13 @@ function WDHealStatsMonitor:updateDataTable()
                 local target = WDHSM.parent:findEntityByGUID(guid)
                 local targetName, classId = guid, 0
                 if target then
-                    targetName, classId = WdLib:getShortName(target.name), target.class
+                    targetName, classId = WdLib.gen:getShortName(target.name), target.class
                     if target.type == "pet" then
                         targetName = WDHSM.parent:updatePetName(target)
                     end
-                    targetName = WdLib:getColoredName(targetName, classId)
+                    targetName = WdLib.gen:getColoredName(targetName, classId)
                 end
-                local sourceName = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
+                local sourceName = WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name), v.class)
                 local filter = self.nameFilter:GetText()
                 if not filter or (filter and targetName:match(filter)) then
                     chart[#chart+1] = {
@@ -202,7 +202,7 @@ function WDHealStatsMonitor:updateDataTable()
         if index == 1 then
             local value = 0
             if v.healDone then value = v.healDone.total end
-            local f = WdLib:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib:shortNumber(value))
+            local f = WdLib.gui:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib.gen:shortNumber(value))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
             WDHSM.parent:initStatusBar(f)
             if v.healDone and rule == "done" then
@@ -218,7 +218,7 @@ function WDHealStatsMonitor:updateDataTable()
         elseif index == 2 then
             local value = 0
             if v.overhealDone then value = v.overhealDone.total end
-            local f = WdLib:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib:shortNumber(value))
+            local f = WdLib.gui:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib.gen:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overhealing", target, source)
             f:SetScript("OnEnter", function() WDHSM.parent:showPopup(f, popupLabel, WDHSM.parent:prepareDataForSpellChart(v.overhealDone)) end)
@@ -227,7 +227,7 @@ function WDHealStatsMonitor:updateDataTable()
         elseif index == 3 then
             local value = 0
             if v.healTaken then value = v.healTaken.total end
-            local f = WdLib:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib:shortNumber(value))
+            local f = WdLib.gui:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib.gen:shortNumber(value))
             WDHSM.parent:initStatusBar(f)
             if v.healTaken and rule == "taken" then
                 WDHSM.parent:updateStatusBar(f.bar, chart[row].class, v.healTaken, chart[1].data.healTaken)
@@ -242,14 +242,14 @@ function WDHealStatsMonitor:updateDataTable()
         elseif index == 4 then
             local value = 0
             if v.overhealTaken then value = v.overhealTaken.total end
-            local f = WdLib:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib:shortNumber(value))
+            local f = WdLib.gui:addNextColumn(WDHSM.dataTable, parent, index, "CENTER", WdLib.gen:shortNumber(value))
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overhealing", source, target)
             f:SetScript("OnEnter", function() WDHSM.parent:showPopup(f, popupLabel, WDHSM.parent:prepareDataForSpellChart(v.overhealTaken)) end)
             f:SetScript("OnLeave", function() WDHSM.parent:hidePopup() end)
             return f
         elseif index == 5 then
-            return WdLib:addNextColumn(WDHSM.dataTable, parent, index, "LEFT", target)
+            return WdLib.gui:addNextColumn(WDHSM.dataTable, parent, index, "LEFT", target)
         end
     end
 
@@ -260,7 +260,7 @@ function WDHealStatsMonitor:updateDataTable()
         if index == 1 then
             local value = 0
             if v.healDone then value = v.healDone.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            f.txt:SetText(WdLib.gen:shortNumber(value))
             if v.healDone and rule == "done" then
                 WDHSM.parent:updateStatusBar(f.bar, chart[row].class, v.healDone, chart[1].data.healDone)
             else
@@ -271,13 +271,13 @@ function WDHealStatsMonitor:updateDataTable()
         elseif index == 2 then
             local value = 0
             if v.overhealDone then value = v.overhealDone.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            f.txt:SetText(WdLib.gen:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overhealing", target, source)
             f:SetScript("OnEnter", function() WDHSM.parent:showPopup(f, popupLabel, WDHSM.parent:prepareDataForSpellChart(v.overhealDone)) end)
         elseif index == 3 then
             local value = 0
             if v.healTaken then value = v.healTaken.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            f.txt:SetText(WdLib.gen:shortNumber(value))
             if v.healTaken and rule == "taken" then
                 WDHSM.parent:updateStatusBar(f.bar, chart[row].class, v.healTaken, chart[1].data.healTaken)
             else
@@ -288,7 +288,7 @@ function WDHealStatsMonitor:updateDataTable()
         elseif index == 4 then
             local value = 0
             if v.overhealTaken then value = v.overhealTaken.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            f.txt:SetText(WdLib.gen:shortNumber(value))
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overhealing", source, target)
             f:SetScript("OnEnter", function() WDHSM.parent:showPopup(f, popupLabel, WDHSM.parent:prepareDataForSpellChart(v.overhealTaken)) end)
         elseif index == 5 then
@@ -296,7 +296,7 @@ function WDHealStatsMonitor:updateDataTable()
         end
     end
 
-    WdLib:updateScrollableTable(WDHSM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDHSM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     WDHSM.dataTable:Show()
 end
@@ -327,23 +327,23 @@ function WDHealStatsMonitor:refreshInfo()
         local v = units[row]
         parent.info = v
         if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            local unitName = WdLib.gen:getColoredName(v.name, v.class)
+            if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
             local percent = 0
             if total > 0 then percent = v.total * 100 / total end
-            local amount = WdLib:shortNumber(v.total).." ("..WdLib:float_round_to(percent, 1).."%)"
+            local amount = WdLib.gen:shortNumber(v.total).." ("..WdLib.gen:float_round_to(percent, 1).."%)"
 
-            local f = WdLib:addNextColumn(WDHSM.mainTable, parent, index, "LEFT", row..". "..unitName)
+            local f = WdLib.gui:addNextColumn(WDHSM.mainTable, parent, index, "LEFT", row..". "..unitName)
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
 
             f.txt:SetSize(300, 20)
             f.txt:SetPoint("LEFT", 2, 0)
-            f.txt2 = WdLib:createFontDefault(f, "RIGHT", amount)
+            f.txt2 = WdLib.gui:createFontDefault(f, "RIGHT", amount)
             f.txt2:SetSize(100, 20)
             f.txt2:SetPoint("RIGHT", -2, 0)
 
             f:SetScript("OnClick", function(rowFrame) WDHSM.lastSelectedButton = rowFrame; self:updateMainTableData() end)
-            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib:getColoredName(WdLib:getShortName(v.name), v.class))
+            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name), v.class))
             f:SetScript("OnEnter", function() self:showPopup(f, popupLabel, WDHSM.parent:prepareTotalDataForSpellChart(v, mode)) end)
             f:SetScript("OnLeave", function() self:hidePopup() end)
             return f
@@ -354,22 +354,22 @@ function WDHealStatsMonitor:refreshInfo()
         local v = units[row]
         f:GetParent().info = v
         if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            local unitName = WdLib.gen:getColoredName(v.name, v.class)
+            if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
             local percent = 0
             if total > 0 then percent = v.total * 100 / total end
-            local amount = WdLib:shortNumber(v.total).." ("..WdLib:float_round_to(percent, 1).."%)"
+            local amount = WdLib.gen:shortNumber(v.total).." ("..WdLib.gen:float_round_to(percent, 1).."%)"
 
             f.txt:SetText(row..". "..unitName)
             f.txt2:SetText(amount)
 
             f:SetScript("OnClick", function(rowFrame) WDHSM.lastSelectedButton = rowFrame; self:updateMainTableData() end)
-            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib:getColoredName(WdLib:getShortName(v.name), v.class))
+            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name), v.class))
             f:SetScript("OnEnter", function() self:showPopup(f, popupLabel, WDHSM.parent:prepareTotalDataForSpellChart(v, mode)) end)
         end
     end
 
-    WdLib:updateScrollableTable(WDHSM.mainTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDHSM.mainTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     if not WDHSM.lastSelectedButton and #units > 0 then
         WDHSM.lastSelectedButton = WDHSM.mainTable.members[1].column[1]

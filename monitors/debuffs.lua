@@ -21,7 +21,7 @@ end
 
 local function calculateUptime(v, totalV)
     if not v or not totalV or totalV == 0 then return nil end
-    return WdLib:float_round_to(v * 100 / totalV, 1)
+    return WdLib.gen:float_round_to(v * 100 / totalV, 1)
 end
 
 local function calculateAuraDuration(pull, unit, aura, index)
@@ -29,7 +29,7 @@ local function calculateAuraDuration(pull, unit, aura, index)
         local toTime = unit.diedAt or pull.endTime or 0
         if toTime > 0 then
             local t = (toTime - aura.applied) / 1000
-            return WdLib:float_round_to(t * 1000, 2)
+            return WdLib.gen:float_round_to(t * 1000, 2)
         end
     end
     if index > 1 then
@@ -42,7 +42,7 @@ local function getCasterName(v)
     local casterName = UNKNOWNOBJECT
     local caster = WDDAM.parent:findEntityByGUID(v.caster)
     if caster then
-        casterName = WdLib:getColoredName(WdLib:getShortName(caster.name), caster.class)
+        casterName = WdLib.gen:getColoredName(WdLib.gen:getShortName(caster.name), caster.class)
     else
         casterName = "|cffffffffEnvironment|r"
     end
@@ -116,7 +116,7 @@ function WDDebuffMonitor:initDataTable()
     }
     WD.Monitor.initDataTable(self, "debuffs", columns)
 
-    self.nameFilter = WdLib:createEditBox(self.frame:GetParent())
+    self.nameFilter = WdLib.gui:createEditBox(self.frame:GetParent())
     self.nameFilter:SetSize(self.frame.dataTable.headers[4]:GetSize())
     self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[4], "TOPLEFT", 0, 1)
     self.nameFilter:SetMaxLetters(15)
@@ -160,8 +160,8 @@ function WDDebuffMonitor:getMainTableSortFunction()
 end
 
 function WDDebuffMonitor:getMainTableRowText(v)
-    local unitName = WdLib:getColoredName(v.name, v.class)
-    if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+    local unitName = WdLib.gen:getColoredName(v.name, v.class)
+    if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
     return unitName
 end
 
@@ -205,17 +205,17 @@ function WDDebuffMonitor:updateDataTable()
         local N = auras[row].N
         local v = auras[row].data
         if index == 1 then
-            local f = WdLib:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", WdLib:getSpellLinkByIdWithTexture(auraId))
+            local f = WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId))
+            WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             return f
         elseif index == 2 then
-            return WdLib:addNextColumn(WDDAM.dataTable, parent, index, "RIGHT", v.uptime.." %")
+            return WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "RIGHT", v.uptime.." %")
         elseif index == 3 then
-            return WdLib:addNextColumn(WDDAM.dataTable, parent, index, "CENTER", N)
+            return WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "CENTER", N)
         elseif index == 4 then
-            local f = WdLib:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", getCasterName(v))
-            WdLib:generateSpellHover(f, getCasterName(v))
+            local f = WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", getCasterName(v))
+            WdLib.gui:generateSpellHover(f, getCasterName(v))
             return f
         end
     end
@@ -225,19 +225,19 @@ function WDDebuffMonitor:updateDataTable()
         local N = auras[row].N
         local v = auras[row].data
         if index == 1 then
-            f.txt:SetText(WdLib:getSpellLinkByIdWithTexture(auraId))
-            WdLib:generateSpellHover(f, WdLib:getSpellLinkByIdWithTexture(auraId))
+            f.txt:SetText(WdLib.gui:getSpellLinkByIdWithTexture(auraId))
+            WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId))
         elseif index == 2 then
             f.txt:SetText(v.uptime.." %")
         elseif index == 3 then
             f.txt:SetText(N)
         elseif index == 4 then
             f.txt:SetText(getCasterName(v))
-            WdLib:generateSpellHover(f, getCasterName(v))
+            WdLib.gui:generateSpellHover(f, getCasterName(v))
         end
     end
 
-    WdLib:updateScrollableTable(WDDAM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDDAM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     WDDAM.dataTable:Show()
 end

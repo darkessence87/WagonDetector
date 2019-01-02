@@ -200,16 +200,16 @@ function WDStatsMonitor:showPopup(parent, label, data)
         popup.members[i]:SetValue(chart[i].percent * 100 / total)
         local spellId = chart[i].id
         if chart[i].spellName and tonumber(spellId) then
-            spellId = WdLib:makeSpellLinkWithTexture(spellId, chart[i].spellName)
+            spellId = WdLib.gui:makeSpellLinkWithTexture(spellId, chart[i].spellName)
         elseif chart[i].spellName then
             spellId = chart[i].spellName
         elseif tonumber(spellId) then
-            spellId = WdLib:getSpellLinkByIdWithTexture(spellId)
+            spellId = WdLib.gui:getSpellLinkByIdWithTexture(spellId)
         else
             spellId = " |cffffffff"..spellId.."|r"
         end
         popup.members[i].leftTxt:SetText(i..spellId)
-        popup.members[i].rightTxt:SetText(WdLib:shortNumber(chart[i].value).." ("..WdLib:float_round_to(chart[i].percent, 1).."%)")
+        popup.members[i].rightTxt:SetText(WdLib.gen:shortNumber(chart[i].value).." ("..WdLib.gen:float_round_to(chart[i].percent, 1).."%)")
         popup.members[i]:Show()
     end
 
@@ -270,7 +270,7 @@ function WDStatsMonitor:updatePetName(pet)
     local newName = pet.name
     if petAsParent.guid ~= pet.guid then
         if petAsParent.type == "pet" then
-            local currId = WdLib:getUnitNumber(petAsParent.name)
+            local currId = WdLib.gen:getUnitNumber(petAsParent.name)
             if currId then
                 newName = newName.."-"..currId
             end
@@ -278,7 +278,7 @@ function WDStatsMonitor:updatePetName(pet)
     end
     local parent = self:findEntityByGUID(pet.parentGuid)
     if parent then
-        local parentName = WdLib:getColoredName("("..WdLib:getShortName(parent.name, "norealm")..")", parent.class)
+        local parentName = WdLib.gen:getColoredName("("..WdLib.gen:getShortName(parent.name, "norealm")..")", parent.class)
         newName = newName.." "..parentName
     end
     return newName
@@ -430,7 +430,7 @@ end
 
 function WDStatsMonitor:merge(parentTable, petTable, petName)
     if not petTable or not parentTable then return 0 end
-    petName = WdLib:getShortName(petName, "norealm")
+    petName = WdLib.gen:getShortName(petName, "norealm")
     for spellId,spellData in pairs(petTable) do
         if type(spellData) == "table" then
             if spellId == "pet" then
@@ -472,7 +472,7 @@ end
 function WDStatsMonitor:loadUnits(mode, units, ruleId)
     local pull = self.frame:GetParent():GetSelectedPull()
     local function loadUnit(unit, ruleId)
-        unit = WdLib:table_deepcopy(unit)
+        unit = WdLib.gen:table_deepcopy(unit)
         if ruleId then
             unit.stats = {}
             if unit.ruleStats and unit.ruleStats[ruleId] then
@@ -521,7 +521,7 @@ function WDStatsMonitor:loadUnits(mode, units, ruleId)
                         if petAsParent.type == "pet" then
                             local petUnit = loadUnit(pet, ruleId)
                             if petUnit then
-                                local currId = WdLib:getUnitNumber(petAsParent.name)
+                                local currId = WdLib.gen:getUnitNumber(petAsParent.name)
                                 if currId then
                                     petUnit.name = petUnit.name.."-"..currId
                                 end
@@ -539,7 +539,7 @@ function WDStatsMonitor:getUnitStatistics(mode)
     if not self.frame.cache.units[mode] then
         self.frame.cache.units[mode] = {}
     else
-        WdLib:table_wipe(self.frame.cache.units[mode])
+        WdLib.gen:table_wipe(self.frame.cache.units[mode])
     end
 
     local ruleType = self:getSelectedRuleType()
@@ -644,17 +644,17 @@ local function initPullsMenu(parent)
     end
 
     -- select pull button
-    parent.buttons["select_pull"] = WdLib:createDropDownMenu(parent, getPullName(), getPulls())
+    parent.buttons["select_pull"] = WdLib.gui:createDropDownMenu(parent, getPullName(), getPulls())
     parent.buttons["select_pull"]:SetSize(200, 20)
     parent.buttons["select_pull"]:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -5)
     parent.buttons["select_pull"]:SetScript("OnShow", function(self) self.txt:SetText(getPullName()) end)
     local frame = parent.buttons["select_pull"]
     function frame:Refresh()
-        WdLib:updateDropDownMenu(self, getPullName(), getPulls())
+        WdLib.gui:updateDropDownMenu(self, getPullName(), getPulls())
     end
 
     -- clear current pull history button
-    parent.buttons["clear_current_pull"] = WdLib:createButton(parent)
+    parent.buttons["clear_current_pull"] = WdLib.gui:createButton(parent)
     parent.buttons["clear_current_pull"]:SetSize(90, 20)
     parent.buttons["clear_current_pull"]:SetScript("OnClick", function()
         if WD.db.profile.tracker and WD.db.profile.tracker.selected and WD.db.profile.tracker.selected > 0 then
@@ -668,18 +668,18 @@ local function initPullsMenu(parent)
         WD:RefreshTrackerPulls()
         refreshMonitors(true)
     end)
-    parent.buttons["clear_current_pull"].txt = WdLib:createFont(parent.buttons["clear_current_pull"], "CENTER", WD_TRACKER_BUTTON_CLEAR_SELECTED)
+    parent.buttons["clear_current_pull"].txt = WdLib.gui:createFont(parent.buttons["clear_current_pull"], "CENTER", WD_TRACKER_BUTTON_CLEAR_SELECTED)
     parent.buttons["clear_current_pull"].txt:SetAllPoints()
 
     -- clear pulls history button
-    parent.buttons["clear_pulls"] = WdLib:createButton(parent)
+    parent.buttons["clear_pulls"] = WdLib.gui:createButton(parent)
     parent.buttons["clear_pulls"]:SetSize(90, 20)
     parent.buttons["clear_pulls"]:SetScript("OnClick", function()
-        WdLib:table_wipe(WD.db.profile.tracker)
+        WdLib.gen:table_wipe(WD.db.profile.tracker)
         WD:RefreshTrackerPulls()
         refreshMonitors(true)
     end)
-    parent.buttons["clear_pulls"].txt = WdLib:createFont(parent.buttons["clear_pulls"], "CENTER", WD_TRACKER_BUTTON_CLEAR)
+    parent.buttons["clear_pulls"].txt = WdLib.gui:createFont(parent.buttons["clear_pulls"], "CENTER", WD_TRACKER_BUTTON_CLEAR)
     parent.buttons["clear_pulls"].txt:SetAllPoints()
 
     parent.buttons["clear_pulls"]:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -5, -5)
@@ -691,11 +691,11 @@ local function initSpellChartPopup(parent)
     parent.popup = CreateFrame("Frame", nil, parent)
     parent.popup:SetFrameStrata("TOOLTIP")
     parent.popup:SetWidth(xSize + 2)
-    parent.popup.bg = WdLib:createColorTexture(parent.popup, "BACKGROUND", 0, 0, 0, .9)
+    parent.popup.bg = WdLib.gui:createColorTexture(parent.popup, "BACKGROUND", 0, 0, 0, .9)
     parent.popup.bg:SetAllPoints()
 
     parent.popup.members = {}
-    parent.popup.label = WdLib:createFontDefault(parent.popup, "LEFT", "")
+    parent.popup.label = WdLib.gui:createFontDefault(parent.popup, "LEFT", "")
     parent.popup.label:SetPoint("TOPLEFT", 5, -1)
     parent.popup.label:SetSize(xSize, 20)
 
@@ -707,10 +707,10 @@ local function initSpellChartPopup(parent)
         r:SetMinMaxValues(0, 100)
         r:SetStatusBarColor(.15,.25,.15,1)
         r:SetSize(xSize, 20)
-        r.leftTxt = WdLib:createFontDefault(r, "LEFT", "")
+        r.leftTxt = WdLib.gui:createFontDefault(r, "LEFT", "")
         r.leftTxt:SetSize(xSize-50, 20)
         r.leftTxt:SetPoint("LEFT", r, "LEFT", 2, 0)
-        r.rightTxt = WdLib:createFontDefault(r, "RIGHT", "")
+        r.rightTxt = WdLib.gui:createFontDefault(r, "RIGHT", "")
         r.rightTxt:SetSize(100, 20)
         r.rightTxt:SetPoint("RIGHT", r, "RIGHT", -2, 0)
         if i == 1 then
@@ -773,16 +773,16 @@ local function initRulesMenu(parent)
     end
 
     -- select rule button
-    parent.buttons["select_rule"] = WdLib:createDropDownMenu(parent, getRuleName(), getRules())
+    parent.buttons["select_rule"] = WdLib.gui:createDropDownMenu(parent, getRuleName(), getRules())
     parent.buttons["select_rule"]:SetSize(400, 20)
     parent.buttons["select_rule"]:SetPoint("TOPLEFT", parent, "TOPLEFT", 386, -5)
     parent.buttons["select_rule"]:SetScript("OnShow", function(self) self.txt:SetText(getRuleName()) end)
     local frame = parent.buttons["select_rule"]
     function frame:Refresh()
-        WdLib:updateDropDownMenu(self, getRuleName(), getRules())
+        WdLib.gui:updateDropDownMenu(self, getRuleName(), getRules())
     end
 
-    parent.buttons["select_rule"].label = WdLib:createFontDefault(parent, "RIGHT", "Applied rule:")
+    parent.buttons["select_rule"].label = WdLib.gui:createFontDefault(parent, "RIGHT", "Applied rule:")
     parent.buttons["select_rule"].label:SetSize(150, 20)
     parent.buttons["select_rule"].label:SetPoint("RIGHT", parent.buttons["select_rule"], "LEFT", -2, 0)
 end

@@ -1,6 +1,18 @@
 
 local WDRO = nil
 
+local WDRaidRosterModule = {}
+WDRaidRosterModule.__index = WDRaidRosterModule
+
+setmetatable(WDRaidRosterModule, {
+    __index = WD.Module,
+    __call = function (v, ...)
+        local self = setmetatable({}, v)
+        self:init(...)
+        return self
+    end,
+})
+
 if not WD.cache then WD.cache = {} end
 WD.cache.raidroster = {}
 WD.cache.raidrosterkeys = {}
@@ -43,7 +55,7 @@ local function createSpecIcon(parent, specId)
     parent.icon = CreateFrame("Button", nil, parent)
     parent.icon:SetSize(16, 16)
     parent.icon:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -2)
-    parent.icon.t = WdLib:createTexture(parent.icon, "Interface\\Icons\\INV_MISC_QUESTIONMARK", "ARTWORK")
+    parent.icon.t = WdLib.gui:createTexture(parent.icon, "Interface\\Icons\\INV_MISC_QUESTIONMARK", "ARTWORK")
     parent.icon.t:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     parent.icon.t:SetAllPoints()
 
@@ -54,7 +66,7 @@ local function createBuffSlot(parent, index)
     if not parent.buffs then parent.buffs = {} end
 
     parent.buffs[index] = CreateFrame("Button", nil, parent)
-    parent.buffs[index].t = WdLib:createColorTexture(parent.buffs[index], "BACKGROUND", .2, .2, .2, 1)
+    parent.buffs[index].t = WdLib.gui:createColorTexture(parent.buffs[index], "BACKGROUND", .2, .2, .2, 1)
     parent.buffs[index]:SetSize(16, 16)
     parent.buffs[index].t:SetAllPoints()
     parent.buffs[index].t:SetColorTexture(1, 0, 0, 1)
@@ -67,7 +79,7 @@ local function createBuffSlot(parent, index)
     parent.buffs[index]:SetScript("OnEnter", function(self)
         if self.spellId then
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetHyperlink(WdLib:getSpellLinkById(self.spellId))
+            GameTooltip:SetHyperlink(WdLib.gui:getSpellLinkById(self.spellId))
             GameTooltip:AddLine('id: '..self.spellId, 1, 1, 1)
             GameTooltip:Show()
         end
@@ -87,7 +99,7 @@ local function setBuffSlotSpell(parent, index, spellId)
     parent.buffs[index]:SetScript("OnEnter", function(self)
         if self.spellId then
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetHyperlink(WdLib:getSpellLinkById(self.spellId))
+            GameTooltip:SetHyperlink(WdLib.gui:getSpellLinkById(self.spellId))
             GameTooltip:AddLine('id: '..self.spellId, 1, 1, 1)
             GameTooltip:Show()
         end
@@ -119,7 +131,7 @@ local function getConsumables(unit)
 end
 
 local function requestInspect(p)
-    if WdLib:getShortName(p.name) == UNKNOWNOBJECT then return end
+    if WdLib.gen:getShortName(p.name) == UNKNOWNOBJECT then return end
     NotifyInspect(p.name)
     WD.cache.raidrosterinspected[p.guid].lastTime = time()
 
@@ -185,7 +197,7 @@ local function updateRaidOverviewMember(data, parent)
             member.column = {}
 
             local index = 1
-            WdLib:addNextColumn(parent, member, index, "LEFT", WdLib:getColoredName(WdLib:getShortName(v.name, "noRealm"), v.class))
+            WdLib.gui:addNextColumn(parent, member, index, "LEFT", WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name, "noRealm"), v.class))
             if k > 1 then
                 member.column[index]:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
                 member:SetPoint("TOPLEFT", parent.members[k - 1], "BOTTOMLEFT", 0, -1)
@@ -211,7 +223,7 @@ local function updateRaidOverviewMember(data, parent)
         else
             local member = parent.members[k]
             member.info = v
-            member.column[1].txt:SetText(WdLib:getColoredName(WdLib:getShortName(v.name, "noRealm"), v.class))
+            member.column[1].txt:SetText(WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name, "noRealm"), v.class))
 
             -- update buff frames
             local flask, food, rune = getConsumables(v.unit)
@@ -285,7 +297,7 @@ local function checkGroup(unitBase)
         local unit = unitBase..i
         local guid = UnitGUID(unit)
         if not guid then return end
-        local name = WdLib:getUnitName(unit)
+        local name = WdLib.gen:getUnitName(unit)
         local _,class = UnitClass(unit)
 
         if WD.cache.raidroster[guid] then
@@ -317,7 +329,7 @@ local function checkGroup(unitBase)
         WD.cache.raidrosterinspected[guid] = nil
         inspectProcessing[guid] = nil
     end
-    WdLib:table_erase(WD.cache.raidrosterkeys, onCompare, onErase)
+    WdLib.gen:table_erase(WD.cache.raidrosterkeys, onCompare, onErase)
 end
 
 local function checkSolo()
@@ -336,9 +348,9 @@ local function checkSolo()
 end
 
 local function resetRaidRoster()
-    WdLib:table_wipe(WD.cache.raidrosterkeys)
-    WdLib:table_wipe(WD.cache.raidroster)
-    WdLib:table_wipe(inspectProcessing)
+    WdLib.gen:table_wipe(WD.cache.raidrosterkeys)
+    WdLib.gen:table_wipe(WD.cache.raidroster)
+    WdLib.gen:table_wipe(inspectProcessing)
 end
 
 local function updateRaidRoster()
@@ -355,8 +367,10 @@ local function updateRaidRoster()
     updateRaidOverviewFrame()
 end
 
-function WD:InitRaidOverviewModule(parent)
-    WDRO = parent
+function WDRaidRosterModule:init(parent, yOffset)
+    WD.Module.init(self, WD_BUTTON_RAID_OVERVIEW_MODULE, parent, yOffset)
+
+    WDRO = self.frame
 
     WDRO.tanks = {}
     WDRO.tanks.headers = {}
@@ -374,11 +388,11 @@ function WD:InitRaidOverviewModule(parent)
     WDRO.unknown.headers = {}
     WDRO.unknown.members = {}
 
-    table.insert(WDRO.tanks.headers,    WdLib:createTableHeader(WDRO, "Tanks",    0,   -30, 200, 20))
-    table.insert(WDRO.healers.headers,  WdLib:createTableHeader(WDRO, "Healers",  201, -30, 200, 20))
-    table.insert(WDRO.melees.headers,   WdLib:createTableHeader(WDRO, "Melee",    402, -30, 200, 20))
-    table.insert(WDRO.ranged.headers,   WdLib:createTableHeader(WDRO, "Ranged",   603, -30, 200, 20))
-    table.insert(WDRO.unknown.headers,   WdLib:createTableHeader(WDRO, "Unknown", 804, -30, 200, 20))
+    table.insert(WDRO.tanks.headers,    WdLib.gui:createTableHeader(WDRO, "Tanks",    0,   -30, 200, 20))
+    table.insert(WDRO.healers.headers,  WdLib.gui:createTableHeader(WDRO, "Healers",  201, -30, 200, 20))
+    table.insert(WDRO.melees.headers,   WdLib.gui:createTableHeader(WDRO, "Melee",    402, -30, 200, 20))
+    table.insert(WDRO.ranged.headers,   WdLib.gui:createTableHeader(WDRO, "Ranged",   603, -30, 200, 20))
+    table.insert(WDRO.unknown.headers,   WdLib.gui:createTableHeader(WDRO, "Unknown", 804, -30, 200, 20))
 
     WDRO:RegisterEvent("GROUP_ROSTER_UPDATE")
     WDRO:RegisterEvent("INSPECT_READY")
@@ -394,7 +408,7 @@ function WD:InitRaidOverviewModule(parent)
             local unit = ...
             for k,v in pairs(WD.cache.raidroster) do
                 if v.unit == unit then
-                    WD.cache.raidroster[v.guid].name = WdLib:getUnitName(unit)
+                    WD.cache.raidroster[v.guid].name = WdLib.gen:getUnitName(unit)
                     requestInspect(WD.cache.raidroster[v.guid])
                     break
                 end
@@ -439,3 +453,5 @@ function WD:GetRole(guid)
 
     return getRoleBySpecId(specId)
 end
+
+WD.RaidRosterModule = WDRaidRosterModule

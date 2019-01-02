@@ -1,6 +1,6 @@
 ﻿
+WdLib = {}
 WD = LibStub("AceAddon-3.0"):NewAddon("Wagon Detector", "AceEvent-3.0", "AceConsole-3.0")
-
 WD.cache = {}
 
 -- basic menu

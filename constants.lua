@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.56"
+WD.Version = "v0.0.57"
 WD.TiersInfo = {}
 WD.MaxPullsToBeSaved = 25
 WD.DebugEnabled = false
@@ -30,7 +30,7 @@ local function loadSectionInfo(holder, sectionId)
     local v = C_EncounterJournal.GetSectionInfo(sectionId)
     if not v then return end
     if v.spellID ~= 0 then
-        local str = "|cffffff00SpellID:|r "..v.spellID.." "..WdLib:getSpellLinkByIdWithTexture(v.spellID)
+        local str = "|cffffff00SpellID:|r "..v.spellID.." "..WdLib.gui:getSpellLinkByIdWithTexture(v.spellID)
         if not holder[v.spellID] then
             holder[v.spellID] = str
         end
@@ -328,32 +328,32 @@ function WD.GetEventDescription(eventName, ...)
     local args = {...}
     if eventName == "EV_DAMAGETAKEN" then
         if args[2] > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
         else
-            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
         end
     elseif eventName == "EV_DEATH" then
-        return string.format(WD_RULE_DEATH, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_DEATH, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif eventName == "EV_AURA" then
         if args[2] == "apply" then
-            return string.format(WD_RULE_APPLY_AURA, WdLib:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_APPLY_AURA, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
         else
-            return string.format(WD_RULE_REMOVE_AURA, WdLib:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_REMOVE_AURA, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
         end
     elseif eventName == "EV_AURA_STACKS" then
         if args[2] > 0 then
-            return string.format(WD_RULE_AURA_STACKS, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_AURA_STACKS, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
         else
-            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
         end
     elseif eventName == "EV_CAST_START" then
-        return string.format(WD_RULE_CAST_START, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_CAST_START, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif eventName == "EV_CAST_END" then
-        return string.format(WD_RULE_CAST, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_CAST, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif eventName == "EV_CAST_INTERRUPTED" then
-        return string.format(WD_RULE_CAST_INTERRUPT, args[2], WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_CAST_INTERRUPT, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif eventName == "EV_DISPEL" then
-        return string.format(WD_RULE_DISPEL, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_DISPEL, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif eventName == "EV_DEATH_UNIT" then
         return string.format(WD_RULE_DEATH_UNIT, args[1])
     elseif eventName == "EV_POTIONS" then
@@ -372,11 +372,11 @@ end
 function WD.GetRangeRuleDescription(ruleName, ...)
     local args = {...}
     if ruleName == "RT_AURA_EXISTS" then
-        return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif ruleName == "RT_AURA_NOT_EXISTS" then
-        return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif ruleName == "RT_UNIT_CASTING" then
-        return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
     elseif ruleName == "RT_CUSTOM" then
         local startEvent, endEvent = args[1][1], args[1][2]
         local startEventMsg = WD.GetEventDescription(startEvent[1], startEvent[2], startEvent[3])

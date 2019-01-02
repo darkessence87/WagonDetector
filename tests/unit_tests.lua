@@ -2,7 +2,7 @@
 local function log(data)
     --if WD.DebugEnabled ~= true then return end
     if type(data) == "table" then
-        print(WdLib:table_tostring(data))
+        print(WdLib.gen:table_tostring(data))
     else
         print(data or "nil")
     end
@@ -36,7 +36,7 @@ local function startTest(testObject, timeout)
         local v = testObject.events[i]
         sendEvent(currTime, unpack(v))
     end
-    WdLib:CreateTimer(onEndTest, timeout, testObject)
+    WdLib.timers:CreateTimer(onEndTest, timeout, testObject)
 end
 
 local Tests = {
@@ -84,10 +84,10 @@ end
 Tests["interrupts"].validate = function(self)
     if not core.tracker then return "No active encounter" end
     for guid,expected in pairs(self.expectations) do
-        local npcId = WdLib:getNpcId(guid)
+        local npcId = WdLib.gen:getNpcId(guid)
         if not npcId then return "Not found npcId for unit with guid:"..guid end
         if not core.tracker.npc[npcId] then return "Not found unit for npcId:"..npcId end
-        local index = WdLib:findEntityIndex(core.tracker.npc[npcId], guid)
+        local index = WdLib.gen:findEntityIndex(core.tracker.npc[npcId], guid)
         if not index then return "Not found unit for guid:"..guid end
         local unit = core.tracker.npc[npcId][index]
         local casted, interrupted = 0, 0
@@ -159,10 +159,10 @@ Tests["unknown_pets"].validate = function(self)
     if not core.tracker then return "No active encounter" end
     for parentGuid,expected in pairs(self.expectations) do
         if not core.tracker.pets[parentGuid] then return "Not found parent with guid:"..parentGuid end
-        local npcId = WdLib:getNpcId(expected.petGuid)
+        local npcId = WdLib.gen:getNpcId(expected.petGuid)
         if not npcId then return "Not found npcId for unit with guid:"..expected.petGuid end
         if not core.tracker.pets[parentGuid][npcId] then return "Not found unit for npcId:"..npcId end
-        local index = WdLib:findEntityIndex(core.tracker.pets[parentGuid][npcId], expected.petGuid)
+        local index = WdLib.gen:findEntityIndex(core.tracker.pets[parentGuid][npcId], expected.petGuid)
         if not index then return "Not found unit for guid:"..expected.petGuid end
         local unit = core.tracker.pets[parentGuid][npcId][index]
         local casted = 0

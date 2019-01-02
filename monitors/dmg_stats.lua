@@ -85,7 +85,7 @@ function WDDmgStatsMonitor:initDataTable()
     }
     WD.Monitor.initDataTable(self, "dmg_info", columns)
 
-    self.nameFilter = WdLib:createEditBox(self.frame:GetParent())
+    self.nameFilter = WdLib.gui:createEditBox(self.frame:GetParent())
     self.nameFilter:SetSize(self.frame.dataTable.headers[5]:GetSize())
     self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[5], "TOPLEFT", 0, 1)
     self.nameFilter:SetMaxLetters(15)
@@ -163,13 +163,13 @@ function WDDmgStatsMonitor:updateDataTable()
                 local target = WDDSM.parent:findEntityByGUID(guid)
                 local targetName, classId = guid, 0
                 if target then
-                    targetName, classId = WdLib:getShortName(target.name), target.class
+                    targetName, classId = WdLib.gen:getShortName(target.name), target.class
                     if target.type == "pet" then
                         targetName = WDDSM.parent:updatePetName(target)
                     end
-                    targetName = WdLib:getColoredName(targetName, classId)
+                    targetName = WdLib.gen:getColoredName(targetName, classId)
                 end
-                local sourceName = WdLib:getColoredName(WdLib:getShortName(v.name), v.class)
+                local sourceName = WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name), v.class)
                 local filter = self.nameFilter:GetText()
                 if not filter or (filter and targetName:match(filter)) then
                     chart[#chart+1] = {
@@ -202,7 +202,7 @@ function WDDmgStatsMonitor:updateDataTable()
         if index == 1 then
             local value = 0
             if v.dmgDone then value = v.dmgDone.total end
-            local f = WdLib:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", WdLib:shortNumber(value))
+            local f = WdLib.gui:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", WdLib.gen:shortNumber(value))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
             WDDSM.parent:initStatusBar(f)
             if v.dmgDone and rule == "done" then
@@ -218,7 +218,7 @@ function WDDmgStatsMonitor:updateDataTable()
         elseif index == 2 then
             local value = ""
             if v.overdmgDone and v.overdmgDone.total > 0 then value = "|cffff0000KILLING BLOW!|r" end
-            local f = WdLib:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", value)
+            local f = WdLib.gui:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", value)
 
             local popupLabel = string.format(WD_TRACKER_DONE_POPUP_LABEL, "Overkill", target, source)
             f:SetScript("OnEnter", function() WDDSM.parent:showPopup(f, popupLabel, WDDSM.parent:prepareDataForSpellChart(v.overdmgDone)) end)
@@ -227,7 +227,7 @@ function WDDmgStatsMonitor:updateDataTable()
         elseif index == 3 then
             local value = 0
             if v.dmgTaken then value = v.dmgTaken.total end
-            local f = WdLib:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", WdLib:shortNumber(value))
+            local f = WdLib.gui:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", WdLib.gen:shortNumber(value))
             WDDSM.parent:initStatusBar(f)
             if v.dmgTaken and rule == "taken" then
                 WDDSM.parent:updateStatusBar(f.bar, chart[row].class, v.dmgTaken, chart[1].data.dmgTaken)
@@ -242,14 +242,14 @@ function WDDmgStatsMonitor:updateDataTable()
         elseif index == 4 then
             local value = ""
             if v.overdmgTaken and v.overdmgTaken.total > 0 then value = "|cffff0000KILLING BLOW!|r" end
-            local f = WdLib:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", value)
+            local f = WdLib.gui:addNextColumn(WDDSM.dataTable, parent, index, "CENTER", value)
 
             local popupLabel = string.format(WD_TRACKER_TAKEN_POPUP_LABEL, "Overkill", source, target)
             f:SetScript("OnEnter", function() WDDSM.parent:showPopup(f, popupLabel, WDDSM.parent:prepareDataForSpellChart(v.overdmgTaken)) end)
             f:SetScript("OnLeave", function() WDDSM.parent:hidePopup() end)
             return f
         elseif index == 5 then
-            return WdLib:addNextColumn(WDDSM.dataTable, parent, index, "LEFT", target)
+            return WdLib.gui:addNextColumn(WDDSM.dataTable, parent, index, "LEFT", target)
         end
     end
 
@@ -260,7 +260,7 @@ function WDDmgStatsMonitor:updateDataTable()
         if index == 1 then
             local value = 0
             if v.dmgDone then value = v.dmgDone.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            f.txt:SetText(WdLib.gen:shortNumber(value))
             if v.dmgDone and rule == "done" then
                 WDDSM.parent:updateStatusBar(f.bar, chart[row].class, v.dmgDone, chart[1].data.dmgDone)
             else
@@ -277,7 +277,7 @@ function WDDmgStatsMonitor:updateDataTable()
         elseif index == 3 then
             local value = 0
             if v.dmgTaken then value = v.dmgTaken.total end
-            f.txt:SetText(WdLib:shortNumber(value))
+            f.txt:SetText(WdLib.gen:shortNumber(value))
             if v.dmgTaken and rule == "taken" then
                 WDDSM.parent:updateStatusBar(f.bar, chart[row].class, v.dmgTaken, chart[1].data.dmgTaken)
             else
@@ -296,7 +296,7 @@ function WDDmgStatsMonitor:updateDataTable()
         end
     end
 
-    WdLib:updateScrollableTable(WDDSM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDDSM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     WDDSM.dataTable:Show()
 end
@@ -327,11 +327,11 @@ function WDDmgStatsMonitor:refreshInfo()
         local v = units[row]
         parent.info = v
         if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            local unitName = WdLib.gen:getColoredName(v.name, v.class)
+            if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
             local percent = 0
             if total > 0 then percent = v.total * 100 / total end
-            local amount = WdLib:shortNumber(v.total).." ("..WdLib:float_round_to(percent, 1).."%)"
+            local amount = WdLib.gen:shortNumber(v.total).." ("..WdLib.gen:float_round_to(percent, 1).."%)"
 
             local pull = WDDSM:GetParent().GetSelectedPull()
             if v.spawnedAt < pull.startTime then
@@ -340,19 +340,19 @@ function WDDmgStatsMonitor:refreshInfo()
             if pull.endTime and v.spawnedAt > pull.endTime then
                 v.spawnedAt = pull.endTime
             end
-            local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
+            local lifeTime = WdLib.gen:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
             local rowText = row..". "..unitName.." ("..lifeTime..")"
-            local f = WdLib:addNextColumn(WDDSM.mainTable, parent, index, "LEFT", rowText)
+            local f = WdLib.gui:addNextColumn(WDDSM.mainTable, parent, index, "LEFT", rowText)
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
 
             f.txt:SetSize(300, 20)
             f.txt:SetPoint("LEFT", 2, 0)
-            f.txt2 = WdLib:createFontDefault(f, "RIGHT", amount)
+            f.txt2 = WdLib.gui:createFontDefault(f, "RIGHT", amount)
             f.txt2:SetSize(100, 20)
             f.txt2:SetPoint("RIGHT", -2, 0)
 
             f:SetScript("OnClick", function(rowFrame) WDDSM.lastSelectedButton = rowFrame; self:updateMainTableData() end)
-            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib:getColoredName(WdLib:getShortName(v.name), v.class))
+            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name), v.class))
             f:SetScript("OnEnter", function() self:showPopup(f, popupLabel, WDDSM.parent:prepareTotalDataForSpellChart(v, mode)) end)
             f:SetScript("OnLeave", function() self:hidePopup() end)
             return f
@@ -363,11 +363,11 @@ function WDDmgStatsMonitor:refreshInfo()
         local v = units[row]
         f:GetParent().info = v
         if index == 1 then
-            local unitName = WdLib:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib:getRaidTargetTextureLink(v.rt).." "..unitName end
+            local unitName = WdLib.gen:getColoredName(v.name, v.class)
+            if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
             local percent = 0
             if total > 0 then percent = v.total * 100 / total end
-            local amount = WdLib:shortNumber(v.total).." ("..WdLib:float_round_to(percent, 1).."%)"
+            local amount = WdLib.gen:shortNumber(v.total).." ("..WdLib.gen:float_round_to(percent, 1).."%)"
 
             local pull = WDDSM:GetParent().GetSelectedPull()
             if v.spawnedAt < pull.startTime then
@@ -376,18 +376,18 @@ function WDDmgStatsMonitor:refreshInfo()
             if pull.endTime and v.spawnedAt > pull.endTime then
                 v.spawnedAt = pull.endTime
             end
-            local lifeTime = WdLib:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
+            local lifeTime = WdLib.gen:getTimedDiffShort(v.spawnedAt or 0, v.diedAt or pull.endTime or 0)
             local rowText = row..". "..unitName.." ("..lifeTime..")"
             f.txt:SetText(rowText)
             f.txt2:SetText(amount)
 
             f:SetScript("OnClick", function(rowFrame) WDDSM.lastSelectedButton = rowFrame; self:updateMainTableData() end)
-            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib:getColoredName(WdLib:getShortName(v.name), v.class))
+            local popupLabel = string.format(self:getPopupLabelByMode(mode), WdLib.gen:getColoredName(WdLib.gen:getShortName(v.name), v.class))
             f:SetScript("OnEnter", function() self:showPopup(f, popupLabel, WDDSM.parent:prepareTotalDataForSpellChart(v, mode)) end)
         end
     end
 
-    WdLib:updateScrollableTable(WDDSM.mainTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDDSM.mainTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     if not WDDSM.lastSelectedButton and #units > 0 then
         WDDSM.lastSelectedButton = WDDSM.mainTable.members[1].column[1]

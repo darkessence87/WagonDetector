@@ -3,7 +3,7 @@ local WDMF = WD.mainFrame
 
 local function log(data)
     if type(data) == "table" then
-        print(WdLib:table_tostring(data))
+        print(WdLib.gen:table_tostring(data))
     else
         print(data or "nil")
     end
@@ -48,9 +48,9 @@ end
 local function findNpc(guid)
     if not WDMF.tracker or not WDMF.tracker.npc then return nil end
     if not guid or tonumber(guid) then return nil end
-    local npcId = WdLib:getNpcId(guid)
+    local npcId = WdLib.gen:getNpcId(guid)
     local holder = WDMF.tracker.npc[npcId]
-    local index = WdLib:findEntityIndex(holder, guid)
+    local index = WdLib.gen:findEntityIndex(holder, guid)
     if index then return holder[index] end
     return nil
 end
@@ -60,7 +60,7 @@ local function findPet(guid)
     if not guid then return nil end
     for parentGuid,infoByNpcId in pairs(WDMF.tracker.pets) do
         for name,infoByGuid in pairs(infoByNpcId) do
-            local index = WdLib:findEntityIndex(infoByGuid, guid)
+            local index = WdLib.gen:findEntityIndex(infoByGuid, guid)
             if index then return infoByGuid[index] end
         end
     end
@@ -98,7 +98,7 @@ local function scanPetOwners(petGuid)
         local txt = lineObj:GetText()
         if not txt or txt == "" then return nil end
         for ownerGuid, owner in pairs(WDMF.tracker.players) do
-            local name = WdLib:getShortName(owner.name)
+            local name = WdLib.gen:getShortName(owner.name)
             if txt:find(name) then
                 return ownerGuid, owner.name
             end
@@ -124,10 +124,10 @@ end
 
 local function updateUnitName(unit, name)
     if not unit or not name then return end
-    local currName = WdLib:getShortName(unit.name, "noRealm")
+    local currName = WdLib.gen:getShortName(unit.name, "noRealm")
     if currName == UNKNOWNOBJECT and name ~= UNKNOWNOBJECT then
         local newName = name
-        local currId = WdLib:getUnitNumber(unit.name)
+        local currId = WdLib.gen:getUnitNumber(unit.name)
         if currId then
             newName = newName.."-"..currId
         end
@@ -165,7 +165,7 @@ local function loadAuras(p)
 end
 
 local function loadNpc(guid, name)
-    local npcId = WdLib:getNpcId(guid)
+    local npcId = WdLib.gen:getNpcId(guid)
     local holder = WDMF.tracker.npc[npcId]
     if not holder then
         WDMF.tracker.npc[npcId] = {}
@@ -174,7 +174,7 @@ local function loadNpc(guid, name)
         return holder[1]
     end
 
-    local index = WdLib:findEntityIndex(holder, guid)
+    local index = WdLib.gen:findEntityIndex(holder, guid)
     if not index then
         if #holder == 1 then
             holder[1].name = holder[1].name.."-1"
@@ -194,7 +194,7 @@ local function loadPet(guid, name, parentGuid, parentName)
         end
     end
 
-    local petNpcId = WdLib:getNpcId(guid)
+    local petNpcId = WdLib.gen:getNpcId(guid)
     local holder = WDMF.tracker.pets[parentGuid]
     if not holder then
         WDMF.tracker.pets[parentGuid] = {}
@@ -211,7 +211,7 @@ local function loadPet(guid, name, parentGuid, parentName)
         holder = holder[petNpcId]
     end
 
-    local index = WdLib:findEntityIndex(holder, guid)
+    local index = WdLib.gen:findEntityIndex(holder, guid)
     if not index then
         if #holder == 1 then
             holder[1].name = holder[1].name.."-1"
@@ -302,7 +302,7 @@ local function getEntities(timestamp, src_guid, src_name, src_flags, src_raid_fl
         elseif WD:IsPet(src_flags) then
             src = loadEntity(src_guid, src_name, "pet")
         elseif src_name then
-            src_name = WdLib:getFullName(src_name)
+            src_name = WdLib.gen:getFullName(src_name)
             src = loadEntity(src_guid, src_name, "player")
         end
         if src then
@@ -319,7 +319,7 @@ local function getEntities(timestamp, src_guid, src_name, src_flags, src_raid_fl
         elseif WD:IsPet(dst_flags) then
             dst = loadEntity(dst_guid, dst_name, "pet")
         elseif dst_name then
-            dst_name = WdLib:getFullName(dst_name)
+            dst_name = WdLib.gen:getFullName(dst_name)
             dst = loadEntity(dst_guid, dst_name, "player")
         end
         if dst then
@@ -463,9 +463,9 @@ local function findRulesInRange(eventType, unit, ...)
                 v.isActiveForGUID[unit.guid] = 1
                 local timeoutInSec = v.timeout / 1000
                 if v.timer then
-                    v.timer = WdLib:RestartTimer(v.timer, expireDependency, timeoutInSec, v, unit.guid)
+                    v.timer = WdLib.timers:RestartTimer(v.timer, expireDependency, timeoutInSec, v, unit.guid)
                 else
-                    v.timer = WdLib:CreateTimer(expireDependency, timeoutInSec, v, unit.guid)
+                    v.timer = WdLib.timers:CreateTimer(expireDependency, timeoutInSec, v, unit.guid)
                 end
             end
 
@@ -516,7 +516,7 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
             WDMF:AddFail(timestamp, unit.guid, unit.rt, msg, p)
         elseif rule[spell_id] and rule[spell_id][0] then
             local p = rule[spell_id][0].points
-            local msg = string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib:getSpellLinkByIdWithTexture(spell_id))
+            local msg = string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib.gui:getSpellLinkByIdWithTexture(spell_id))
             if rule.range then
                 msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
             end
@@ -525,7 +525,7 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
     elseif eventType == "EV_CAST_START" or eventType == "EV_CAST_END" then
         local spell_id, unit_name = args[1], args[2]
         if rule[spell_id] then
-            local key = WdLib:getNpcId(unit.guid)
+            local key = WdLib.gen:getNpcId(unit.guid)
             if not rule[spell_id][key] then
                 key = unit_name
             end
@@ -534,7 +534,7 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
                 local msg = WD.GetEventDescription(eventType, spell_id, unit_name)
                 msg = updateByRangeDescription(rule, msg)
                 if unit.type ~= "player" then
-                    WDMF:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
+                    WDMF:AddSuccess(timestamp, "creature"..WdLib.gen:getNpcId(unit.guid), unit.rt, msg, p)
                 else
                     WDMF:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
                 end
@@ -543,14 +543,14 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
     elseif eventType == "EV_CAST_INTERRUPTED" then
         local target_spell_id, target, target_name = args[1], args[2], args[3]
         if rule[target_spell_id] then
-            local key = WdLib:getNpcId(target.guid)
+            local key = WdLib.gen:getNpcId(target.guid)
             if not rule[target_spell_id][key] then
                 key = target_name
             end
             if rule[target_spell_id][key] then
                 local p = rule[target_spell_id][key].points
                 local dst_nameWithMark = target.name
-                if target.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(target.rt).." "..target.name end
+                if target.rt > 0 then dst_nameWithMark = WdLib.gui:getRaidTargetTextureLink(target.rt).." "..target.name end
                 local msg = WD.GetEventDescription(eventType, target_spell_id, dst_nameWithMark)
                 msg = updateByRangeDescription(rule, msg)
                 WDMF:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
@@ -567,14 +567,14 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
     elseif eventType == "EV_UNIT_DEATH" then
         local u = rule.unit
         local unit_name = args[1]
-        if (tonumber(u) and u == WdLib:getNpcId(unit.guid)) or (u == unit_name) then
+        if (tonumber(u) and u == WdLib.gen:getNpcId(unit.guid)) or (u == unit_name) then
             local p = rule.points
             local dst_nameWithMark = unit.name
-            if unit.rt > 0 then dst_nameWithMark = WdLib:getRaidTargetTextureLink(dst.rt).." "..unit.name end
+            if unit.rt > 0 then dst_nameWithMark = WdLib.gui:getRaidTargetTextureLink(dst.rt).." "..unit.name end
             local msg = WD.GetEventDescription("EV_DEATH_UNIT", dst_nameWithMark)
             msg = updateByRangeDescription(rule, msg)
             if unit.type ~= "player" then
-                WDMF:AddSuccess(timestamp, "creature"..WdLib:getNpcId(unit.guid), unit.rt, msg, p)
+                WDMF:AddSuccess(timestamp, "creature"..WdLib.gen:getNpcId(unit.guid), unit.rt, msg, p)
             else
                 WDMF:AddSuccess(timestamp, unit.guid, unit.rt, msg, p)
             end
@@ -620,9 +620,9 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
         local diff = (timestamp - unit.casts.current_timestamp) * 1000
         unit.casts[target_spell_id].count = i
         unit.casts[target_spell_id][i] = {}
-        unit.casts[target_spell_id][i].timestamp = WdLib:getTimedDiff(self.tracker.startTime, timestamp)
-        unit.casts[target_spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
-        unit.casts[target_spell_id][i].percent = WdLib:float_round_to(diff / unit.casts.current_cast_time, 2) * 100
+        unit.casts[target_spell_id][i].timestamp = WdLib.gen:getTimedDiff(self.tracker.startTime, timestamp)
+        unit.casts[target_spell_id][i].timediff = WdLib.gen:float_round_to(diff / 1000, 2)
+        unit.casts[target_spell_id][i].percent = WdLib.gen:float_round_to(diff / unit.casts.current_cast_time, 2) * 100
         unit.casts[target_spell_id][i].status = "INTERRUPTED"
         unit.casts[target_spell_id][i].interrupter = interrupter.guid
         unit.casts[target_spell_id][i].spell_id = source_spell_id
@@ -630,11 +630,11 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
         if interrupter then
             -- regular rules
             local rule = findRuleByRole("EV_CAST_INTERRUPTED", interrupter.role)
-            processRuleByEvent(rule, timestamp, interrupter, "EV_CAST_INTERRUPTED", target_spell_id, unit, WdLib:getShortName(unit_name, "ignoreRealm"))
+            processRuleByEvent(rule, timestamp, interrupter, "EV_CAST_INTERRUPTED", target_spell_id, unit, WdLib.gen:getShortName(unit_name, "ignoreRealm"))
             -- range rules
-            local rangeRules = findRulesInRange("EV_CAST_INTERRUPTED", unit, target_spell_id, WdLib:getShortName(unit_name, "ignoreRealm"))
+            local rangeRules = findRulesInRange("EV_CAST_INTERRUPTED", unit, target_spell_id, WdLib.gen:getShortName(unit_name, "ignoreRealm"))
             for _,v in pairs(rangeRules) do
-                processRuleByEvent(v, timestamp, interrupter, "EV_CAST_INTERRUPTED", target_spell_id, unit, WdLib:getShortName(unit_name, "ignoreRealm"))
+                processRuleByEvent(v, timestamp, interrupter, "EV_CAST_INTERRUPTED", target_spell_id, unit, WdLib.gen:getShortName(unit_name, "ignoreRealm"))
             end
             -- quality rules
             local statRules = WDMF.encounter.statRules
@@ -645,7 +645,7 @@ local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, 
                 local actualQuality = unit.casts[target_spell_id][i].percent
                 local expectedQuality = statRules["RL_QUALITY"]["QT_INTERRUPTS"][target_spell_id].qualityPercent
                 if actualQuality < expectedQuality then
-                    WDMF:AddFail(timestamp, interrupter.guid, interrupter.rt, string.format(WD_TRACKER_QT_INTERRUPTS_DESC, expectedQuality, WdLib:getSpellLinkByIdWithTexture(target_spell_id)), 0)
+                    WDMF:AddFail(timestamp, interrupter.guid, interrupter.rt, string.format(WD_TRACKER_QT_INTERRUPTS_DESC, expectedQuality, WdLib.gui:getSpellLinkByIdWithTexture(target_spell_id)), 0)
                 end
             end
         end
@@ -673,8 +673,8 @@ local function finishCast(self, unit, timestamp, spell_id, result)
                 unit.casts[spell_id].count = i
                 unit.casts[spell_id][i] = {}
                 unit.casts[spell_id][i].status = result
-                unit.casts[spell_id][i].timestamp = WdLib:getTimedDiff(self.tracker.startTime, timestamp)
-                unit.casts[spell_id][i].timediff = WdLib:float_round_to(diff / 1000, 2)
+                unit.casts[spell_id][i].timestamp = WdLib.gen:getTimedDiff(self.tracker.startTime, timestamp)
+                unit.casts[spell_id][i].timediff = WdLib.gen:float_round_to(diff / 1000, 2)
             end
         end
         unit.casts.current_spell_id = 0
@@ -693,8 +693,8 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
         aura.applied = self.tracker.startTime
         aura.removed = timestamp
         aura.caster = unit.guid
-        aura.dispelledAt = WdLib:getTimedDiff(self.tracker.startTime, timestamp)
-        aura.dispelledIn = WdLib:float_round_to(timestamp - aura.applied, 2)
+        aura.dispelledAt = WdLib.gen:getTimedDiff(self.tracker.startTime, timestamp)
+        aura.dispelledIn = WdLib.gen:float_round_to(timestamp - aura.applied, 2)
         aura.dispell_id = source_spell_id
         aura.dispeller = dispeller.guid
         unit.auras[target_aura_id] = {}
@@ -715,13 +715,13 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
     for i=1, #unit.auras[target_aura_id] do
         local aura = unit.auras[target_aura_id][i]
         local diff = (timestamp - aura.applied) * 1000
-        diff = WdLib:float_round_to(diff / 1000, 2)
+        diff = WdLib.gen:float_round_to(diff / 1000, 2)
         if not aura.duration then
             local t = (timestamp - aura.applied) / 1000
-            aura.duration = WdLib:float_round_to(t * 1000, 2)
+            aura.duration = WdLib.gen:float_round_to(t * 1000, 2)
         end
         if diff <= aura.duration + 0.01 then
-            aura.dispelledAt = WdLib:getTimedDiff(self.encounter.startTime, timestamp)
+            aura.dispelledAt = WdLib.gen:getTimedDiff(self.encounter.startTime, timestamp)
             aura.dispelledIn = diff
             aura.dispell_id = source_spell_id
             aura.dispeller = dispeller.guid
@@ -737,11 +737,11 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
                     local lateTime = statRules["RL_QUALITY"]["QT_DISPELS"][target_aura_id].lateDispel
                     local dispelledIn = aura.dispelledIn * 1000
                     if earlyTime > 0 and lateTime > 0 and (dispelledIn < earlyTime or dispelledIn > lateTime) then
-                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, earlyTime, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, earlyTime, lateTime, WdLib.gui:getSpellLinkByIdWithTexture(target_aura_id)), 0)
                     elseif earlyTime > 0 and lateTime == 0 and dispelledIn < earlyTime then
-                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, earlyTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, earlyTime, WdLib.gui:getSpellLinkByIdWithTexture(target_aura_id)), 0)
                     elseif earlyTime == 0 and lateTime > 0 and dispelledIn > lateTime then
-                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, lateTime, WdLib:getSpellLinkByIdWithTexture(target_aura_id)), 0)
+                        WDMF:AddFail(timestamp, dispeller.guid, dispeller.rt, string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, lateTime, WdLib.gui:getSpellLinkByIdWithTexture(target_aura_id)), 0)
                     end
                 end
             end
@@ -923,7 +923,7 @@ local function trackDamage(src, dst, event, spell_id, amount, overdmg)
     -- target related stat rules
     if rules["ST_TARGET_DAMAGE"] then
         local t = rules["ST_TARGET_DAMAGE"]
-        local targetName = WdLib:getShortName(dst.name, "norealm")
+        local targetName = WdLib.gen:getShortName(dst.name, "norealm")
         if t["RT_AURA_EXISTS"] and t["RT_AURA_EXISTS"][targetName] then
             for auraId,ruleId in pairs(t["RT_AURA_EXISTS"][targetName]) do
                 if hasAura(dst, auraId) then
@@ -1072,7 +1072,7 @@ function WDMF:ProcessAuras(src, dst, ...)
             if aura then
                 aura.removed = timestamp
                 local t = (aura.removed - aura.applied) / 1000
-                aura.duration = WdLib:float_round_to(t * 1000, 2)
+                aura.duration = WdLib.gen:float_round_to(t * 1000, 2)
             end
         end
 
@@ -1097,12 +1097,12 @@ function WDMF:ProcessCasts(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_START" then
         startCast(src, timestamp, spell_id)
-        processRulesByEventType(timestamp, src, "EV_CAST_START", spell_id, WdLib:getShortName(src_name))
+        processRulesByEventType(timestamp, src, "EV_CAST_START", spell_id, WdLib.gen:getShortName(src_name))
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
         finishCast(self, src, timestamp, spell_id, "SUCCESS")
-        processRulesByEventType(timestamp, src, "EV_CAST_END", spell_id, WdLib:getShortName(src_name))
+        processRulesByEventType(timestamp, src, "EV_CAST_END", spell_id, WdLib.gen:getShortName(src_name))
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_MISS" then
@@ -1308,7 +1308,7 @@ function WDMF:ProcessDeaths(src, dst, ...)
             end
         end
 
-        processRulesByEventType(timestamp, dst, "EV_DEATH_UNIT", WdLib:getShortName(dst_name))
+        processRulesByEventType(timestamp, dst, "EV_DEATH_UNIT", WdLib.gen:getShortName(dst_name))
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_INSTAKILL" then
@@ -1358,11 +1358,11 @@ function WDMF:LoadRules()
     local function getStatRuleDescription(rule)
         local function getRangeRuleDescription(rangeRule, data)
             if rangeRule == "RT_AURA_EXISTS" then
-                return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+                return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(data))
             elseif rangeRule == "RT_AURA_NOT_EXISTS" then
-                return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+                return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(data))
             elseif rangeRule == "RT_UNIT_CASTING" then
-                return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+                return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib.gui:getSpellLinkByIdWithTexture(data))
             elseif rangeRule == "RT_CUSTOM" then
                 local startEventMsg = WD.GetEventDescription(data.startEvent[1], data.startEvent[2][1], data.startEvent[2][2])
                 local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
@@ -1577,7 +1577,7 @@ function WDMF:CheckConsumables(player)
 end
 
 function WDMF:Init()
-    WdLib:table_wipe(callbacks)
+    WdLib.gen:table_wipe(callbacks)
     registerCallback(self.ProcessSummons,           "SPELL_SUMMON")
     registerCallback(self.ProcessAuras,             "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
     registerCallback(self.ProcessCasts,             "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
@@ -1597,7 +1597,7 @@ end
 function WDMF:CreateRaidMember(unitId, petUnitId)
     local function createInternalEntity(unitId)
         if not UnitIsVisible(unitId) then return nil end
-        local name = WdLib:getUnitName(unitId)
+        local name = WdLib.gen:getUnitName(unitId)
         if name == UNKNOWNOBJECT then return nil end
         local _,class = UnitClass(unitId)
 
@@ -1629,7 +1629,7 @@ function WDMF:CreateRaidMember(unitId, petUnitId)
 
     if pet then
         pet.type = "pet"
-        pet.name = WdLib:getShortName(pet.name)
+        pet.name = WdLib.gen:getShortName(pet.name)
         pet.parentGuid = player.guid
         pet.parentName = player.name
         self:LoadExistingPet(pet)
@@ -1646,7 +1646,7 @@ function WDMF:UpdateRaidMember(unitId)
                 for npcId,petData in pairs(npcData) do
                     if petData.unit == unitId then
                         local newGuid = UnitGUID(unitId)
-                        local name = WdLib:getUnitName(unitId)
+                        local name = WdLib.gen:getUnitName(unitId)
                         if name ~= UNKNOWNOBJECT then
                             petData.name = name
                         end
@@ -1670,7 +1670,7 @@ end
 function WDMF:CreateBoss(unitId)
     local function createInternalEntity(unitId)
         if not UnitIsVisible(unitId) then return nil end
-        local name = WdLib:getUnitName(unitId)
+        local name = WdLib.gen:getUnitName(unitId)
         if name == UNKNOWNOBJECT then return nil end
         local _,class = UnitClass(unitId)
 
@@ -1736,7 +1736,7 @@ function WDMF:Tracker_OnStopEncounter()
     if not WD.db.profile.tracker or #WD.db.profile.tracker == 0 then return end
     local n = WD.db.profile.tracker[#WD.db.profile.tracker].pullName
     WD.db.profile.tracker[#WD.db.profile.tracker].endTime = self.encounter.endTime
-    WD.db.profile.tracker[#WD.db.profile.tracker].pullName = n.." ("..WdLib:getTimedDiffShort(self.tracker.startTime, self.tracker.endTime)..")"
+    WD.db.profile.tracker[#WD.db.profile.tracker].pullName = n.." ("..WdLib.gen:getTimedDiffShort(self.tracker.startTime, self.tracker.endTime)..")"
 
     WD:RefreshTrackerPulls()
     WD:RefreshBasicMonitors()
@@ -1761,7 +1761,7 @@ end
 
 function WDMF:LoadExistingPet(pet)
     if not pet or not pet.parentGuid then return end
-    local petNpcId = WdLib:getNpcId(pet.guid)
+    local petNpcId = WdLib.gen:getNpcId(pet.guid)
     local holder = WDMF.tracker.pets[pet.parentGuid]
     if not holder then
         WDMF.tracker.pets[pet.parentGuid] = {}
@@ -1780,7 +1780,7 @@ function WDMF:LoadExistingPet(pet)
         holder = holder[petNpcId]
     end
 
-    local index = WdLib:findEntityIndex(holder, pet.guid)
+    local index = WdLib.gen:findEntityIndex(holder, pet.guid)
     if not index then
         if #holder == 1 then
             holder[1].name = holder[1].name.."-1"
@@ -1803,7 +1803,7 @@ end
 
 function WDMF:LoadExistingNpc(npc)
     if not npc then return end
-    local npcId = WdLib:getNpcId(npc.guid)
+    local npcId = WdLib.gen:getNpcId(npc.guid)
     local holder = WDMF.tracker.npc[npcId]
     if not holder then
         WDMF.tracker.npc[npcId] = {}
@@ -1813,7 +1813,7 @@ function WDMF:LoadExistingNpc(npc)
         return
     end
 
-    local index = WdLib:findEntityIndex(holder, npc.guid)
+    local index = WdLib.gen:findEntityIndex(holder, npc.guid)
     if not index then
         if #holder == 1 then
             holder[1].name = holder[1].name.."-1"

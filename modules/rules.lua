@@ -1,4 +1,16 @@
 
+local WDRulesModule = {}
+WDRulesModule.__index = WDRulesModule
+
+setmetatable(WDRulesModule, {
+    __index = WD.Module,
+    __call = function (v, ...)
+        local self = setmetatable({}, v)
+        self:init(...)
+        return self
+    end,
+})
+
 local WDRS = nil
 
 local trackingRuleTypes = {
@@ -72,11 +84,11 @@ end
 local function getRuleDescription(rule)
     local function getRangeRuleDescription(rangeRule, data)
         if rangeRule == "RT_AURA_EXISTS" then
-            return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+            return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(data))
         elseif rangeRule == "RT_AURA_NOT_EXISTS" then
-            return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+            return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(data))
         elseif rangeRule == "RT_UNIT_CASTING" then
-            return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib:getSpellLinkByIdWithTexture(data))
+            return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib.gui:getSpellLinkByIdWithTexture(data))
         elseif rangeRule == "RT_CUSTOM" then
             local startEventMsg = WD.GetEventDescription(data.startEvent[1], data.startEvent[2][1], data.startEvent[2][2])
             local endEventMsg = WD.GetEventDescription(data.endEvent[1], data.endEvent[2][1], data.endEvent[2][2])
@@ -86,14 +98,14 @@ local function getRuleDescription(rule)
 
     if rule.ruleType == "RL_QUALITY" then
         if rule.arg0 == "QT_INTERRUPTS" then
-            return string.format(WD_TRACKER_QT_INTERRUPTS_DESC, rule.qualityPercent, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+            return string.format(WD_TRACKER_QT_INTERRUPTS_DESC, rule.qualityPercent, WdLib.gui:getSpellLinkByIdWithTexture(rule.arg1))
         elseif rule.arg0 == "QT_DISPELS" then
             if rule.earlyDispel > 0 and rule.lateDispel > 0 then
-                return string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, rule.earlyDispel, rule.lateDispel, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+                return string.format(WD_TRACKER_QT_DISPELS_FULL_RANGE, rule.earlyDispel, rule.lateDispel, WdLib.gui:getSpellLinkByIdWithTexture(rule.arg1))
             elseif rule.earlyDispel > 0 and rule.lateDispel == 0 then
-                return string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, rule.earlyDispel, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+                return string.format(WD_TRACKER_QT_DISPELS_LEFT_RANGE, rule.earlyDispel, WdLib.gui:getSpellLinkByIdWithTexture(rule.arg1))
             elseif rule.earlyDispel == 0 and rule.lateDispel > 0 then
-                return string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, rule.lateDispel, WdLib:getSpellLinkByIdWithTexture(rule.arg1))
+                return string.format(WD_TRACKER_QT_DISPELS_RIGHT_RANGE, rule.lateDispel, WdLib.gui:getSpellLinkByIdWithTexture(rule.arg1))
             end
         end
     elseif rule.ruleType == "RL_RANGE_RULE" then
@@ -136,35 +148,35 @@ local function editEventConfig(eventFrame, eventName, args)
     local arg1_drop = eventFrame.hiddenMenus["arg1_drop"]
 
     if eventName == "EV_AURA" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
-        WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
-        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, args[2])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        local arg1_frame = WdLib.gui:findDropDownFrameByName(arg1_drop, args[2])
         if arg1_frame then
             arg1_drop.selected = arg1_frame
             arg1_drop:SetText(args[2])
         end
         arg1_drop:Show()
     elseif eventName == "EV_AURA_STACKS" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
-        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
     elseif eventName == "EV_DISPEL" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
     elseif eventName == "EV_CAST_START" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
-        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
     elseif eventName == "EV_CAST_INTERRUPTED" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
-        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
     elseif eventName == "EV_CAST_END" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
-        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
     elseif eventName == "EV_DAMAGETAKEN" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
-        WdLib:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg1_edit", args[2])
     elseif eventName == "EV_DEATH" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
     elseif eventName == "EV_DEATH_UNIT" then
-        WdLib:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
+        WdLib.gui:showHiddenEditBox(eventFrame, "arg0_edit", args[1])
     end
 end
 
@@ -218,30 +230,30 @@ local function showEventConfig(origin, menuId, rule)
     end
 
     if rule == "EV_AURA" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
-        WdLib:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select action:", {{name = "apply"},{name = "remove"}})
         arg1_drop:Show()
     elseif rule == "EV_AURA_STACKS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "stacks or 0 (if any)")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib.gui:showHiddenEditBox(r, "arg1_edit", "stacks or 0 (if any)")
     elseif rule == "EV_DISPEL" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "aura id")
     elseif rule == "EV_CAST_START" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib.gui:showHiddenEditBox(r, "arg1_edit", "caster name")
     elseif rule == "EV_CAST_INTERRUPTED" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "target name")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "target spell id")
+        WdLib.gui:showHiddenEditBox(r, "arg1_edit", "target name")
     elseif rule == "EV_CAST_END" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "caster name")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib.gui:showHiddenEditBox(r, "arg1_edit", "caster name")
     elseif rule == "EV_DAMAGETAKEN" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
-        WdLib:showHiddenEditBox(r, "arg1_edit", "amount or 0")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib.gui:showHiddenEditBox(r, "arg1_edit", "amount or 0")
     elseif rule == "EV_DEATH" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "spell id")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "spell id")
     elseif rule == "EV_DEATH_UNIT" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "unit name")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "unit name")
     end
 
     r:Show()
@@ -281,15 +293,15 @@ local function editRangeRuleMenu(origin, ruleType, arg0)
     r.label:SetText(ruleType)
 
     if ruleType == "RT_UNIT_CASTING" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", arg0)
     elseif ruleType == "RT_AURA_EXISTS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", arg0)
     elseif ruleType == "RT_AURA_NOT_EXISTS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", arg0)
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", arg0)
     elseif ruleType == "RT_CUSTOM" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select start event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
-        local arg0_frame = WdLib:findDropDownFrameByName(arg0_drop, arg0.startEvent[1])
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select start event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg0_frame = WdLib.gui:findDropDownFrameByName(arg0_drop, arg0.startEvent[1])
         if arg0_frame then
             arg0_drop.selected = arg0_frame
             arg0_drop:SetText(arg0.startEvent[1])
@@ -297,8 +309,8 @@ local function editRangeRuleMenu(origin, ruleType, arg0)
         arg0_drop:Show()
         editEventConfigMenu(arg0_drop, arg0.startEvent[1], arg0.startEvent[2])
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select end event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
-        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, arg0.endEvent[1])
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select end event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg1_frame = WdLib.gui:findDropDownFrameByName(arg1_drop, arg0.endEvent[1])
         if arg1_frame then
             arg1_drop.selected = arg1_frame
             arg1_drop:SetText(arg0.endEvent[1])
@@ -326,15 +338,15 @@ local function updateRangeRuleMenu(frame, selected)
     r.label:SetText(rule)
 
     if rule == "RT_AURA_EXISTS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "aura id")
     elseif rule == "RT_AURA_NOT_EXISTS" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "aura id")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "aura id")
     elseif rule == "RT_UNIT_CASTING" then
-        WdLib:showHiddenEditBox(r, "arg0_edit", "target spell id")
+        WdLib.gui:showHiddenEditBox(r, "arg0_edit", "target spell id")
     elseif rule == "RT_CUSTOM" then
-        WdLib:updateDropDownMenu(arg0_drop, "Select start event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select start event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg0_drop:Show()
-        WdLib:updateDropDownMenu(arg1_drop, "Select end event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select end event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg1_drop:Show()
     end
 
@@ -358,26 +370,26 @@ local function updateNewRuleHiddenMenu(frame, selected)
     local name = selected.name
     if name == "QT_INTERRUPTS" then
         -- arg1
-        WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
+        WdLib.gui:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
         updateRangeRuleMenu(arg1_edit, {name = "RT_UNIT_CASTING"})
         arg1_edit.label:SetText("Range rule type:")
         arg1_edit:EnableMouse(false)
         -- arg2
-        WdLib:showHiddenEditBox(parent, "arg2_edit", 50)
+        WdLib.gui:showHiddenEditBox(parent, "arg2_edit", 50)
         arg2_edit.label:SetText("Quality percent:")
         -- arg3
         arg3_edit:Hide()
     elseif name == "QT_DISPELS" then
         -- arg1
-        WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
+        WdLib.gui:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
         updateRangeRuleMenu(arg1_edit, {name = "RT_AURA_EXISTS"})
         arg1_edit.label:SetText("Range rule type:")
         arg1_edit:EnableMouse(false)
         -- arg2
-        WdLib:showHiddenEditBox(parent, "arg2_edit", 2000)
+        WdLib.gui:showHiddenEditBox(parent, "arg2_edit", 2000)
         arg2_edit.label:SetText("Early dispel before (msec):")
         -- arg3
-        WdLib:showHiddenEditBox(parent, "arg3_edit", 5000)
+        WdLib.gui:showHiddenEditBox(parent, "arg3_edit", 5000)
         arg3_edit.label:SetText("Late dispel after (msec):")
     elseif name == "ST_TARGET_DAMAGE"
         or name == "ST_TARGET_HEALING"
@@ -387,14 +399,14 @@ local function updateNewRuleHiddenMenu(frame, selected)
         or name == "ST_SOURCE_INTERRUPTS"
     then
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select range:", WdLib.gui:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
         updateRangeRuleMenu()
         arg1_drop.label:SetText("Range rule type:")
         arg1_drop:Show()
 
         -- arg2
         if name == "ST_TARGET_DAMAGE" then
-            WdLib:showHiddenEditBox(parent, "arg2_edit", "unit name")
+            WdLib.gui:showHiddenEditBox(parent, "arg2_edit", "unit name")
             arg2_edit.label:SetText("Target unit name:")
         else
             arg2_edit:Hide()
@@ -420,14 +432,14 @@ local function editRule(rule)
 
     -- encounter
     local encounterName = WD.EncounterNames[rule.journalId]
-    local frame = WdLib:findDropDownFrameByName(parent.menus["encounters"], encounterName)
+    local frame = WdLib.gui:findDropDownFrameByName(parent.menus["encounters"], encounterName)
     if frame then
         parent.menus["encounters"].selected = frame
         parent.menus["encounters"]:SetText(encounterName)
     end
 
     -- rule
-    local ruleFrame = WdLib:findDropDownFrameByName(parent.menus["rule_types"], rule.ruleType)
+    local ruleFrame = WdLib.gui:findDropDownFrameByName(parent.menus["rule_types"], rule.ruleType)
     if ruleFrame then
         parent.menus["rule_types"].selected = ruleFrame
         parent.menus["rule_types"]:SetText(rule.ruleType)
@@ -435,8 +447,8 @@ local function editRule(rule)
 
     if rule.ruleType == "RL_QUALITY" then
         -- quality type
-        WdLib:updateDropDownMenu(arg0_drop, "Select quality:", WdLib:convertTypesToItems(qualityTypes, updateNewRuleHiddenMenu))
-        local frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0)
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select quality:", WdLib.gui:convertTypesToItems(qualityTypes, updateNewRuleHiddenMenu))
+        local frame = WdLib.gui:findDropDownFrameByName(arg0_drop, rule.arg0)
         if frame then
             arg0_drop.selected = frame
             arg0_drop:SetText(rule.arg0)
@@ -446,32 +458,32 @@ local function editRule(rule)
 
         if rule.arg0 == "QT_INTERRUPTS" then
             -- arg1
-            WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
+            WdLib.gui:showHiddenEditBox(parent, "arg1_edit", "RT_UNIT_CASTING")
             arg1_edit.label:SetText("Range rule type:")
             arg1_edit:EnableMouse(false)
             editRangeRuleMenu(arg1_edit, "RT_UNIT_CASTING", rule.arg1)
             -- arg2
-            WdLib:showHiddenEditBox(parent, "arg2_edit", rule.qualityPercent)
+            WdLib.gui:showHiddenEditBox(parent, "arg2_edit", rule.qualityPercent)
             arg2_edit.label:SetText("Quality percent:")
             -- arg3
             arg3_edit:Hide()
         elseif rule.arg0 == "QT_DISPELS" then
             -- arg1
-            WdLib:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
+            WdLib.gui:showHiddenEditBox(parent, "arg1_edit", "RT_AURA_EXISTS")
             arg1_edit.label:SetText("Range rule type:")
             arg1_edit:EnableMouse(false)
             editRangeRuleMenu(arg1_edit, "RT_AURA_EXISTS", rule.arg1)
             -- arg2
-            WdLib:showHiddenEditBox(parent, "arg2_edit", rule.earlyDispel)
+            WdLib.gui:showHiddenEditBox(parent, "arg2_edit", rule.earlyDispel)
             arg2_edit.label:SetText("Early dispel before (msec):")
             -- arg3
-            WdLib:showHiddenEditBox(parent, "arg3_edit", rule.lateDispel)
+            WdLib.gui:showHiddenEditBox(parent, "arg3_edit", rule.lateDispel)
             arg3_edit.label:SetText("Late dispel after (msec):")
        end
     elseif rule.ruleType == "RL_RANGE_RULE" then
         -- range rule type
-        WdLib:updateDropDownMenu(arg0_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
-        local arg0_frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0[1])
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select range:", WdLib.gui:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        local arg0_frame = WdLib.gui:findDropDownFrameByName(arg0_drop, rule.arg0[1])
         if arg0_frame then
             arg0_drop.selected = arg0_frame
             arg0_drop:SetText(rule.arg0[1])
@@ -481,8 +493,8 @@ local function editRule(rule)
         editRangeRuleMenu(arg0_drop, rule.arg0[1], rule.arg0[2])
 
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
-        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1[1])
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select result event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg1_frame = WdLib.gui:findDropDownFrameByName(arg1_drop, rule.arg1[1])
         if arg1_frame then
             arg1_drop.selected = arg1_frame
             arg1_drop:SetText(rule.arg1[1])
@@ -492,8 +504,8 @@ local function editRule(rule)
         editEventConfigMenu(arg1_drop, rule.arg1[1], rule.arg1[2])
     elseif rule.ruleType == "RL_DEPENDENCY" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select reason event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
-        local arg0_frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0[1])
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select reason event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg0_frame = WdLib.gui:findDropDownFrameByName(arg0_drop, rule.arg0[1])
         if arg0_frame then
             arg0_drop.selected = arg0_frame
             arg0_drop:SetText(rule.arg0[1])
@@ -502,8 +514,8 @@ local function editRule(rule)
         arg0_drop:Show()
         editEventConfigMenu(arg0_drop, rule.arg0[1], rule.arg0[2])
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
-        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1[1])
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select result event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        local arg1_frame = WdLib.gui:findDropDownFrameByName(arg1_drop, rule.arg1[1])
         if arg1_frame then
             arg1_drop.selected = arg1_frame
             arg1_drop:SetText(rule.arg1[1])
@@ -512,12 +524,12 @@ local function editRule(rule)
         arg1_drop:Show()
         editEventConfigMenu(arg1_drop, rule.arg1[1], rule.arg1[2])
         -- arg2
-        WdLib:showHiddenEditBox(parent, "arg2_edit", rule.timeout)
+        WdLib.gui:showHiddenEditBox(parent, "arg2_edit", rule.timeout)
         arg2_edit.label:SetText("Timeout (in msec):")
     elseif rule.ruleType == "RL_STATISTICS" then
         -- statistic type
-        WdLib:updateDropDownMenu(arg0_drop, "Select statistics:", WdLib:updateItemsByHoverInfo(true, statisticTypes, WD.Help.statisticInfo, updateNewRuleHiddenMenu))
-        local frame = WdLib:findDropDownFrameByName(arg0_drop, rule.arg0)
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select statistics:", WdLib.gui:updateItemsByHoverInfo(true, statisticTypes, WD.Help.statisticInfo, updateNewRuleHiddenMenu))
+        local frame = WdLib.gui:findDropDownFrameByName(arg0_drop, rule.arg0)
         if frame then
             arg0_drop.selected = frame
             arg0_drop:SetText(rule.arg0)
@@ -526,8 +538,8 @@ local function editRule(rule)
         arg0_drop:Show()
 
         -- range rule type
-        WdLib:updateDropDownMenu(arg1_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
-        local arg1_frame = WdLib:findDropDownFrameByName(arg1_drop, rule.arg1[1])
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select range:", WdLib.gui:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        local arg1_frame = WdLib.gui:findDropDownFrameByName(arg1_drop, rule.arg1[1])
         if arg1_frame then
             arg1_drop.selected = arg1_frame
             arg1_drop:SetText(rule.arg1[1])
@@ -538,7 +550,7 @@ local function editRule(rule)
 
         -- arg2
         if rule.arg0 == "ST_TARGET_DAMAGE" then
-            WdLib:showHiddenEditBox(parent, "arg2_edit", rule.targetUnit)
+            WdLib.gui:showHiddenEditBox(parent, "arg2_edit", rule.targetUnit)
             arg2_edit.label:SetText("Target unit name:")
         end
     end
@@ -567,30 +579,30 @@ local function updateRulesListFrame()
     local function createFn(parent, row, index)
         local v = WD.db.profile.statRules[row]
         if index == 1 then
-            local f = WdLib:createCheckButton(parent)
+            local f = WdLib.gui:createCheckButton(parent)
             f:SetSize(parent:GetHeight() - 2, parent:GetHeight() - 2)
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
             f:SetChecked(v.isActive)
             f:SetScript("OnClick", function() v.isActive = not v.isActive end)
             return f
         elseif index == 2 then
-            local f = WdLib:addNextColumn(WDRS, parent, index, "LEFT", WD.EncounterNames[v.journalId])
+            local f = WdLib.gui:addNextColumn(WDRS, parent, index, "LEFT", WD.EncounterNames[v.journalId])
             f:SetPoint("TOPLEFT", parent.column[1], "TOPRIGHT", 2, 1)
             local instanceName = WD.FindInstanceByJournalId(v.journalId)
-            WdLib:generateHover(f, instanceName)
+            WdLib.gui:generateHover(f, instanceName)
             return f
         elseif index == 3 then
-            local f = WdLib:addNextColumn(WDRS, parent, index, "LEFT", getRuleDescription(v))
-            WdLib:generateSpellHover(f, getRuleDescription(v))
+            local f = WdLib.gui:addNextColumn(WDRS, parent, index, "LEFT", getRuleDescription(v))
+            WdLib.gui:generateSpellHover(f, getRuleDescription(v))
             return f
         elseif index == 4 then
-            local f = WdLib:addNextColumn(WDRS, parent, index, "CENTER", WD_BUTTON_EDIT)
+            local f = WdLib.gui:addNextColumn(WDRS, parent, index, "CENTER", WD_BUTTON_EDIT)
             f:EnableMouse(true)
             f:SetScript("OnClick", function() editRule(v); end)
             f.t:SetColorTexture(.2, 1, .2, .5)
             return f
         elseif index == 5 then
-            local f = WdLib:addNextColumn(WDRS, parent, index, "CENTER", WD_BUTTON_DELETE)
+            local f = WdLib.gui:addNextColumn(WDRS, parent, index, "CENTER", WD_BUTTON_DELETE)
             f:EnableMouse(true)
             f:SetScript("OnClick", function() table.remove(WD.db.profile.statRules, row); updateRulesListFrame(); end)
             f.t:SetColorTexture(1, .2, .2, .5)
@@ -606,17 +618,17 @@ local function updateRulesListFrame()
         elseif index == 2 then
             frame.txt:SetText(WD.EncounterNames[v.journalId])
             local instanceName = WD.FindInstanceByJournalId(v.journalId)
-            WdLib:generateHover(frame, instanceName)
+            WdLib.gui:generateHover(frame, instanceName)
         elseif index == 3 then
             frame.txt:SetText(getRuleDescription(v))
-            WdLib:generateSpellHover(frame, getRuleDescription(v))
+            WdLib.gui:generateSpellHover(frame, getRuleDescription(v))
         elseif index == 4 then
             frame:SetScript("OnClick", function(self) editRule(v); end)
         elseif index == 5 then
         end
     end
 
-    WdLib:updateScrollableTable(WDRS, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
+    WdLib.gui:updateScrollableTable(WDRS, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 end
 
 local function findEventConfigByOrigin(origin)
@@ -964,33 +976,33 @@ local function updateNewRuleMenuByTrackingRules(frame, selected)
 
     if rule == "RL_RANGE_RULE" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select range:", WdLib:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select range:", WdLib.gui:updateItemsByHoverInfo(true, rangeRuleTypes, WD.Help.rangesInfo, updateRangeRuleMenu))
         arg0_drop.label:SetText("Range rule type:")
         arg0_drop:Show()
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select result event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
     elseif rule == "RL_DEPENDENCY" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select reason event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select reason event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg0_drop.label:SetText("Reason event:")
         arg0_drop:Show()
         -- arg1
-        WdLib:updateDropDownMenu(arg1_drop, "Select result event:", WdLib:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
+        WdLib.gui:updateDropDownMenu(arg1_drop, "Select result event:", WdLib.gui:updateItemsByHoverInfo(true, WD.EventTypes, WD.Help.eventsInfo, updateEventConfigMenu))
         arg1_drop.label:SetText("Result event:")
         arg1_drop:Show()
         -- arg2
         arg2_edit.label:SetText("Timeout (in msec):")
-        WdLib:showHiddenEditBox(parent, "arg2_edit", "1000")
+        WdLib.gui:showHiddenEditBox(parent, "arg2_edit", "1000")
     elseif rule == "RL_STATISTICS" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select statistics:", WdLib:updateItemsByHoverInfo(true, statisticTypes, WD.Help.statisticInfo, updateNewRuleHiddenMenu))
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select statistics:", WdLib.gui:updateItemsByHoverInfo(true, statisticTypes, WD.Help.statisticInfo, updateNewRuleHiddenMenu))
         arg0_drop.label:SetText("Statistics mode:")
         arg0_drop:Show()
     elseif rule == "RL_QUALITY" then
         -- arg0
-        WdLib:updateDropDownMenu(arg0_drop, "Select quality:", WdLib:convertTypesToItems(qualityTypes, updateNewRuleHiddenMenu))
+        WdLib.gui:updateDropDownMenu(arg0_drop, "Select quality:", WdLib.gui:convertTypesToItems(qualityTypes, updateNewRuleHiddenMenu))
         arg0_drop.label:SetText("Quality type:")
         arg0_drop:Show()
     end
@@ -1026,7 +1038,7 @@ local function initSelectedRuleMenu()
     local maxV = 3
     --local m = math.floor(maxV / 2) + 1
     for i=1,maxV do
-        local r = WdLib:createRuleWindow(parent)
+        local r = WdLib.gui:createRuleWindow(parent)
         r:SetFrameStrata("FULLSCREEN")
         updateColorByIndex(r.bg, i)
 
@@ -1057,24 +1069,24 @@ local function initRangeRuleMenu()
     local xSize = 150
 
     -- label
-    r.label = WdLib:createFontDefault(r, "CENTER", "")
+    r.label = WdLib.gui:createFontDefault(r, "CENTER", "")
     r.label:SetSize(xSize, 20)
     r.label:SetPoint("TOPRIGHT", r, "TOPRIGHT", -1, -1)
 
     -- arg0: dropdown or editbox
-    r.hiddenMenus["arg0_drop"] = WdLib:createDropDownMenu(r)
+    r.hiddenMenus["arg0_drop"] = WdLib.gui:createDropDownMenu(r)
     r.hiddenMenus["arg0_drop"].txt:SetJustifyH("CENTER")
     r.hiddenMenus["arg0_drop"]:SetSize(xSize, 20)
     r.hiddenMenus["arg0_drop"]:SetPoint("TOPRIGHT", r.label, "BOTTOMRIGHT", 0, -1)
     r.hiddenMenus["arg0_drop"]:Hide()
 
-    r.hiddenMenus["arg0_edit"] = WdLib:createEditBox(r)
+    r.hiddenMenus["arg0_edit"] = WdLib.gui:createEditBox(r)
     r.hiddenMenus["arg0_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg0_edit"]:SetPoint("TOPRIGHT", r.label, "BOTTOMRIGHT", 0, -1)
     r.hiddenMenus["arg0_edit"]:Hide()
 
     -- arg1: dropdown
-    r.hiddenMenus["arg1_drop"] = WdLib:createDropDownMenu(r)
+    r.hiddenMenus["arg1_drop"] = WdLib.gui:createDropDownMenu(r)
     r.hiddenMenus["arg1_drop"].txt:SetJustifyH("CENTER")
     r.hiddenMenus["arg1_drop"]:SetSize(xSize, 20)
     r.hiddenMenus["arg1_drop"]:SetPoint("TOPRIGHT", r.hiddenMenus["arg0_drop"], "BOTTOMRIGHT", 0, -1)
@@ -1094,7 +1106,7 @@ local function initRangeRuleMenu()
     r:EnableMouse(true)
     r:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
     r:SetSize(xSize + 2, 3 * 21 + 1)
-    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, .15, 1)
+    r.bg = WdLib.gui:createColorTexture(r, "TEXTURE", 0, 0, .15, 1)
     r.bg.color = {0, 0, .15, 1}
     r.bg:SetAllPoints()
 
@@ -1116,108 +1128,108 @@ local function initNewRuleWindow()
     local totalWidth = xSize + x
 
     -- preview
-    r.menus["preview"] = WdLib:createFontDefault(r, "LEFT", "")
+    r.menus["preview"] = WdLib.gui:createFontDefault(r, "LEFT", "")
     r.menus["preview"]:SetSize(700, 20)
     r.menus["preview"]:SetPoint("BOTTOMLEFT", r, "BOTTOMLEFT", 5, -2)
     -- encounters menu
-    r.menus["encounters"] = WdLib:createDropDownMenu(r, "Select encounter", WD:CreateTierList())
+    r.menus["encounters"] = WdLib.gui:createDropDownMenu(r, "Select encounter", WD:CreateTierList())
     r.menus["encounters"]:SetSize(xSize, 20)
     r.menus["encounters"]:SetPoint("TOPLEFT", r, "TOPLEFT", x, -1)
-    r.menus["encounters"].label = WdLib:createFontDefault(r.menus["encounters"], "RIGHT", "Encounter:")
+    r.menus["encounters"].label = WdLib.gui:createFontDefault(r.menus["encounters"], "RIGHT", "Encounter:")
     r.menus["encounters"].label:SetSize(x - 5, 20)
     r.menus["encounters"].label:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -1)
     -- tracking rules menu
-    r.menus["rule_types"] = WdLib:createDropDownMenu(r, "Select rule type", WdLib:updateItemsByHoverInfo(true, trackingRuleTypes, WD.Help.rulesInfo, updateNewRuleMenuByTrackingRules))
+    r.menus["rule_types"] = WdLib.gui:createDropDownMenu(r, "Select rule type", WdLib.gui:updateItemsByHoverInfo(true, trackingRuleTypes, WD.Help.rulesInfo, updateNewRuleMenuByTrackingRules))
     r.menus["rule_types"]:SetSize(xSize, 20)
     r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["encounters"], "BOTTOMLEFT", 0, -1)
-    r.menus["rule_types"].label = WdLib:createFontDefault(r.menus["rule_types"], "RIGHT", "Rule:")
+    r.menus["rule_types"].label = WdLib.gui:createFontDefault(r.menus["rule_types"], "RIGHT", "Rule:")
     r.menus["rule_types"].label:SetSize(x - 5, 20)
     r.menus["rule_types"].label:SetPoint("TOPLEFT", r.menus["encounters"].label, "BOTTOMLEFT", 0, -1)
 
     -- arg0: dropdown or editbox
-    r.hiddenMenus["arg0_drop"] = WdLib:createDropDownMenu(r)
+    r.hiddenMenus["arg0_drop"] = WdLib.gui:createDropDownMenu(r)
     r.hiddenMenus["arg0_drop"].txt:SetJustifyH("CENTER")
     r.hiddenMenus["arg0_drop"]:SetSize(xSize, 20)
     r.hiddenMenus["arg0_drop"]:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg0_drop"].label = WdLib:createFontDefault(r.hiddenMenus["arg0_drop"], "RIGHT", "Statistics type:")
+    r.hiddenMenus["arg0_drop"].label = WdLib.gui:createFontDefault(r.hiddenMenus["arg0_drop"], "RIGHT", "Statistics type:")
     r.hiddenMenus["arg0_drop"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg0_drop"].label:SetPoint("TOPLEFT", r.menus["rule_types"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg0_drop"]:Hide()
 
-    r.hiddenMenus["arg0_edit"] = WdLib:createEditBox(r)
+    r.hiddenMenus["arg0_edit"] = WdLib.gui:createEditBox(r)
     r.hiddenMenus["arg0_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg0_edit"]:SetPoint("TOPLEFT", r.menus["rule_types"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg0_edit"].label = WdLib:createFontDefault(r.hiddenMenus["arg0_edit"], "RIGHT", "target spell id:")
+    r.hiddenMenus["arg0_edit"].label = WdLib.gui:createFontDefault(r.hiddenMenus["arg0_edit"], "RIGHT", "target spell id:")
     r.hiddenMenus["arg0_edit"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg0_edit"].label:SetPoint("TOPLEFT", r.menus["rule_types"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg0_edit"]:Hide()
 
     -- arg1: dropdown or editbox
-    r.hiddenMenus["arg1_drop"] = WdLib:createDropDownMenu(r)
+    r.hiddenMenus["arg1_drop"] = WdLib.gui:createDropDownMenu(r)
     r.hiddenMenus["arg1_drop"].txt:SetJustifyH("CENTER")
     r.hiddenMenus["arg1_drop"]:SetSize(xSize, 20)
     r.hiddenMenus["arg1_drop"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg1_drop"].label = WdLib:createFontDefault(r.hiddenMenus["arg1_drop"], "RIGHT", "")
+    r.hiddenMenus["arg1_drop"].label = WdLib.gui:createFontDefault(r.hiddenMenus["arg1_drop"], "RIGHT", "")
     r.hiddenMenus["arg1_drop"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg1_drop"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg1_drop"]:Hide()
 
-    r.hiddenMenus["arg1_edit"] = WdLib:createEditBox(r)
+    r.hiddenMenus["arg1_edit"] = WdLib.gui:createEditBox(r)
     r.hiddenMenus["arg1_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg1_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg1_edit"].label = WdLib:createFontDefault(r.hiddenMenus["arg1_edit"], "RIGHT", "quality percent:")
+    r.hiddenMenus["arg1_edit"].label = WdLib.gui:createFontDefault(r.hiddenMenus["arg1_edit"], "RIGHT", "quality percent:")
     r.hiddenMenus["arg1_edit"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg1_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg0_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg1_edit"]:Hide()
 
     -- arg2: dropdown or editbox
-    r.hiddenMenus["arg2_drop"] = WdLib:createDropDownMenu(r)
+    r.hiddenMenus["arg2_drop"] = WdLib.gui:createDropDownMenu(r)
     r.hiddenMenus["arg2_drop"].txt:SetJustifyH("CENTER")
     r.hiddenMenus["arg2_drop"]:SetSize(xSize, 20)
     r.hiddenMenus["arg2_drop"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg2_drop"].label = WdLib:createFontDefault(r.hiddenMenus["arg2_drop"], "RIGHT", "Stop event:")
+    r.hiddenMenus["arg2_drop"].label = WdLib.gui:createFontDefault(r.hiddenMenus["arg2_drop"], "RIGHT", "Stop event:")
     r.hiddenMenus["arg2_drop"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg2_drop"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg2_drop"]:Hide()
 
-    r.hiddenMenus["arg2_edit"] = WdLib:createEditBox(r)
+    r.hiddenMenus["arg2_edit"] = WdLib.gui:createEditBox(r)
     r.hiddenMenus["arg2_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg2_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg2_edit"].label = WdLib:createFontDefault(r.hiddenMenus["arg2_edit"], "RIGHT", "time to reset (in msec):")
+    r.hiddenMenus["arg2_edit"].label = WdLib.gui:createFontDefault(r.hiddenMenus["arg2_edit"], "RIGHT", "time to reset (in msec):")
     r.hiddenMenus["arg2_edit"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg2_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg1_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg2_edit"]:Hide()
 
     -- arg3: editbox
-    r.hiddenMenus["arg3_edit"] = WdLib:createEditBox(r)
+    r.hiddenMenus["arg3_edit"] = WdLib.gui:createEditBox(r)
     r.hiddenMenus["arg3_edit"]:SetSize(xSize, 20)
     r.hiddenMenus["arg3_edit"]:SetPoint("TOPLEFT", r.hiddenMenus["arg2_drop"], "BOTTOMLEFT", 0, -1)
-    r.hiddenMenus["arg3_edit"].label = WdLib:createFontDefault(r.hiddenMenus["arg3_edit"], "RIGHT", "")
+    r.hiddenMenus["arg3_edit"].label = WdLib.gui:createFontDefault(r.hiddenMenus["arg3_edit"], "RIGHT", "")
     r.hiddenMenus["arg3_edit"].label:SetSize(x - 5, 20)
     r.hiddenMenus["arg3_edit"].label:SetPoint("TOPLEFT", r.hiddenMenus["arg2_drop"].label, "BOTTOMLEFT", 0, -1)
     r.hiddenMenus["arg3_edit"]:Hide()
 
-    r.buttons["save"] = WdLib:createButton(r)
+    r.buttons["save"] = WdLib.gui:createButton(r)
     r.buttons["save"]:SetPoint("TOPLEFT", r.hiddenMenus["arg3_edit"], "BOTTOMLEFT", 1, -2)
     r.buttons["save"]:SetSize(xSize / 2 - 1, 20)
     r.buttons["save"]:SetScript("OnClick", function() local result = saveRule() if result == true then r:Hide() end end)
     r.buttons["save"].t:SetColorTexture(.2, .4, .2, 1)
-    r.buttons["save"].txt = WdLib:createFont(r.buttons["save"], "CENTER", "Save")
+    r.buttons["save"].txt = WdLib.gui:createFont(r.buttons["save"], "CENTER", "Save")
     r.buttons["save"].txt:SetAllPoints()
 
-    r.buttons["cancel"] = WdLib:createButton(r)
+    r.buttons["cancel"] = WdLib.gui:createButton(r)
     r.buttons["cancel"]:SetPoint("TOPLEFT", r.buttons["save"], "TOPRIGHT", 1, 0)
     r.buttons["cancel"]:SetSize(xSize / 2 - 2, 20)
     r.buttons["cancel"]:SetScript("OnClick", function() r:Hide() end)
     r.buttons["cancel"].t:SetColorTexture(.4, .2, .2, 1)
-    r.buttons["cancel"].txt = WdLib:createFont(r.buttons["cancel"], "CENTER", "Cancel")
+    r.buttons["cancel"].txt = WdLib.gui:createFont(r.buttons["cancel"], "CENTER", "Cancel")
     r.buttons["cancel"].txt:SetAllPoints()
 
-    r.buttons["preview"] = WdLib:createButton(r)
+    r.buttons["preview"] = WdLib.gui:createButton(r)
     r.buttons["preview"]:SetPoint("TOPRIGHT", r.buttons["save"], "TOPLEFT", -1, 0)
     r.buttons["preview"]:SetSize(xSize / 2 - 2, 20)
     r.buttons["preview"]:SetScript("OnClick", function() local result, errorMsg = previewRule() if result == false then r.menus["preview"]:SetText("|cffff0000"..errorMsg.."|r") end end)
-    r.buttons["preview"].txt = WdLib:createFont(r.buttons["preview"], "CENTER", "Preview")
+    r.buttons["preview"].txt = WdLib.gui:createFont(r.buttons["preview"], "CENTER", "Preview")
     r.buttons["preview"].txt:SetAllPoints()
 
     r:EnableMouse(true)
@@ -1225,7 +1237,7 @@ local function initNewRuleWindow()
     r:SetSize(700, 230)
     r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end r.menus["preview"]:SetText("") end)
 
-    r.bg = WdLib:createColorTexture(r, "TEXTURE", 0, 0, 0, .9)
+    r.bg = WdLib.gui:createColorTexture(r, "TEXTURE", 0, 0, 0, .9)
     r.bg:SetAllPoints()
 
     initSelectedRuleMenu()
@@ -1254,38 +1266,40 @@ local function onMenuClick(menu)
     end
 end
 
-function WD:InitRulesStatisticsModule(parent)
-    WDRS = parent
+function WDRulesModule:init(parent, yOffset)
+    WD.Module.init(self, WD_BUTTON_TRACKING_RULES_MODULE, parent, yOffset)
+
+    WDRS = self.frame
 
     WDRS.menus = {}
     WDRS.buttons = {}
     WDRS.members = {}
 
     -- new rule button
-    WDRS.buttons["add_rule"] = WdLib:createButton(WDRS)
+    WDRS.buttons["add_rule"] = WdLib.gui:createButton(WDRS)
     WDRS.buttons["add_rule"]:SetPoint("TOPLEFT", WDRS, "TOPLEFT", 1, -5)
     WDRS.buttons["add_rule"]:SetSize(125, 20)
     WDRS.buttons["add_rule"]:SetScript("OnClick", function() onMenuClick("new_rule") end)
-    WDRS.buttons["add_rule"].txt = WdLib:createFont(WDRS.buttons["add_rule"], "CENTER", WD_BUTTON_NEW_RULE)
+    WDRS.buttons["add_rule"].txt = WdLib.gui:createFont(WDRS.buttons["add_rule"], "CENTER", WD_BUTTON_NEW_RULE)
     WDRS.buttons["add_rule"].txt:SetAllPoints()
 
     -- headers
     local x, y = 1, -30
     local height = 20
     WDRS.headers = {}
-    local h = WdLib:createTableHeader(WDRS, "", x, y, height, height)
+    local h = WdLib.gui:createTableHeader(WDRS, "", x, y, height, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeader(WDRS, WD_BUTTON_ENCOUNTER, x + height + 1, y, 150, height)
+    h = WdLib.gui:createTableHeader(WDRS, WD_BUTTON_ENCOUNTER, x + height + 1, y, 150, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, WD_BUTTON_REASON, 750, height)
+    h = WdLib.gui:createTableHeaderNext(WDRS, h, WD_BUTTON_REASON, 750, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, "", 50, height)
+    h = WdLib.gui:createTableHeaderNext(WDRS, h, "", 50, height)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, "", 50, height)
+    h = WdLib.gui:createTableHeaderNext(WDRS, h, "", 50, height)
     table.insert(WDRS.headers, h)
-    --[[h = WdLib:createTableHeaderNext(WDRS, h, "", 50, 20)
+    --[[h = WdLib.gui:createTableHeaderNext(WDRS, h, "", 50, 20)
     table.insert(WDRS.headers, h)
-    h = WdLib:createTableHeaderNext(WDRS, h, "", 70, 20)
+    h = WdLib.gui:createTableHeaderNext(WDRS, h, "", 70, 20)
     table.insert(WDRS.headers, h)]]
 
     initNewRuleWindow()
@@ -1295,3 +1309,5 @@ function WD:InitRulesStatisticsModule(parent)
         updateRulesListFrame()
     end
 end
+
+WD.RulesModule = WDRulesModule

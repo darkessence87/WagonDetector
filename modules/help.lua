@@ -1,4 +1,17 @@
 
+
+local WDHelpModule = {}
+WDHelpModule.__index = WDHelpModule
+
+setmetatable(WDHelpModule, {
+    __index = WD.Module,
+    __call = function (v, ...)
+        local self = setmetatable({}, v)
+        self:init(...)
+        return self
+    end,
+})
+
 local WDHP = nil
 
 WD.Help = {}
@@ -42,8 +55,10 @@ WD.Help.statisticInfo = {
     ["ST_SOURCE_INTERRUPTS"]    = "|cffffffffcollects interrupts done by units in |cffffff00events_range |cffffffffrelated to those units|r",
 }
 
-function WD:InitHelpModule(parent)
-    WDHP = parent
+function WDHelpModule:init(parent, yOffset)
+    WD.Module.init(self, WD_BUTTON_HELP_MODULE, parent, yOffset)
+
+    WDHP = self.frame
 
     WDHP.mainPage = CreateFrame("SimpleHTML", nil, WDHP)
     WDHP.mainPage:SetSize(WDHP:GetWidth() - 20, WDHP:GetHeight() - 40)
@@ -53,10 +68,10 @@ function WD:InitHelpModule(parent)
     local header = "<html><body>"
     local footer = "</body></html>"
     local version = "<p align=\"center\">Current version: |cff00ff00"..WD.Version.."|r</p><br/>"
-    local eventsHelp = "<h1>Events list:</h1>" .. WdLib:table_tohtml(WD.Help.eventsInfo) .. "<br/>"
-    local rulesHelp = "<h1>Rules list:</h1>" .. WdLib:table_tohtml(WD.Help.rulesInfo) .. "<br/>"
-    local statsHelp = "<h1>Statistic modes:</h1>" .. WdLib:table_tohtml(WD.Help.statisticInfo) .. "<br/>"
-    local rangesHelp = "<h1>Ranges list:</h1>" .. WdLib:table_tohtml(WD.Help.rangesInfo) .. "<br/>"
+    local eventsHelp = "<h1>Events list:</h1>" .. WdLib.gen:table_tohtml(WD.Help.eventsInfo) .. "<br/>"
+    local rulesHelp = "<h1>Rules list:</h1>" .. WdLib.gen:table_tohtml(WD.Help.rulesInfo) .. "<br/>"
+    local statsHelp = "<h1>Statistic modes:</h1>" .. WdLib.gen:table_tohtml(WD.Help.statisticInfo) .. "<br/>"
+    local rangesHelp = "<h1>Ranges list:</h1>" .. WdLib.gen:table_tohtml(WD.Help.rangesInfo) .. "<br/>"
     WDHP.mainPage:SetText(header .. version .. eventsHelp .. rulesHelp .. statsHelp .. rangesHelp .. footer)
 
     -- link button
@@ -65,3 +80,5 @@ function WD:InitHelpModule(parent)
     function WDHP:OnUpdate()
     end
 end
+
+WD.HelpModule = WDHelpModule

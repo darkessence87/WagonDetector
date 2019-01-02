@@ -11,7 +11,7 @@ end
 local core = WD.mainFrame
 
 local function onEndTest(testObject)
-    core:OnEvent("ENCOUNTER_END")
+    core:OnEvent("ENCOUNTER_END", 0, testObject.name, 10, 10)
     local errorMsg = testObject.validate(testObject)
     local headerMsg = "|cffffffff["..testObject.name.."] |cffffff00finished, result:|r"
     if errorMsg then
@@ -29,9 +29,9 @@ local function sendEvent(currTime, timeDiff, event, ...)
 end
 
 local function startTest(testObject, timeout)
-    core:OnEvent("ENCOUNTER_START", 0, testObject.name)
+    core:OnEvent("ENCOUNTER_START", 0, testObject.name, 10, 10)
     testObject.startFn(testObject)
-    local currTime = time()
+    local currTime = GetTime()
     for i=1,#testObject.events do
         local v = testObject.events[i]
         sendEvent(currTime, unpack(v))
@@ -54,8 +54,8 @@ Tests["interrupts"].events = {
     {5,"SPELL_CAST_START","Creature-0-3151-1861-23835-139381-00009C17EC","Caster 1",0xa48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
     {6,"SPELL_CAST_START","Creature-0-3151-1861-23835-139381-00001C17EC","Caster 1",0x10a48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
     {7,"SPELL_INTERRUPT","Player-1929-0A3C63F","Interrupter 3",0x514,0x0,"Creature-0-3151-1861-23835-139381-00009C17EC","Caster 1",0xa48,0x0,47528,"Заморозка разума",0x10,273944,"Залп Бездны",32},
-    {9,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C17EC","Caster 1",0xa48,0x0,"Player-1602-0AC4520","Player 1",0x514,0x0,273945,"Залп Бездны",0x20,"Creature-0-3151-1861-23835-139381-00001C17EC",0000000000000000,573529,1369275,0,0,2700,0,0,295105,0,266.22,-282.74,1155,5.9229,122},
-    {9,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C17EC","Caster 1",0x10a48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20,"Creature-0-3151-1861-23835-139381-00001C17EC",0000000000000000,987274,1369275,0,0,2700,0,0,295105,0,278.78,-222.63,1155,5.9206,122},
+    {9,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C17EC","Caster 1",0xa48,0x0,"Player-1602-0AC4520","Player 1",0x514,0x0,273945,"Залп Бездны",0x20},
+    {9,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C17EC","Caster 1",0x10a48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
     -- 1 creature started cast again, interrupted
     {9,"SPELL_CAST_START","Creature-0-3151-1861-23835-139381-00001C17EC","Caster 1",0x10a48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
     {10,"SPELL_INTERRUPT","Player-1615-08F2F7C","Interrupter 2",0x514,0x0,"Creature-0-3151-1861-23835-139381-00001C17EC","Caster 1",0x10a48,0x0,183752,"Прерывание",0x7c,273944,"Залп Бездны",32},
@@ -68,10 +68,10 @@ Tests["interrupts"].events = {
     -- 2 creatures started cast again, no interrupts
     {15,"SPELL_CAST_START","Creature-0-3151-1861-23835-139381-00009C1877","Caster 1",0xa48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
     {15,"SPELL_CAST_START","Creature-0-3151-1861-23835-139381-00001C1877","Caster 1",0x10a48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
-    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00009C1877","Caster 1",0xa48,0x0,"Player-1602-0AC4520","Player 1",0x514,0x0,273945,"Залп Бездны",0x20,"Creature-0-3151-1861-23835-139381-00009C1877",0000000000000000,573529,1369275,0,0,2700,0,0,295105,0,266.22,-282.74,1155,5.9229,122},
-    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00009C1877","Caster 1",0xa48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20,"Creature-0-3151-1861-23835-139381-00009C1877",0000000000000000,573529,1369275,0,0,2700,0,0,295105,0,266.22,-282.74,1155,1.1108,122},
-    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C1877","Caster 1",0x10a48,0x0,"Player-1602-0AC4520","Player 1",0x514,0x0,273945,"Залп Бездны",0x20,"Creature-0-3151-1861-23835-139381-00001C1877",0000000000000000,573529,1369275,0,0,2700,0,0,295105,0,266.22,-282.74,1155,5.9229,122},
-    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C1877","Caster 1",0x10a48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20,"Creature-0-3151-1861-23835-139381-00001C1877",0000000000000000,593866,1369275,0,0,2700,0,0,295105,0,270.97,-215.83,1155,5.1489,122},
+    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00009C1877","Caster 1",0xa48,0x0,"Player-1602-0AC4520","Player 1",0x514,0x0,273945,"Залп Бездны",0x20},
+    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00009C1877","Caster 1",0xa48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
+    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C1877","Caster 1",0x10a48,0x0,"Player-1602-0AC4520","Player 1",0x514,0x0,273945,"Залп Бездны",0x20},
+    {18,"SPELL_CAST_SUCCESS","Creature-0-3151-1861-23835-139381-00001C1877","Caster 1",0x10a48,0x0,0000000000000000,nil,0x80000000,0x80000000,273944,"Залп Бездны",0x20},
 }
 Tests["interrupts"].expectations = {
     ["Creature-0-3151-1861-23835-139381-00009C17EC"] = {casts = 0, interrupted = 2},

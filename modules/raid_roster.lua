@@ -133,7 +133,9 @@ end
 local function requestInspect(p)
     if WdLib.gen:getShortName(p.name) == UNKNOWNOBJECT then return end
     NotifyInspect(p.name)
-    WD.cache.raidrosterinspected[p.guid].lastTime = time()
+    if WD.cache.raidrosterinspected[p.guid] then
+        WD.cache.raidrosterinspected[p.guid].lastTime = time()
+    end
 
     inspectProcessing[p.guid] = {}
 end

@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.57"
+WD.Version = "v0.0.58"
 WD.TiersInfo = {}
 WD.MaxPullsToBeSaved = 25
 WD.DebugEnabled = false
@@ -206,6 +206,7 @@ WD.Spells.controlEffects = {
       [5211] = "Druid - mighty-bash",
     [236748] = "Druid - talent intimidating-roar",
     [187650] = "Hunter - trap",
+     [24394] = "Hunter - intimidation",
      [31661] = "Mage - dragon breath",
        [118] = "Mage - poly",
      [28271] = "Mage - poly",

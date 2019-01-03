@@ -517,9 +517,7 @@ local function processRuleByEvent(rule, timestamp, unit, eventType, ...)
         elseif rule[spell_id] and rule[spell_id][0] then
             local p = rule[spell_id][0].points
             local msg = string.format(WD_RULE_AURA_STACKS_ANY, "("..stacks..")", WdLib.gui:getSpellLinkByIdWithTexture(spell_id))
-            if rule.range then
-                msg = msg.." "..WD.GetRangeRuleDescription(rule.range[1], rule.range[2])
-            end
+            msg = updateByRangeDescription(rule, msg)
             WDMF:AddFail(timestamp, unit.guid, unit.rt, msg, p)
         end
     elseif eventType == "EV_CAST_START" or eventType == "EV_CAST_END" then

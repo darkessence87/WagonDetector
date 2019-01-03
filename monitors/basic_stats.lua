@@ -472,7 +472,7 @@ end
 function WDStatsMonitor:loadUnits(mode, units, ruleId)
     local pull = self.frame:GetParent():GetSelectedPull()
     local function loadUnit(unit, ruleId)
-        unit = WdLib.gen:table_deepcopy(unit)
+        unit = WdLib.table:deepcopy(unit)
         if ruleId then
             unit.stats = {}
             if unit.ruleStats and unit.ruleStats[ruleId] then
@@ -539,7 +539,7 @@ function WDStatsMonitor:getUnitStatistics(mode)
     if not self.frame.cache.units[mode] then
         self.frame.cache.units[mode] = {}
     else
-        WdLib.gen:table_wipe(self.frame.cache.units[mode])
+        WdLib.table:wipe(self.frame.cache.units[mode])
     end
 
     local ruleType = self:getSelectedRuleType()
@@ -675,7 +675,7 @@ local function initPullsMenu(parent)
     parent.buttons["clear_pulls"] = WdLib.gui:createButton(parent)
     parent.buttons["clear_pulls"]:SetSize(90, 20)
     parent.buttons["clear_pulls"]:SetScript("OnClick", function()
-        WdLib.gen:table_wipe(WD.db.profile.tracker)
+        WdLib.table:wipe(WD.db.profile.tracker)
         WD:RefreshTrackerPulls()
         refreshMonitors(true)
     end)

@@ -241,7 +241,7 @@ function WDMF:StopEncounter(isKill)
 end
 
 function WDMF:ResetEncounter()
-    WdLib.gen:table_wipe(self.encounter)
+    WdLib.table:wipe(self.encounter)
 
     self.encounter.rules = {}
     self.encounter.statRules = {}

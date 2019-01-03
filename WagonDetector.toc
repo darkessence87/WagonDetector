@@ -12,10 +12,12 @@ loader.lua
 
 helpers\lib_common.lua
 helpers\lib_gui.lua
+helpers\lib_table.lua
 helpers\lib_timers.lua
 localization\en.lua
 localization\ru.lua
 
+tiers.lua
 constants.lua
 
 modules\basic.lua

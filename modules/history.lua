@@ -49,7 +49,7 @@ end
 
 local function exportHistory()
     local r = WDHM.exportWindow
-    local history = WdLib.gen:table_deepcopy(WD.cache.history)
+    local history = WdLib.table:deepcopy(WD.cache.history)
     for k,v in pairs(history) do
         if not v.isReverted or v.isReverted == false then
             local _, _, spellString = string.find(v.reason, "|Hspell(.+)|h ")
@@ -85,10 +85,10 @@ local function exportHistory()
             history[k] = nil
         end
     end
-    --local txt = WdLib.gen:encode64(WdLib.gen:table_tostring(history))
-    local txt = WdLib.gen:table_tostring(history)
+    --local txt = WdLib.gen:encode64(WdLib.table:tostring(history))
+    local txt = WdLib.table:tostring(history)
 
-    WdLib.gen:table_wipe(history)
+    WdLib.table:wipe(history)
 
     r.editBox:SetText(txt)
     r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
@@ -179,14 +179,14 @@ local function applyFilters()
         WDHM.filters[0] = date("%d/%m")
     end
 
-    WdLib.gen:table_wipe(WD.cache.history)
+    WdLib.table:wipe(WD.cache.history)
     for k,v in pairs(WD.db.profile.history) do
         if matchFilter(v.encounter, WDHM.filters[0]) and
            matchFilter(v.name, WDHM.filters[1]) and
            matchFilter(v.role, WDHM.filters[2]) and
            matchFilter(v.reason, WDHM.filters[3])
         then
-            local entry = WdLib.gen:table_deepcopy(v)
+            local entry = WdLib.table:deepcopy(v)
             entry.cacheIndex = #WD.cache.history+1
             WD.cache.history[entry.cacheIndex] = entry
         end
@@ -352,8 +352,8 @@ function WD:AddPullHistory(encounter, difficulty)
 end
 
 function WD:ClearHistory()
-    WdLib.gen:table_wipe(WD.db.profile.history)
-    WdLib.gen:table_wipe(WD.cache.history)
+    WdLib.table:wipe(WD.db.profile.history)
+    WdLib.table:wipe(WD.cache.history)
 
     refreshHistoryFrame()
 

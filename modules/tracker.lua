@@ -3,7 +3,7 @@ local WDMF = WD.mainFrame
 
 local function log(data)
     if type(data) == "table" then
-        print(WdLib.gen:table_tostring(data))
+        print(WdLib.table:tostring(data))
     else
         print(data or "nil")
     end
@@ -1575,7 +1575,7 @@ function WDMF:CheckConsumables(player)
 end
 
 function WDMF:Init()
-    WdLib.gen:table_wipe(callbacks)
+    WdLib.table:wipe(callbacks)
     registerCallback(self.ProcessSummons,           "SPELL_SUMMON")
     registerCallback(self.ProcessAuras,             "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
     registerCallback(self.ProcessCasts,             "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")

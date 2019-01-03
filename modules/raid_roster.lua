@@ -331,7 +331,7 @@ local function checkGroup(unitBase)
         WD.cache.raidrosterinspected[guid] = nil
         inspectProcessing[guid] = nil
     end
-    WdLib.gen:table_erase(WD.cache.raidrosterkeys, onCompare, onErase)
+    WdLib.table:erase(WD.cache.raidrosterkeys, onCompare, onErase)
 end
 
 local function checkSolo()
@@ -350,9 +350,9 @@ local function checkSolo()
 end
 
 local function resetRaidRoster()
-    WdLib.gen:table_wipe(WD.cache.raidrosterkeys)
-    WdLib.gen:table_wipe(WD.cache.raidroster)
-    WdLib.gen:table_wipe(inspectProcessing)
+    WdLib.table:wipe(WD.cache.raidrosterkeys)
+    WdLib.table:wipe(WD.cache.raidroster)
+    WdLib.table:wipe(inspectProcessing)
 end
 
 local function updateRaidRoster()

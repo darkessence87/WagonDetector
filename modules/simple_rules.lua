@@ -208,7 +208,7 @@ end
 local function exportRule(rule)
     if not rule then return end
     rule.version = WD.Version
-    local txt = WdLib.gen:encode64(WdLib.gen:table_tostring(rule))
+    local txt = WdLib.gen:encode64(WdLib.table:tostring(rule))
     local r = WDRM.exportWindow
     r.editBox:SetText(txt)
     r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
@@ -222,7 +222,7 @@ end
 local function exportEncounter(rules)
     if not rules or #rules == 0 then return end
     for _,v in pairs(rules) do v.version = WD.Version end
-    local txt = WdLib.gen:encode64(WdLib.gen:table_tostring(rules))
+    local txt = WdLib.gen:encode64(WdLib.table:tostring(rules))
     local r = WDRM.exportWindow
     r.editBox:SetText(txt)
     r.editBox:SetScript("OnChar", function() r.editBox:SetText(txt); r.editBox:HighlightText(); end)
@@ -248,7 +248,7 @@ end
 local function shareRule(rule)
     if not rule then return end
     rule.version = WD.Version
-    local txt = WdLib.gen:encode64(WdLib.gen:table_tostring(rule))
+    local txt = WdLib.gen:encode64(WdLib.table:tostring(rule))
     WD:SendAddonMessage("share_rule", txt)
 end
 
@@ -1089,7 +1089,7 @@ function WD:SendSharedEncounter(sender, encounterName)
     for _,v in pairs(WD.db.profile.rules) do
         if v.journalId == encounterName then
             v.version = WD.Version
-            local txt = WdLib.gen:encode64(WdLib.gen:table_tostring(v))
+            local txt = WdLib.gen:encode64(WdLib.table:tostring(v))
             WD:SendAddonMessage("receive_rule", txt, sender)
         end
     end
@@ -1155,6 +1155,51 @@ function WD:CreateTierList(fn, filterFn)
         end
     end
     return t
+end
+
+function WD.GetEventDescription(eventName, ...)
+    local args = {...}
+    if eventName == "EV_DAMAGETAKEN" then
+        if args[2] > 0 then
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        else
+            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        end
+    elseif eventName == "EV_DEATH" then
+        return string.format(WD_RULE_DEATH, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_AURA" then
+        if args[2] == "apply" then
+            return string.format(WD_RULE_APPLY_AURA, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        else
+            return string.format(WD_RULE_REMOVE_AURA, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        end
+    elseif eventName == "EV_AURA_STACKS" then
+        if args[2] > 0 then
+            return string.format(WD_RULE_AURA_STACKS, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        else
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        end
+    elseif eventName == "EV_CAST_START" then
+        return string.format(WD_RULE_CAST_START, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_CAST_END" then
+        return string.format(WD_RULE_CAST, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_CAST_INTERRUPTED" then
+        return string.format(WD_RULE_CAST_INTERRUPT, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_DISPEL" then
+        return string.format(WD_RULE_DISPEL, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif eventName == "EV_DEATH_UNIT" then
+        return string.format(WD_RULE_DEATH_UNIT, args[1])
+    elseif eventName == "EV_POTIONS" then
+        return string.format(WD_RULE_POTIONS)
+    elseif eventName == "EV_FLASKS" then
+        return string.format(WD_RULE_FLASKS)
+    elseif eventName == "EV_FOOD" then
+        return string.format(WD_RULE_FOOD)
+    elseif eventName == "EV_RUNES" then
+        return string.format(WD_RULE_RUNES)
+    end
+
+    return eventName..": unsupported rule"
 end
 
 WD.SimpleRulesModule = WDSimpleRulesModule

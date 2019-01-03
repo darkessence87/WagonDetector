@@ -2,7 +2,7 @@
 local function log(data)
     --if WD.DebugEnabled ~= true then return end
     if type(data) == "table" then
-        print(WdLib.gen:table_tostring(data))
+        print(WdLib.table:tostring(data))
     else
         print(data or "nil")
     end

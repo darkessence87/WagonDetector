@@ -1310,4 +1310,21 @@ function WDRulesModule:init(parent, yOffset)
     end
 end
 
+function WD.GetRangeRuleDescription(ruleName, ...)
+    local args = {...}
+    if ruleName == "RT_AURA_EXISTS" then
+        return string.format(WD_TRACKER_RT_AURA_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif ruleName == "RT_AURA_NOT_EXISTS" then
+        return string.format(WD_TRACKER_RT_AURA_NOT_EXISTS_DESC, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif ruleName == "RT_UNIT_CASTING" then
+        return string.format(WD_TRACKER_RT_UNIT_CASTING_DESC, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+    elseif ruleName == "RT_CUSTOM" then
+        local startEvent, endEvent = args[1][1], args[1][2]
+        local startEventMsg = WD.GetEventDescription(startEvent[1], startEvent[2], startEvent[3])
+        local endEventMsg = WD.GetEventDescription(endEvent[1], endEvent[2], endEvent[3])
+        return string.format(WD_TRACKER_RT_CUSTOM_DESC, startEventMsg, endEventMsg)
+    end
+    return ruleName..": not yet implemented"
+end
+
 WD.RulesModule = WDRulesModule

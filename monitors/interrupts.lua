@@ -76,7 +76,7 @@ function WDInterruptMonitor:getMainTableData()
                 for _,npc in pairs(data) do
                     if type(npc) == "table" then
                         if isCastedNpc(npc) then
-                            local npcCopy = WdLib.gen:table_deepcopy(npc)
+                            local npcCopy = WdLib.table:deepcopy(npc)
                             npcCopy.npc_id = npcId
                             creatures[#creatures+1] = npcCopy
                         end
@@ -88,9 +88,9 @@ function WDInterruptMonitor:getMainTableData()
                 if parentGuid:match("Creature") then
                     for npcId,data in pairs(info) do
                         for _,pet in pairs(data) do
-                            --print(WdLib.gen:table_tostring(pet))
+                            --print(WdLib.table:tostring(pet))
                             if isCastedNpc(pet) then
-                                local petCopy = WdLib.gen:table_deepcopy(pet)
+                                local petCopy = WdLib.table:deepcopy(pet)
                                 petCopy.npc_id = npcId
                                 petCopy.name = "[pet] "..petCopy.name
                                 creatures[#creatures+1] = petCopy
@@ -103,7 +103,7 @@ function WDInterruptMonitor:getMainTableData()
             for guid,pl in pairs(v) do
                 if type(pl) == "table" then
                     if isCastedNpc(pl) then
-                        local plCopy = WdLib.gen:table_deepcopy(pl)
+                        local plCopy = WdLib.table:deepcopy(pl)
                         plCopy.npc_id = "player"
                         creatures[#creatures+1] = plCopy
                     end

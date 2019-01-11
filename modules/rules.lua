@@ -924,6 +924,8 @@ local function previewRule()
                 return false, "Please specify correct target name"
             end
             rule.targetUnit = targetUnit
+        elseif statisticType == "ST_TARGET_INTERRUPTS" or statisticType == "ST_SOURCE_INTERRUPTS" then
+            return false, "Not implemented yet:"..statisticType
         end
 
         rule.arg0 = statisticType

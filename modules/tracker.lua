@@ -475,6 +475,30 @@ local function findRulesInRange(eventType, unit, ...)
         end
     end
 
+    local function processStatRule(statType, ...)
+        if rules[statType] and rules[statType]["RT_CUSTOM"] then
+            for _,v in pairs(rules[statType]["RT_CUSTOM"]) do
+                -- register start range tracking
+                if compareWithEvent(v.startEv[eventType], eventType, ...) == true then
+                    --local statRule = WDMF.encounter.statRules[v.ruleId]
+                    v.isActiveForGUID[unit.guid] = 1
+                end
+
+                -- register stop range tracking
+                if compareWithEvent(v.endEv[eventType], eventType, ...) == true then
+                    --local statRule = WDMF.encounter.statRules[v.ruleId]
+                    v.isActiveForGUID[unit.guid] = nil
+                end
+            end
+        end
+    end
+    processStatRule("ST_TARGET_HEALING", ...)
+    processStatRule("ST_TARGET_DAMAGE", ...)
+    --"ST_TARGET_INTERRUPTS"
+    processStatRule("ST_SOURCE_HEALING", ...)
+    processStatRule("ST_SOURCE_DAMAGE", ...)
+    --"ST_SOURCE_INTERRUPTS"
+
     return results
 end
 
@@ -830,6 +854,19 @@ local function trackHeal(src, dst, event, spell_id, amount, overheal)
                 end
             end
         end
+        if t["RT_CUSTOM"] then
+            for _,v in pairs(t["RT_CUSTOM"]) do
+                if v.isActiveForGUID[dst.guid] and v.isActiveForGUID[dst.guid] == 1 then
+                    local ruleId = v.ruleId
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
     end
     -- source related stat rules
     if rules["ST_SOURCE_HEALING"] then
@@ -861,6 +898,19 @@ local function trackHeal(src, dst, event, spell_id, amount, overheal)
         if t["RT_UNIT_CASTING"] then
             for targetSpellId,ruleId in pairs(t["RT_UNIT_CASTING"]) do
                 if isCasting(src, targetSpellId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateHealStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveHealToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_CUSTOM"] then
+            for _,v in pairs(t["RT_CUSTOM"]) do
+                if v.isActiveForGUID[src.guid] and v.isActiveForGUID[src.guid] == 1 then
+                    local ruleId = v.ruleId
                     if not src.ruleStats then src.ruleStats = {} end
                     if not dst.ruleStats then dst.ruleStats = {} end
                     if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
@@ -917,7 +967,6 @@ local function trackDamage(src, dst, event, spell_id, amount, overdmg)
     saveDmgToTable(src.stats, dst.stats)
 
     local rules = WDMF.encounter.statRules
-    local rules = WDMF.encounter.statRules
     -- target related stat rules
     if rules["ST_TARGET_DAMAGE"] then
         local t = rules["ST_TARGET_DAMAGE"]
@@ -958,6 +1007,19 @@ local function trackDamage(src, dst, event, spell_id, amount, overdmg)
                 end
             end
         end
+        if t["RT_CUSTOM"] then
+            for _,v in pairs(t["RT_CUSTOM"]) do
+                if v.isActiveForGUID[dst.guid] and v.isActiveForGUID[dst.guid] == 1 then
+                    local ruleId = v.ruleId
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
     end
     -- source related stat rules
     if rules["ST_SOURCE_DAMAGE"] then
@@ -989,6 +1051,19 @@ local function trackDamage(src, dst, event, spell_id, amount, overdmg)
         if t["RT_UNIT_CASTING"] then
             for targetSpellId,ruleId in pairs(t["RT_UNIT_CASTING"]) do
                 if isCasting(src, targetSpellId) then
+                    if not src.ruleStats then src.ruleStats = {} end
+                    if not dst.ruleStats then dst.ruleStats = {} end
+                    if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
+                    if not dst.ruleStats[ruleId] then dst.ruleStats[ruleId] = {} dst.ruleStats[ruleId].stats = {} end
+                    validateDmgStatsHolders(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats, event, spell_id)
+                    saveDmgToTable(src.ruleStats[ruleId].stats, dst.ruleStats[ruleId].stats)
+                end
+            end
+        end
+        if t["RT_CUSTOM"] then
+            for _,v in pairs(t["RT_CUSTOM"]) do
+                if v.isActiveForGUID[src.guid] and v.isActiveForGUID[src.guid] == 1 then
+                    local ruleId = v.ruleId
                     if not src.ruleStats then src.ruleStats = {} end
                     if not dst.ruleStats then dst.ruleStats = {} end
                     if not src.ruleStats[ruleId] then src.ruleStats[ruleId] = {} src.ruleStats[ruleId].stats = {} end
@@ -1518,21 +1593,17 @@ function WDMF:LoadRules()
                             if not rules[statType][rangeType][spellId] then rules[statType][rangeType][spellId] = rule_id end
                         end
                         self.tracker.statRules[rule_id] = { id = rule_id, data = r, description = getStatRuleDescription(r) }
-                    --[[elseif rangeType == "RT_CUSTOM" then
-                        local data = rules["RL_RANGE_RULE"][rangeType]
-                        local eventData = { startEv = {}, endEv = {}, resultEv = {}, isActiveForGUID = {} }
-                        local sEvName, eEvName, rEvName = r.arg0[2].startEvent[1], r.arg0[2].endEvent[1], r.arg1[1]
+                    elseif rangeType == "RT_CUSTOM" then
+                        if not self.tracker.statRules then self.tracker.statRules = {} end
+                        local data = rules[statType][rangeType]
+                        local eventData = { startEv = {}, endEv = {}, ruleId = rule_id, isActiveForGUID = {} }
+                        local sEvName, eEvName = r.arg1[2].startEvent[1], r.arg1[2].endEvent[1]
                         eventData.startEv[sEvName] = {}
                         eventData.endEv[eEvName] = {}
-                        eventData.resultEv[rEvName] = {}
-                        fillEventByType(eventData.startEv[sEvName], sEvName, r.arg0[2].startEvent[2][1], r.arg0[2].startEvent[2][2], 0)
-                        fillEventByType(eventData.endEv[eEvName], eEvName, r.arg0[2].endEvent[2][1], r.arg0[2].endEvent[2][2], 0)
-                        fillEventByType(eventData.resultEv[rEvName], rEvName, r.arg1[2][1], r.arg1[2][2], 0)
-                        eventData.resultEv[rEvName].range = {rangeType, {
-                            {sEvName, r.arg0[2].startEvent[2][1], r.arg0[2].startEvent[2][2]},
-                            {eEvName, r.arg0[2].endEvent[2][1], r.arg0[2].endEvent[2][2]}
-                        }}
-                        data[#data+1] = eventData]]
+                        fillEventByType(eventData.startEv[sEvName], sEvName, r.arg1[2].startEvent[2][1], r.arg1[2].startEvent[2][2], 0)
+                        fillEventByType(eventData.endEv[eEvName], eEvName, r.arg1[2].endEvent[2][1], r.arg1[2].endEvent[2][2], 0)
+                        data[#data+1] = eventData
+                        self.tracker.statRules[rule_id] = { id = rule_id, data = r, description = getStatRuleDescription(r) }
                     end
                 end
             end

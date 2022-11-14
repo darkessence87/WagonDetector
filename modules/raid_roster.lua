@@ -180,10 +180,10 @@ local function getRoleBySpecId(specId)
         return false
     end
 
-    if isRoleEqual(specId, "TANK") == true   then return "Tank" end
-    if isRoleEqual(specId, "HEALER") == true then return "Healer" end
-    if isRoleEqual(specId, "MELEE") == true  then return "Melee" end
-    if isRoleEqual(specId, "RANGED") == true then return "Ranged" end
+    if isRoleEqual(specId, "TANK") == true   then return "TANK" end
+    if isRoleEqual(specId, "HEALER") == true then return "HEALER" end
+    if isRoleEqual(specId, "MELEE") == true  then return "MELEE" end
+    if isRoleEqual(specId, "RANGED") == true then return "RANGED" end
 
     return "Unknown"
 end
@@ -274,13 +274,13 @@ local function updateRaidOverviewFrame()
     for k=1,#WD.cache.raidrosterkeys do
         local v = WD.cache.raidroster[WD.cache.raidrosterkeys[k]]
         local role = getRoleBySpecId(v.specId)
-        if role == "Tank" then
+        if role == "TANK" then
             tanks[#tanks+1] = WD.cache.raidrosterkeys[k]
-        elseif role == "Healer" then
+        elseif role == "HEALER" then
             healers[#healers+1] = WD.cache.raidrosterkeys[k]
-        elseif role == "Melee" then
+        elseif role == "MELEE" then
             melees[#melees+1] = WD.cache.raidrosterkeys[k]
-        elseif role == "Ranged" then
+        elseif role == "RANGED" then
             ranged[#ranged+1] = WD.cache.raidrosterkeys[k]
         else
             unknown[#unknown+1] = WD.cache.raidrosterkeys[k]

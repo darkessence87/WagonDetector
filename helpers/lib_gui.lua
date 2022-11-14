@@ -51,11 +51,12 @@ end
 
 function lib:getSpellLinkByIdWithTexture(id)
     local name,_,icon = GetSpellInfo(id)
-    if not name then return "Unknown" end
+    if not name or not icon then return "Unknown" end
     return "|cff71d5ff|Hspell:"..id.."|h "..lib:getTextureLinkByPath(icon, 18).." "..name.."|h|r"
 end
 
 function lib:getTextureLinkByPath(path, sz)
+    if not path then return "" end
     return "|T"..path..":"..(sz or 0).."|t"
 end
 
@@ -64,7 +65,8 @@ function lib:getRaidTargetTextureLink(rt)
 end
 
 function lib:createColorTexture(parent, level, r, g, b, a, blendMode)
-    local t = parent:CreateTexture(nil, level)
+    --local t = parent:CreateTexture(nil, level)
+    local t = parent:CreateTexture()
     t:SetColorTexture(r, g, b, a)
     if blendMode then
         t:SetBlendMode(blendMode)
@@ -107,7 +109,7 @@ function lib:createCheckButton(parent)
     button.ct:SetAllPoints()
     button:SetCheckedTexture(button.ct)
 
-    button.h = lib:createColorTexture(button, "TEXTURE", 1, 1, 1, .3)
+    button.h = lib:createColorTexture(button, "HIGHLIGHT", 1, 1, 1, .3)
     button.h:SetAllPoints()
     button:SetHighlightTexture(button.h)
 
@@ -376,7 +378,7 @@ function lib:updateDropDownMenu(self, name, items, parent)
         local width = frame:GetWidth() + 2
         local height = #items * frame:GetHeight() + #items + 1
         if not self.bg then
-            self.bg = lib:createColorTexture(self, "FULLSCREEN", 0, 0, 0, 1)
+            self.bg = lib:createColorTexture(self, "BACKGROUND", 0, 0, 0, 1)
         end
         self.bg:SetSize(width, height)
         self.bg:SetPoint("TOPLEFT", frame, "TOPLEFT", -1, 1)
@@ -565,7 +567,7 @@ function lib:createRuleWindow(parent)
 
     r:EnableMouse(true)
     r:SetSize(totalWidth, 3 * 21 + 1)
-    r.bg = lib:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = lib:createColorTexture(r, "BACKGROUND", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     r:Hide()

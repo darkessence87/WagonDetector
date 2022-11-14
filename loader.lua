@@ -111,13 +111,30 @@ function WD:OnProfileReset()
     self:OnUpdate()
 end
 
+function WD:getChatType(toSay)
+	local isInInstance = IsInGroup(LE_PARTY_CATEGORY_INSTANCE)
+	local isInParty = IsInGroup()
+	local isInRaid = IsInRaid()
+	local playerName = nil
+	local chat_type = (isInInstance and "INSTANCE_CHAT") or (isInRaid and "RAID") or (isInParty and "PARTY")
+	if not chat_type and not toSay then
+		chat_type = "WHISPER"
+		playerName = UnitName("player")
+	elseif not chat_type then
+		chat_type = "SAY"
+	end
+	return chat_type, playerName
+end
+
 function WD:SlashHandler(msg, box)
     msg = string.lower(msg)
-    cmd, tail = string.match(msg, "^%s*(%a+)%s*(.*)$");
+    cmd, tail = string.match(msg, "^%s*(%a+)%s*(.*)$")
 
     if cmd == "config" then
         self:OpenConfig()
     elseif cmd == "starttest" then
+        self:OnGuildRosterUpdate()
+        self.mainFrame:Init()
         self.mainFrame:OnEvent("ENCOUNTER_START", 0, "Test", 10, 10)
     elseif cmd == "stoptest" then
         self.mainFrame:OnEvent("ENCOUNTER_END", 0, "Test", 10, 10, 1)
@@ -140,6 +157,8 @@ function WD:SlashHandler(msg, box)
         WD:ClearHistory()
     elseif cmd == "startunittest" then
         WD:_StartUnitTest(tail)
+    elseif cmd == "requestmrtdata" then
+        C_ChatInfo.SendAddonMessage("EXRTADD", "raidcheckreq\tREQ\t1", self.getChatType(false))
     else
         print(WD_HELP)
         self:OpenConfig()

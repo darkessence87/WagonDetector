@@ -1,20 +1,6 @@
 
 WD.TiersInfo = {}
 
--- [encounterJournalId] = encounterCombatId, encounterName
-WD.EncountersMapping = {
-       [0] = { journalId =    0, combatId =    0 },
-      [-1] = { journalId =   -1, combatId =   -1 },
-    [2168] = { journalId = 2168, combatId = 2144 },
-    [2167] = { journalId = 2167, combatId = 2141 },
-    [2169] = { journalId = 2169, combatId = 2136 },
-    [2166] = { journalId = 2166, combatId = 2134 },
-    [2146] = { journalId = 2146, combatId = 2128 },
-    [2195] = { journalId = 2195, combatId = 2145 },
-    [2194] = { journalId = 2194, combatId = 2135 },
-    [2147] = { journalId = 2147, combatId = 2122 },
-}
-
 WD.EncounterNames = {
     [0]  = "Test",
     [-1] = "ALL"
@@ -47,11 +33,6 @@ local function loadEncounters(instanceId)
     while encounterName do
         local enc = {}
         enc.journalId = encounterJournalId
-        if WD.EncountersMapping[encounterJournalId] then
-            enc.combatId = WD.EncountersMapping[encounterJournalId].combatId
-        else
-            enc.combatId = -1
-        end
         enc.name = encounterName
         enc.spells = {}
 
@@ -116,15 +97,6 @@ function WD.LoadTiers()
     for i=1,EJ_GetNumTiers() do
         WD.TiersInfo[i] = loadTier(i)
     end
-end
-
-function WD.FindEncounterJournalIdByCombatId(combatId)
-    for k,v in pairs(WD.EncountersMapping) do
-        if v.combatId == combatId then
-            return v.journalId
-        end
-    end
-    return nil
 end
 
 function WD.FindEncounterJournalIdByName(name)

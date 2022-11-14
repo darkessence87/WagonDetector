@@ -11,6 +11,16 @@ setmetatable(WDMainModule, {
     end,
 })
 
+local chatTypes = {
+    "OFFICER",
+    "RAID",
+    "PRINT",
+    "SAY",
+    "YELL",
+    "EMOTE",
+    "VOICE_TEXT"
+}
+
 local function lockConfig(parent)
     if WD.db.profile.isLocked == true then
         parent:RegisterForDrag("LeftButton")

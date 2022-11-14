@@ -239,7 +239,7 @@ end
 
 function WD:RefreshGuildRosterFrame()
     if WDGR then
-        GuildRoster()
+        C_GuildInfo.GuildRoster()
     end
 end
 
@@ -280,11 +280,16 @@ function WD:OnGuildRosterUpdate()
     WD.cache.rosterkeys = {}
     local altInfos = {}
     for i=1,GetNumGuildMembers() do
-        local name, rank, rankIndex, _, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
+        local name, rank, rankIndex, level, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
+        local yearsOffline, monthsOffline, daysOffline, hoursOffline = GetGuildRosterLastOnline(i)
+        local isLongOffline = false
+        if monthsOffline and monthsOffline >= 1 then
+            isLongOffline = true
+        end
         if officernote and officernote == "" then
             officernote = "0,0"
         end
-        if officernote and rankIndex <= WD.db.profile.minGuildRank.id then
+        if officernote and rankIndex <= WD.db.profile.minGuildRank.id and level == 60 and isLongOffline == false then
             local info = {}
             info.index = i
             info.name, info.class, info.rank, info.rankIndex = name, class, rank, rankIndex

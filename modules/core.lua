@@ -5,12 +5,20 @@ local WDMF = WD.mainFrame
 WDMF.isActive = 0
 WDMF.isBlockedByAnother = 0
 WDMF.encounter = {}
+WDMF.MRTCache = {}
+WDMF.MRTCache.armorkits = {}
+WDMF.MRTCache.oils = {}
+WDMF.MRTCache.oils2 = {}
 
 -- init pet's owner scanner
 CreateFrame("GameTooltip", "WdPetScanner", nil, "GameTooltipTemplate")
 WDMF.scanner = _G.WdPetScanner
-WDMF.scanner.line1 = _G["WdPetScannerTextLeft2"]
-WDMF.scanner.line2 = _G["WdPetScannerTextLeft3"]
+WDMF.scanner.line1 = _G["WdPetScannerTextLeft1"]
+--WDMF.scanner.line2 = _G["WdPetScannerTextLeft3"]
+
+CreateFrame("GameTooltip", "WdItemScanner", nil, "GameTooltipTemplate")
+WDMF.itemScanner = _G.WdItemScanner
+WDMF.itemScanner:SetOwner(UIParent, "ANCHOR_NONE")
 
 local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 
@@ -238,6 +246,8 @@ function WDMF:StopEncounter(isKill)
     self.isBlockedByAnother = 0
 
     WdLib.gen:sendMessage(string.format(WD_ENCOUNTER_STOP, self.encounter.name, WdLib.gen:getTimedDiffShort(self.encounter.startTime, self.encounter.endTime)))
+
+    WD.db.profile.MRTCache = self.MRTCache
 end
 
 function WDMF:ResetEncounter()
@@ -267,7 +277,133 @@ function WDMF:StopPull()
     self:UnregisterEvent("ENCOUNTER_END")
 end
 
+function WDMF:OnMRTMessage(sender, cmd, type, ver, ...)
+    if cmd == "raidcheck" and type == "DUR" then
+        if sender then
+            local val = ...
+            val = tonumber(val or "100") or 100
+
+            --local shortName = WdLib.gen:getShortName(sender)
+            for i=2, select('#', ...), 2 do
+                local key,val = select(i, ...)
+                if key == "KIT" then
+                    self.MRTCache.armorkits[sender] = 0
+                elseif key == "KITT" then
+                    if self.MRTCache.armorkits[sender] then
+                        self.MRTCache.armorkits[sender] = val
+                    end
+                elseif key == "OIL" then
+                    self.MRTCache.oils[sender] = val
+                elseif key == "OIL2" then
+                    self.MRTCache.oils2[sender] = val
+                end
+            end
+        end
+    end
+
+    if cmd == "raidcheckreq" and sender and playerName == sender then
+        function OilCheck()
+            local OIL_SLOTS = {
+                16,	--INVSLOT_MAINHAND
+                17,	--INVSLOT_OFFHAND
+            }
+            local oilTypes = {
+                {GetSpellInfo(320798),320798},
+                {GetSpellInfo(321389),321389},
+                {GetSpellInfo(322762),322762},
+                {GetSpellInfo(322763),322763},
+                {GetSpellInfo(295623),33757},
+                {GetSpellInfo(194084),318038},
+                {WD_RaidCheckOilSharpen,322762},
+                {WD_RaidCheckOilSharpen2,322763},
+            }
+
+            for i=#oilTypes,1,-1 do
+                if not oilTypes[i][1] then
+                    tremove(oilTypes,i)
+                end
+            end
+
+            local oilMH, oilOH = 0, 0
+            for _,itemSlotId in pairs(OIL_SLOTS) do
+                self.itemScanner:SetInventoryItem("player", itemSlotId)
+                for j=2, self.itemScanner:NumLines() do
+                    local tooltipLine = _G["WdItemScannerTextLeft"..j]
+                    local text = tooltipLine:GetText()
+                    local isBreak
+                    if text and text ~= "" then
+                        for i=1,#oilTypes do
+                            if text:find("^"..oilTypes[i][1]) then
+                                if itemSlotId == 16 then
+                                    oilMH = oilTypes[i][2]
+                                elseif itemSlotId == 17 then
+                                    oilOH = oilTypes[i][2]
+                                end
+                                isBreak = true
+                                break
+                            end
+                        end
+                    end
+                    if isBreak then
+                        break
+                    end
+                end
+                self.itemScanner:ClearLines()
+            end
+            return oilMH, oilOH
+        end
+
+        function ArmorKitCheck()
+            local KitSlots = {
+                5,	--INVSLOT_CHEST
+                --7,	--INVSLOT_LEGS
+                --10,	--INVSLOT_HAND
+                --8,	--INVSLOT_FEET
+            }
+            local L_EncName = "^"..WD_RaidCheckReinforced
+            local locale = GetLocale()
+            if locale ~= "ruRU" and locale ~= "enGB" and locale ~= "enUS" then
+                L_EncName = "%(%+%d+[^%)]+%) %(%d+"
+            end
+
+            local kitType = 0
+            for _,itemSlotId in pairs(KitSlots) do
+                self.itemScanner:SetInventoryItem("player", itemSlotId)
+                for j=2, self.itemScanner:NumLines() do
+                    local tooltipLine = _G["WdItemScannerTextLeft"..j]
+                    local text = tooltipLine:GetText()
+                    if text and text ~= "" then
+                        if text:find(L_EncName) then
+                            local stats = text:match("%d+")
+                            if stats == "32" then
+                                kitType = 172347
+                            elseif stats == "16" then
+                                kitType = 172346
+                            elseif stats == "24" then
+                                kitType = 180709
+                            end
+                            break
+                        end
+                    end
+                end
+                self.itemScanner:ClearLines()
+            end
+            return kitType
+        end
+
+        local oilMH, oilOH = OilCheck()
+        local kitType = ArmorKitCheck()
+        self.MRTCache.oils[playerName] = oilMH
+        self.MRTCache.oils2[playerName] = oilOH
+        self.MRTCache.armorkits[playerName] = kitType
+    end
+end
+
 function WDMF:OnAddonMessage(msgId, msg, channel, sender)
+    if msgId == "EXRTADD" then
+        self:OnMRTMessage(sender, strsplit("\t", msg))
+        return
+    end
     if msgId ~= "WDCM" then return end
 
     local cmd, data = string.match(msg, "^(.*):(.*)$")

@@ -107,9 +107,9 @@ local function scanPetOwners(petGuid)
     end
 
     local ownerGuid, ownerName = scanLine(WDMF.scanner.line1)
-    if not ownerGuid then
+    --[[if not ownerGuid then
         ownerGuid, ownerName = scanLine(WDMF.scanner.line2)
-    end
+    end]]
     return ownerGuid, ownerName
 end
 
@@ -772,6 +772,7 @@ local function dispelAura(self, unit, unit_name, timestamp, source_spell_id, tar
 end
 
 local function trackHeal(src, dst, event, spell_id, amount, overheal)
+    if not WD.RulesModule then return end
     if not src or not dst then return end
 
     local function validateHealStatsHolders(srcTable, dstTable, event, spell_id)
@@ -924,6 +925,7 @@ local function trackHeal(src, dst, event, spell_id, amount, overheal)
 end
 
 local function trackDamage(src, dst, event, spell_id, amount, overdmg)
+    if not WD.RulesModule then return end
     if not src or not dst then return end
 
     local function validateDmgStatsHolders(srcTable, dstTable, event, spell_id)
@@ -1079,7 +1081,7 @@ end
 local function debugEvent(...)
     if WD.DebugEnabled == false then return end
     local info = ChatTypeInfo["COMBAT_MISC_INFO"];
-    local _, event, hideCaster, srcGUID, srcName, srcFlags, srcRaidFlags, dstGUID, dstName, dstFlags, dstRaidFlags = ...
+    local t, event, hideCaster, srcGUID, srcName, srcFlags, srcRaidFlags, dstGUID, dstName, dstFlags, dstRaidFlags = ...
     local message = format("%s, %s, %s, 0x%x, 0x%x, %s, %s, 0x%x, 0x%x", event, srcGUID, srcName or "nil", srcFlags, srcRaidFlags, dstGUID, dstName or "nil", dstFlags, dstRaidFlags);
     for i = 11, select("#", ...) do
         message = message..", "..tostring(select(i, ...));
@@ -1114,9 +1116,9 @@ function WDMF:ProcessAuras(src, dst, ...)
         if not dst.auras[spell_id] then dst.auras[spell_id] = {} end
         local auras = dst.auras[spell_id]
         if src then
-            auras[#auras+1] = { caster = src.guid, applied = timestamp, isBuff = auraType == "BUFF" }
+            auras[#auras+1] = { caster = src.guid, applied = timestamp, isBuff = auraType == "BUFF", stacks = 1 }
         else
-            auras[#auras+1] = { caster = "Environment", applied = timestamp, isBuff = auraType == "BUFF" }
+            auras[#auras+1] = { caster = "Environment", applied = timestamp, isBuff = auraType == "BUFF", stacks = 1 }
         end
 
         -- interrupts
@@ -1154,7 +1156,26 @@ function WDMF:ProcessAuras(src, dst, ...)
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_AURA_APPLIED_DOSE" then
         local stacks = tonumber(arg[16])
+
+        if dst.auras[spell_id] then
+            local aura = findActiveAuraByCaster(dst, spell_id, src)
+            if aura then
+                aura.stacks = stacks
+            end
+        end
+
         processRulesByEventType(timestamp, dst, "EV_AURA_STACKS", spell_id, stacks)
+    end
+    -----------------------------------------------------------------------------------------------------------------------
+    if event == "SPELL_AURA_REMOVED_DOSE" then
+        local stacks = tonumber(arg[16])
+
+        if dst.auras[spell_id] then
+            local aura = findActiveAuraByCaster(dst, spell_id, src)
+            if aura then
+                aura.stacks = stacks
+            end
+        end
     end
 end
 
@@ -1176,6 +1197,15 @@ function WDMF:ProcessCasts(src, dst, ...)
     if event == "SPELL_CAST_SUCCESS" then
         finishCast(self, src, timestamp, spell_id, "SUCCESS")
         processRulesByEventType(timestamp, src, "EV_CAST_END", spell_id, WdLib.gen:getShortName(src_name))
+
+        -- potions
+        local potionRule = findRuleByRole("EV_POTIONS", src.role)
+        if potionRule then
+            if WD.Spells.potions[spell_id] then
+                local msg = WD.GetEventDescription("EV_POTIONS")
+                WDMF:AddSuccess(timestamp, src.guid, src.rt, msg, potionRule.points)
+            end
+        end
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_MISS" then
@@ -1201,7 +1231,7 @@ function WDMF:ProcessEnvironmentDamage(src, dst, ...)
     if not src and src_name then return end
     if not dst and dst_name then return end
     -----------------------------------------------------------------------------------------------------------------------
-    debugEvent(...)
+    --debugEvent(...)
     -----------------------------------------------------------------------------------------------------------------------
     local environmentType, amount = arg[12], arg[13]
     local spell_id = "Environment: "..environmentType
@@ -1470,7 +1500,7 @@ function WDMF:LoadRules()
         elseif rType == "EV_DEATH_UNIT" then
             event.unit = arg0
             event.points = p
-        elseif rType == "EV_POTIONS" or rType == "EV_FLASKS" or rType == "EV_FOOD" or rType == "EV_RUNES" then
+        elseif rType == "EV_POTIONS" or rType == "EV_FLASKS" or rType == "EV_FOOD" or rType == "EV_RUNES" or rType == "EV_ARMORKIT" or rType == "EV_OILS" then
             event.points = p
         else
             if not event[arg0] then
@@ -1498,6 +1528,8 @@ function WDMF:LoadRules()
             ["EV_FLASKS"] = {},            -- done
             ["EV_FOOD"] = {},            -- done
             ["EV_RUNES"] = {},            -- done
+            ["EV_ARMORKIT"] = {},   -- todo
+            ["EV_OILS"] = {},       -- todo
         }
 
         for i=1,#WD.db.profile.rules do
@@ -1613,13 +1645,10 @@ function WDMF:LoadRules()
     end
 
     -- search journalId for encounter
-    local journalId = WD.FindEncounterJournalIdByCombatId(self.encounter.id)
+    local journalId = WD.FindEncounterJournalIdByName(self.encounter.encounterName)
     if not journalId then
-        journalId = WD.FindEncounterJournalIdByName(self.encounter.encounterName)
-        if not journalId then
-            journalId = WD.FindEncounterJournalIdByName("ALL")
-            print("Unknown name for encounterId:"..self.encounter.id)
-        end
+        journalId = WD.FindEncounterJournalIdByName("ALL")
+        print("Unknown name for encounterId:"..self.encounter.id)
     end
 
     self.encounter.rules = getActiveRules(journalId)
@@ -1643,12 +1672,26 @@ function WDMF:CheckConsumables(player)
     if rules[role] and rules[role]["EV_POTIONS"] and hasAnyAura(player, WD.Spells.potions) then
         WDMF:AddSuccess(GetTime(), guid, 0, WD.GetEventDescription("EV_POTIONS"), rules[role]["EV_POTIONS"].points)
     end
+
+    if rules[role] and rules[role]["EV_ARMORKIT"] then
+        local kits = self.MRTCache.armorkits[player.name]
+        if not kits or kits == 0 then
+            WDMF:AddFail(GetTime(), guid, 0, WD.GetEventDescription("EV_ARMORKIT"), rules[role]["EV_ARMORKIT"].points)
+        end
+    end
+    if rules[role] and rules[role]["EV_OILS"] then
+        local oils = self.MRTCache.oils[player.name]
+        local oils2 = self.MRTCache.oils2[player.name]
+        if not oils or oils == 0 then
+            WDMF:AddFail(GetTime(), guid, 0, WD.GetEventDescription("EV_OILS"), rules[role]["EV_OILS"].points)
+        end
+    end
 end
 
 function WDMF:Init()
     WdLib.table:wipe(callbacks)
     registerCallback(self.ProcessSummons,           "SPELL_SUMMON")
-    registerCallback(self.ProcessAuras,             "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE")
+    registerCallback(self.ProcessAuras,             "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE", "SPELL_AURA_REMOVED_DOSE")
     registerCallback(self.ProcessCasts,             "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_MISS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
     registerCallback(self.ProcessEnvironmentDamage, "ENVIRONMENTAL_DAMAGE")
     registerCallback(self.ProcessWhiteDamage,       "SWING_DAMAGE", "RANGE_DAMAGE")
@@ -1774,7 +1817,7 @@ function WDMF:ProcessPull()
     end
 
     -- load bosses
-    for i=1,4 do
+    for i=1,8 do
         self:CreateBoss("boss"..i)
     end
 end
@@ -1802,6 +1845,18 @@ function WDMF:Tracker_OnStartEncounter(raidSz)
 end
 
 function WDMF:Tracker_OnStopEncounter()
+    -- finish auras
+    for _,npcHolder in pairs(self.tracker.npc) do
+        for k=1,#npcHolder do
+            for i=1,#npcHolder[k].auras do
+                local aura = npcHolder[k].auras[i]
+                aura.removed = timestamp
+                local t = (aura.removed - aura.applied) / 1000
+                aura.duration = WdLib.gen:float_round_to(t * 1000, 2)
+            end
+        end
+    end
+
     if not WD.db.profile.tracker or #WD.db.profile.tracker == 0 then return end
     local n = WD.db.profile.tracker[#WD.db.profile.tracker].pullName
     WD.db.profile.tracker[#WD.db.profile.tracker].endTime = self.encounter.endTime
@@ -1810,6 +1865,8 @@ function WDMF:Tracker_OnStopEncounter()
     WD:RefreshTrackerPulls()
     WD:RefreshBasicMonitors()
     WD:RefreshBasicStatsMonitors()
+
+    collectgarbage("collect")
 end
 
 function WDMF:Tracker_OnEvent(...)

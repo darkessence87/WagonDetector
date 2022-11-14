@@ -30,6 +30,7 @@ WD.Help.eventsInfo = {
     ["EV_FLASKS"]           = "|cffffffffcheck if any unit in raid has aura listed as flask buff at pull time|r",
     ["EV_FOOD"]             = "|cffffffffcheck if any unit in raid has aura listed as food buff at pull time|r",
     ["EV_RUNES"]            = "|cffffffffcheck if any unit in raid has aura listed as rune buff at pull time|r",
+    ["EV_ARMORKIT"]         = "|cffffffffcheck if any unit in raid has armor kit listed as armor kit at pull time|r",
 }
 
 WD.Help.rulesInfo = {
@@ -64,7 +65,8 @@ function WDHelpModule:init(parent, yOffset)
     WDHP.mainPage:SetSize(WDHP:GetWidth() - 20, WDHP:GetHeight() - 40)
     WDHP.mainPage:SetPoint("TOPLEFT", WDHP, "TOPLEFT", 10, -10)
 
-    WDHP.mainPage:SetFont("Fonts\\FRIZQT__.TTF", 12);
+    WDHP.mainPage:SetFont("h1", 'Fonts\\FRIZQT__.TTF', 12, "OUTLINE")
+    WDHP.mainPage:SetFont("p", 'Fonts\\FRIZQT__.TTF', 12, "OUTLINE")
     local header = "<html><body>"
     local footer = "</body></html>"
     local version = "<p align=\"center\">Current version: |cff00ff00"..WD.Version.."|r</p><br/>"

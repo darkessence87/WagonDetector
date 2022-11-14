@@ -7,21 +7,15 @@ WD.options.args.configButton = {
     func = function() WD:OpenConfig() end,
 }
 
-chatTypes = {
-    "OFFICER",
-    "RAID",
-    "PRINT"
-}
-
 local modulesMap = {
     {"main",                    WD.MainModule},
     {"guild_roster",            WD.GuildRosterModule},
     {"raid_roster",             WD.RaidRosterModule},
     {"simple_rules",            WD.SimpleRulesModule},
-    {"rules",                   WD.RulesModule},
+    --{"rules",                   WD.RulesModule},
     {"tracker_auras",           WD.Monitor1Module},
     {"tracker_casts",           WD.Monitor2Module},
-    {"tracker_statistics",      WD.Monitor3Module},
+    --{"tracker_statistics",      WD.Monitor3Module},
     {"last_encounter",          WD.LastEncounterModule},
     {"history",                 WD.HistoryModule},
     {"help",                    WD.HelpModule},
@@ -49,10 +43,10 @@ function WD:CreateGuiFrame()
     WDGF.icon:SetVertexColor(0, 1, 0, 1)
 
     -- temp, santa hat
-    --WDGF.iconex = WdLib.gui:createTexture(WDGF, [[Interface\AddOns\WagonDetector\media\textures\santa_hat]], "OVERLAY")
-    --WDGF.iconex:SetPoint("BOTTOM", WDGF.icon, "TOP", 4, -13)
-    --WDGF.iconex:SetSize(35, 35)
-    --WDGF.iconex:SetVertexColor(1, 0, 0, 1)
+    WDGF.iconex = WdLib.gui:createTexture(WDGF, [[Interface\AddOns\WagonDetector\media\textures\santa_hat]], "OVERLAY")
+    WDGF.iconex:SetPoint("BOTTOM", WDGF.icon, "TOP", 4, -13)
+    WDGF.iconex:SetSize(35, 35)
+    WDGF.iconex:SetVertexColor(1, 0, 0, 1)
 
     -- text1
     WDGF.txt1 = WdLib.gui:createFontDefault(WDGF, "LEFT", "Wagon Detector")
@@ -95,11 +89,11 @@ function WD:CreateGuiFrame()
     end)
     WDGF:SetScript("OnShow", function(self)
         if self:IsEventRegistered("GUILD_ROSTER_UPDATE") then
-            GuildRoster()
+            C_GuildInfo.GuildRoster()
         end
     end)
 
-    GuildRoster()
+    C_GuildInfo.GuildRoster()
     WDGF:Hide()
 
     if WD.db.profile.isLocked == false then

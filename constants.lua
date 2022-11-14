@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.59"
+WD.Version = "v0.0.60"
 WD.MaxPullsToBeSaved = 25
 WD.DebugEnabled = false
 
@@ -32,43 +32,51 @@ WD.MIN_CAST_TIME_TRACKED = 150 -- in msec
 
 WD.Spells = {}
 WD.Spells.flasks = {
-    [251837] = "/flask-of-endless-fathoms",
-    [251839] = "/flask-of-the-undertow",
-    [251836] = "/flask-of-the-currents",
-    [251838] = "/flask-of-the-vast-horizon",
+    [307185] = "",
+    [307187] = "",
+    [307166] = "",
 }
 
 WD.Spells.food = {
-    [257408] = "Increases critical strike by 53 for 1 hour.",
-    [257410] = "Increases critical strike by 70 for 1 hour.",
-    [257413] = "Increases haste by 53 for 1 hour.",
-    [257415] = "Increases haste by 70 for 1 hour.",
-    [257418] = "Increases mastery by 53 for 1 hour.",
-    [257420] = "Increases mastery by 70 for 1 hour.",
-    [257422] = "Increases versatility by 53 for 1 hour.",
-    [257424] = "Increases versatility by 70 for 1 hour.",
-    [259448] = "Agility increased by 75.  Lasts 1 hour.",
-    [259454] = "Agility increased by 100.  Lasts 1 hour.",
-    [259449] = "Intellect increased by 75.  Lasts 1 hour.",
-    [259455] = "Intellect increased by 100.  Lasts 1 hour.",
-    [259452] = "Strength increased by 75.  Lasts 1 hour.",
-    [259456] = "Strength increased by 100.  Lasts 1 hour.",
-    [259453] = "Stamina increased by 113.  Lasts 1 hour.",
-    [259457] = "Stamina increased by 150.  Lasts 1 hour.",
+    -- low food/feast: Int, Str, Agi, Stam
+    --308474,
+    --308504,
+    --308430,
+    --308509,
+    [327704] = "",
+    [327701] = "",
+    [327705] = "",
+    -- normal food/feast: Haste, Mastery, Crit, Versa, Int, Str, Agi, Stam, BRez
+    [308488] = "",
+    [308506] = "",
+    [308434] = "",
+    [308514] = "",
+    [327708] = "",
+    [327706] = "",
+    [327709] = "",
+    [327707] = "",
+    [341449] = "",
 }
 
 WD.Spells.runes = {
-    [270058] = "/battle-scarred-augmentation",
+    [347901] = "/battle-scarred-augmentation",
 }
 
 WD.Spells.potions = {
-    [279151] = "/battle-potion-of-intellect",
-    [279152] = "/battle-potion-of-agility",
-    [279153] = "/battle-potion-of-strength",
-    [229206] = "/potion-of-prolonged-power",
-    [251316] = "/potion-of-bursting-blood",
-    [269853] = "/potion-of-rising-death",
-    [279154] = "/battle-potion-of-stamina",
+    [307159] = "",
+    [307162] = "",
+    [307163] = "",
+    [307164] = "",
+    [307497] = "",
+    [307494] = "",
+    [307495] = "",
+    [322302] = "",
+    [307496] = "",
+    [307192] = "",
+    [307193] = "",
+    [307194] = "",
+    [307161] = "",
+    [307165] = "",
 }
 
 WD.Spells.rootEffects = {

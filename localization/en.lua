@@ -95,6 +95,8 @@ WD_RULE_POTIONS = "used potion"
 WD_RULE_FLASKS = "no flask buff"
 WD_RULE_FOOD = "no food buff"
 WD_RULE_RUNES = "no rune buff"
+WD_RULE_ARMORKIT = "no armor kit"
+WD_RULE_OILS = "no oil on weapon"
 WD_RULE_ST_TARGET_DAMAGE = "damage |cfffffffftaken|r by |cffff0000%s|r"
 WD_RULE_ST_TARGET_HEALING = "healing |cfffffffftaken|r"
 WD_RULE_ST_TARGET_INTERRUPTS = "interrupted |cffffffffby|r"
@@ -131,3 +133,7 @@ WD_TRACKER_ST_SOURCE_INTERRUPTS = "collects interrupts |cffffffffdone|r statisti
 
 WD_TRACKER_DONE_POPUP_LABEL = "%s done to %s by %s"
 WD_TRACKER_TAKEN_POPUP_LABEL = "%s taken by %s from %s"
+
+WD_RaidCheckOilSharpen = "Sharpened [VIX]+"
+WD_RaidCheckOilSharpen2 = "Weighted [VIX]+"
+WD_RaidCheckReinforced = "Reinforced %("

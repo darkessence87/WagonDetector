@@ -496,7 +496,7 @@ local function isRuleSavable()
             print("Unknown aura id")
             return false
         end
-    elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" then
+    elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" or ruleType == "EV_ARMORKIT" or ruleType == "EV_OILS" then
         -- nothing to do here
     else
         print("Unsupported rule type:"..ruleType)
@@ -550,7 +550,7 @@ local function saveRule()
         rule.arg0 = arg0
     elseif ruleType == "EV_DISPEL" then
         rule.arg0 = tonumber(arg0) or 0
-    elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" then
+    elseif ruleType == "EV_POTIONS" or ruleType == "EV_FLASKS" or ruleType == "EV_FOOD" or ruleType == "EV_RUNES" or ruleType == "EV_ARMORKIT" or ruleType == "EV_OILS" then
         -- nothing to do here
     else
         print("Unsupported rule type:"..rule.type)
@@ -575,6 +575,8 @@ local function updateNewRuleMenu(frame, selected)
     "EV_FLASKS"
     "EV_FOOD"
     "EV_RUNES"
+    "EV_ARMORKIT"
+    "EV_OILS"
 ]]
     local r = WDRM.menus["new_rule"]
     local rule = selected.name
@@ -664,6 +666,8 @@ local function initNewRuleWindow()
     table.insert(items, { name = "EV_FLASKS", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_FOOD", func = updateNewRuleMenu })
     table.insert(items, { name = "EV_RUNES", func = updateNewRuleMenu })
+    table.insert(items, { name = "EV_ARMORKIT", func = updateNewRuleMenu })
+    table.insert(items, { name = "EV_OILS", func = updateNewRuleMenu })
     r.menus["rule_types"] = WdLib.gui:createDropDownMenu(r, "Select rule type", WdLib.gui:updateItemsByHoverInfo(false, items, WD.Help.eventsInfo))
     r.menus["rule_types"]:SetSize(xSize, 20)
     r.menus["rule_types"]:SetPoint("TOPLEFT", r.menus["roles"], "BOTTOMLEFT", 0, -1)
@@ -736,7 +740,7 @@ local function initNewRuleWindow()
 end
 
 local function notifyEncounterRules(encounter)
-    print("encounter instance id: " .. encounter.combatId)
+    print("encounter journal id: " .. encounter.journalId)
     WdLib.gen:sendMessage(string.format(WD_NOTIFY_HEADER_RULE, encounter.name))
     for _,v in pairs(WD.db.profile.rules) do
         if WD.EncounterNames[v.journalId] == encounter.name and v.isActive == true then
@@ -814,7 +818,6 @@ local function initExportWindow()
     r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -21)
     r.editBox:SetMultiLine(true)
     r.editBox:SetJustifyH("LEFT")
-    r.editBox:SetMaxBytes(nil)
     r.editBox:SetMaxLetters(2048)
     r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
     r.editBox:SetScript("OnMouseUp", function() r.editBox:HighlightText(); end)
@@ -902,7 +905,6 @@ local function initImportEncounterWindow()
     r.editBox:SetPoint("TOPLEFT", r, "TOPLEFT", 1, -22)
     r.editBox:SetMultiLine(true)
     r.editBox:SetJustifyH("LEFT")
-    r.editBox:SetMaxBytes(nil)
     r.editBox:SetMaxLetters(2048)
     r.editBox:SetScript("OnEnterPressed", function() tryImportEncounter(r.editBox:GetText()) end)
     r.editBox:SetScript("OnEscapePressed", function() r:Hide(); end)
@@ -1103,22 +1105,22 @@ function WD:ReceiveRequestedRule(sender, data)
 end
 
 function WD:GetAllowedRoles(role)
-    if role == "ANY" then return {"Tank", "Healer", "Melee", "Ranged", "Unknown"} end
-    if role == "DPS" then return {"Melee", "Ranged"} end
-    if role == "NOT_TANK" then return {"Healer", "Melee", "Ranged"} end
+    if role == "ANY" then return {"TANK", "HEALER", "MELEE", "RANGED", "Unknown"} end
+    if role == "DPS" then return {"MELEE", "RANGED"} end
+    if role == "NOT_TANK" then return {"HEALER", "MELEE", "RANGED"} end
     return { role }
 end
 
 function WD:CreateTierList(fn, filterFn)
     local t = {}
 
-    local testItem = { name = "Test", combatId = 0, journalId = 0 }
+    local testItem = { name = "Test", journalId = 0 }
     if fn then testItem.func = function() fn(testItem) end end
     if not filterFn or (filterFn and filterFn(testItem.journalId)) then
         table.insert(t, testItem)
     end
 
-    local allItem = { name = "ALL", combatId = -1, journalId = -1 }
+    local allItem = { name = "ALL", journalId = -1 }
     if fn then allItem.func = function() fn(allItem) end end
     if not filterFn or (filterFn and filterFn(allItem.journalId)) then
         table.insert(t, allItem)
@@ -1161,32 +1163,32 @@ function WD.GetEventDescription(eventName, ...)
     local args = {...}
     if eventName == "EV_DAMAGETAKEN" then
         if args[2] > 0 then
-            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_DAMAGE_TAKEN_AMOUNT, args[2], WdLib.gui:getSpellLinkById(args[1]))
         else
-            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_DAMAGE_TAKEN, WdLib.gui:getSpellLinkById(args[1]))
         end
     elseif eventName == "EV_DEATH" then
-        return string.format(WD_RULE_DEATH, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_DEATH, WdLib.gui:getSpellLinkById(args[1]))
     elseif eventName == "EV_AURA" then
         if args[2] == "apply" then
-            return string.format(WD_RULE_APPLY_AURA, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_APPLY_AURA, WdLib.gui:getSpellLinkById(args[1]))
         else
-            return string.format(WD_RULE_REMOVE_AURA, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_REMOVE_AURA, WdLib.gui:getSpellLinkById(args[1]))
         end
     elseif eventName == "EV_AURA_STACKS" then
         if args[2] > 0 then
-            return string.format(WD_RULE_AURA_STACKS, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_AURA_STACKS, args[2], WdLib.gui:getSpellLinkById(args[1]))
         else
-            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+            return string.format(WD_RULE_AURA_STACKS_ANY, "", WdLib.gui:getSpellLinkById(args[1]))
         end
     elseif eventName == "EV_CAST_START" then
-        return string.format(WD_RULE_CAST_START, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_CAST_START, args[2], WdLib.gui:getSpellLinkById(args[1]))
     elseif eventName == "EV_CAST_END" then
-        return string.format(WD_RULE_CAST, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_CAST, args[2], WdLib.gui:getSpellLinkById(args[1]))
     elseif eventName == "EV_CAST_INTERRUPTED" then
-        return string.format(WD_RULE_CAST_INTERRUPT, args[2], WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_CAST_INTERRUPT, args[2], WdLib.gui:getSpellLinkById(args[1]))
     elseif eventName == "EV_DISPEL" then
-        return string.format(WD_RULE_DISPEL, WdLib.gui:getSpellLinkByIdWithTexture(args[1]))
+        return string.format(WD_RULE_DISPEL, WdLib.gui:getSpellLinkById(args[1]))
     elseif eventName == "EV_DEATH_UNIT" then
         return string.format(WD_RULE_DEATH_UNIT, args[1])
     elseif eventName == "EV_POTIONS" then
@@ -1197,6 +1199,10 @@ function WD.GetEventDescription(eventName, ...)
         return string.format(WD_RULE_FOOD)
     elseif eventName == "EV_RUNES" then
         return string.format(WD_RULE_RUNES)
+    elseif eventName == "EV_ARMORKIT" then
+        return string.format(WD_RULE_ARMORKIT)
+    elseif eventName == "EV_OILS" then
+        return string.format(WD_RULE_OILS)
     end
 
     return eventName..": unsupported rule"

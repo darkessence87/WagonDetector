@@ -69,11 +69,13 @@ local function getFilteredDebuffs(unit, filter)
                             duration = maxDuration
                         end
                     end
+                    local stacks = auraInfo[i].stacks or 0
 
-                    if not byCaster[caster] then byCaster[caster] = {duration=0, count=0} end
+                    if not byCaster[caster] then byCaster[caster] = {duration=0, count=0, maxStacks=0} end
                     if duration > 0 then
                         byCaster[caster].duration = byCaster[caster].duration + duration
                         byCaster[caster].count = byCaster[caster].count + 1
+                        byCaster[caster].maxStacks = max(byCaster[caster].maxStacks, stacks)
                     end
                 end
             end
@@ -82,7 +84,7 @@ local function getFilteredDebuffs(unit, filter)
             if info.duration > maxDuration then
                 info.duration = maxDuration
             end
-            result[#result+1] = { N = info.count, id = auraId, data = { uptime = calculateUptime(info.duration, maxDuration) or 0, caster = casterGuid } }
+            result[#result+1] = { N = info.count, M = info.maxStacks, id = auraId, data = { uptime = calculateUptime(info.duration, maxDuration) or 0, caster = casterGuid } }
         end
     end
     return result
@@ -110,15 +112,16 @@ end
 function WDDebuffMonitor:initDataTable()
     local columns = {
         [1] = {"Debuff",    300},
-        [2] = {"Uptime",    70},
+        [2] = {"Uptime",    60},
         [3] = {"Count",     40},
-        [4] = {"Casted by", 300},
+        [4] = {"Max Stacks",40},
+        [5] = {"Casted by", 270},
     }
     WD.Monitor.initDataTable(self, "debuffs", columns)
 
     self.nameFilter = WdLib.gui:createEditBox(self.frame:GetParent())
-    self.nameFilter:SetSize(self.frame.dataTable.headers[4]:GetSize())
-    self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[4], "TOPLEFT", 0, 1)
+    self.nameFilter:SetSize(self.frame.dataTable.headers[#columns]:GetSize())
+    self.nameFilter:SetPoint("BOTTOMLEFT", self.frame.dataTable.headers[#columns], "TOPLEFT", 0, 1)
     self.nameFilter:SetMaxLetters(15)
     self.nameFilter:SetScript("OnChar", function(f) self:updateDataTable() end)
     self.nameFilter:SetScript("OnEnterPressed", function(f) f:ClearFocus() self:updateDataTable() end)
@@ -198,11 +201,12 @@ function WDDebuffMonitor:updateDataTable()
     local maxHeight = 210
     local topLeftPosition = { x = 30, y = -51 }
     local rowsN = #auras
-    local columnsN = 4
+    local columnsN = 5
 
     local function createFn(parent, row, index)
         local auraId = auras[row].id
         local N = auras[row].N
+        local M = auras[row].M
         local v = auras[row].data
         if index == 1 then
             local f = WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", WdLib.gui:getSpellLinkByIdWithTexture(auraId))
@@ -214,6 +218,8 @@ function WDDebuffMonitor:updateDataTable()
         elseif index == 3 then
             return WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "CENTER", N)
         elseif index == 4 then
+            return WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "CENTER", M)
+        elseif index == 5 then
             local f = WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", getCasterName(v))
             WdLib.gui:generateSpellHover(f, getCasterName(v))
             return f
@@ -223,6 +229,7 @@ function WDDebuffMonitor:updateDataTable()
     local function updateFn(f, row, index)
         local auraId = auras[row].id
         local N = auras[row].N
+        local M = auras[row].M
         local v = auras[row].data
         if index == 1 then
             f.txt:SetText(WdLib.gui:getSpellLinkByIdWithTexture(auraId))
@@ -232,6 +239,8 @@ function WDDebuffMonitor:updateDataTable()
         elseif index == 3 then
             f.txt:SetText(N)
         elseif index == 4 then
+            f.txt:SetText(M)
+        elseif index == 5 then
             f.txt:SetText(getCasterName(v))
             WdLib.gui:generateSpellHover(f, getCasterName(v))
         end

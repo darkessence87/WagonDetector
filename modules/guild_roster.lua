@@ -257,8 +257,6 @@ function WD:FindMain(name)
 end
 
 function WD:OnGuildRosterUpdate(needGUIupdate)
-    print('-OnGuildRosterUpdate-')
-
     WD.cache.roster = {}
     WD.cache.rosterkeys = {}
     WD.cache.guildranks = {}

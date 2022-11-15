@@ -282,9 +282,9 @@ function WD:OnGuildRosterUpdate()
     for i=1,GetNumGuildMembers() do
         local name, rank, rankIndex, level, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
         local yearsOffline, monthsOffline, daysOffline, hoursOffline = GetGuildRosterLastOnline(i)
-        local isLongOffline = false
-        if monthsOffline and monthsOffline >= 1 then
-            isLongOffline = true
+        local isLongOffline = true
+        if (daysOffline) and (monthsOffline and monthsOffline < 2) and (yearsOffline and yearsOffline < 1) then
+            isLongOffline = false
         end
         if officernote and officernote == "" then
             officernote = "0,0"

@@ -35,13 +35,14 @@ local ClassSpecializations = {
 	["SHAMAN"]      = {262, 263, 264},
 	["WARLOCK"]     = {265, 266, 267},
 	["WARRIOR"]     = {71, 72, 73},
+    ["EVOKER"]      = {1467, 1468},
 }
 
 local RoleSpecializations = {
-    ["TANK"]    = {250, 581, 104, 268, 66, 73},     -- 6
-    ["HEALER"]  = {105, 270, 65, 256, 257, 264},    -- 6
+    ["TANK"]    = {250, 581, 104, 268, 66, 73},        -- 6
+    ["HEALER"]  = {105, 270, 65, 256, 257, 264, 1468}, -- 7
     ["MELEE"]   = {251, 252, 577, 103, 255, 269, 70, 259, 260, 261, 263, 71, 72},   -- 13
-    ["RANGED"]  = {102, 253, 254, 62, 63, 64, 258, 262, 265, 266, 267},             -- 11
+    ["RANGED"]  = {102, 253, 254, 62, 63, 64, 258, 262, 265, 266, 267, 1467},       -- 12
 }
 
 local function updateSpecIcon(parent, specId)
@@ -143,11 +144,11 @@ end
 local function updateSpecialization(p)
     if not p then return end
 
-    local specId = nil
+    local specIndex = nil
     if p.name == playerName then
-        specId = GetSpecialization()
-        if specId and ClassSpecializations[p.class][specId] then
-            p.specId = ClassSpecializations[p.class][specId]
+        specIndex = GetSpecialization()
+        if specIndex then
+            p.specId = GetSpecializationInfo(specIndex)
         end
     else
         local currTime = time()

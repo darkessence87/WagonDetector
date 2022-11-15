@@ -80,8 +80,7 @@ function WD:CreateGuiFrame()
             WDGF:HideModules()
             WDGF:UnregisterEvent("PLAYER_ENTERING_WORLD")
         elseif event == "GUILD_ROSTER_UPDATE" then
-            local gRanks = WD:GetGuildRanks()
-            if #gRanks ~= 0 then
+            if #WD.cache.guildranks ~= 0 then
                 WDGF:UnregisterEvent("GUILD_ROSTER_UPDATE")
             end
             WDGF:OnUpdate()

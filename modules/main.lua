@@ -33,14 +33,13 @@ local function lockConfig(parent)
     end
 end
 
-local function reloadGuildRanksMenu(parent)
+function reloadGuildRanksMenu(parent)
     local items3 = {}
-    local gRanks = WD:GetGuildRanks()
-    for k,v in pairs(gRanks) do
+    for k,v in pairs(WD.cache.guildranks) do
         local item = { name = v.name, func = function()
             WD.db.profile.minGuildRank = v
             parent.txt:SetText(WD.db.profile.minGuildRank.name)
-            WD:OnGuildRosterUpdate()
+            WD:OnGuildRosterUpdate(false)
         end }
         table.insert(items3, item)
     end

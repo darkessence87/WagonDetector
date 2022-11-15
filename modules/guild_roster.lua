@@ -16,21 +16,19 @@ local WDGR = nil
 if not WD.cache then WD.cache = {} end
 WD.cache.roster = {}
 WD.cache.rosterkeys = {}
+WD.cache.guildranks = {}
 
 function calculateCoef(points, pulls)
     return WdLib.gen:float_round_to(points * 1.0 / pulls, 2)
 end
 
-local function parseOfficerNote(note)
+local function parseOfficerNote(note, guildIndex)
     local points, pulls = string.match(note, "^(%w+),(%w+)$")
     local isAlt = "no"
 
-    for i=1,GetNumGuildMembers() do
-        local name, _, rankIndex = GetGuildRosterInfo(i)
-        if note == WdLib.gen:getShortName(name) and rankIndex <= WD.db.profile.minGuildRank.id then
-            isAlt = "yes"
-            break
-        end
+    local name, _, rankIndex = GetGuildRosterInfo(guildIndex)
+    if note == WdLib.gen:getShortName(name) and rankIndex <= WD.db.profile.minGuildRank.id then
+        isAlt = "yes"
     end
 
     return tonumber(points) or 0, tonumber(pulls) or 0, isAlt
@@ -226,8 +224,11 @@ function WDGuildRosterModule:init(parent, yOffset)
     WD:SortGuildRoster("BY_NAME", false, function() updateGuildRosterFrame() end)
 
     WDGR:RegisterEvent("GUILD_ROSTER_UPDATE")
+    WDGR:RegisterEvent("GUILD_RANKS_UPDATE")
     WDGR:SetScript("OnEvent", function(self, event, ...)
         if event == "GUILD_ROSTER_UPDATE" then
+            WD:OnGuildRosterUpdate()
+        elseif event == "GUILD_RANKS_UPDATE" then
             WD:OnGuildRosterUpdate()
         end
     end)
@@ -255,37 +256,33 @@ function WD:FindMain(name)
     return name
 end
 
-function WD:OnGuildRosterUpdate()
-    local gRanks = WD:GetGuildRanks()
-    if WD.db.profile.minGuildRank and #gRanks ~= 0 then
-        local needRankUpdate = true
-        for k,v in pairs(gRanks) do
-            if v.name == WD.db.profile.minGuildRank.name then
-                needRankUpdate = false
-                break
-            end
-        end
-        if needRankUpdate == true then WD.db.profile.minGuildRank = nil end
-    end
-    if not WD.db.profile.minGuildRank or not WD.db.profile.minGuildRank.name then
-        for k,v in pairs(gRanks) do
-            if v.id == 0 then
-                WD.db.profile.minGuildRank = v
-                break
-            end
-        end
-    end
+function WD:OnGuildRosterUpdate(needGUIupdate)
+    print('-OnGuildRosterUpdate-')
 
     WD.cache.roster = {}
     WD.cache.rosterkeys = {}
+    WD.cache.guildranks = {}
     local altInfos = {}
+    local tempRanks = {}
+    local tempRanksKeys = {}
     for i=1,GetNumGuildMembers() do
         local name, rank, rankIndex, level, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
+
+        -- ranks
+        local rankInfo = { id = rankIndex, name = rank }
+        if not tempRanks[rankInfo.id] then
+            tempRanks[rankInfo.id] = rankInfo
+            tempRanksKeys[#tempRanksKeys+1] = rankInfo.id
+        end
+
+        -- last online
         local yearsOffline, monthsOffline, daysOffline, hoursOffline = GetGuildRosterLastOnline(i)
         local isLongOffline = true
         if (daysOffline) and (monthsOffline and monthsOffline < 2) and (yearsOffline and yearsOffline < 1) then
             isLongOffline = false
         end
+
+        -- officer notes
         if officernote and officernote == "" then
             officernote = "0,0"
         end
@@ -293,7 +290,7 @@ function WD:OnGuildRosterUpdate()
             local info = {}
             info.index = i
             info.name, info.class, info.rank, info.rankIndex = name, class, rank, rankIndex
-            info.points, info.pulls, info.isAlt = parseOfficerNote(officernote)
+            info.points, info.pulls, info.isAlt = parseOfficerNote(officernote, i)
             info.alts = {}
             if info.isAlt == "no" then
                 if info.pulls == 0 then
@@ -321,6 +318,39 @@ function WD:OnGuildRosterUpdate()
         if WD.cache.roster[mainName] then
             table.insert(WD.cache.roster[mainName].alts, v.name)
         end
+    end
+
+    if #tempRanksKeys > 1 then
+        local fn = function(a, b) return tempRanks[a].id < tempRanks[b].id end
+        table.sort(tempRanksKeys, fn)
+    end
+
+    for _,k in pairs(tempRanksKeys) do
+        local v = tempRanks[k]
+        local rankInfo = { id = v.id, name = v.name }
+        table.insert(WD.cache.guildranks, rankInfo)
+    end
+
+    if WD.db.profile.minGuildRank and #WD.cache.guildranks ~= 0 then
+        local needRankUpdate = true
+        for k,v in pairs(WD.cache.guildranks) do
+            if v.name == WD.db.profile.minGuildRank.name then
+                needRankUpdate = false
+                break
+            end
+        end
+        if needRankUpdate == true then WD.db.profile.minGuildRank = nil end
+    end
+    if not WD.db.profile.minGuildRank or not WD.db.profile.minGuildRank.name then
+        for k,v in pairs(WD.cache.guildranks) do
+            if v.id == 0 then
+                WD.db.profile.minGuildRank = v
+                break
+            end
+        end
+    end
+    if needGUIupdate and needGUIupdate == false then
+        reloadGuildRanksMenu(WD.MainModule.frame.dropFrame1)
     end
 
     WD:SortGuildRoster(WD.cache.rostersort, WD.cache.rostersortinverse, function() updateGuildRosterFrame() end)
@@ -403,7 +433,7 @@ function WD:ResetGuildStatistics()
             local info = {}
             info.index = i
             info.name, info.class, info.rank, info.rankIndex = name, class, rank, rankIndex
-            info.points, info.pulls, info.isAlt = parseOfficerNote(officernote)
+            info.points, info.pulls, info.isAlt = parseOfficerNote(officernote, i)
             info.alts = {}
             if info.isAlt == "no" then
                 GuildRosterSetOfficerNote(info.index, "0,0")
@@ -414,33 +444,6 @@ function WD:ResetGuildStatistics()
     self:OnGuildRosterUpdate()
 
     WdLib.gen:sendMessage(WD_RESET_GUILD_ROSTER)
-end
-
-function WD:GetGuildRanks()
-    local ranks = {}
-    local temp = {}
-    local tempKeys = {}
-    for i=1,GetNumGuildMembers() do
-        local _, rankName, rankIndex = GetGuildRosterInfo(i)
-        local rank = { id = rankIndex, name = rankName }
-        if not temp[rank.id] then
-            temp[rank.id] = rank
-            tempKeys[#tempKeys+1] = rank.id
-        end
-    end
-
-    if #tempKeys > 1 then
-        local fn = function(a, b) return temp[a].id < temp[b].id end
-        table.sort(tempKeys, fn)
-    end
-
-    for _,k in pairs(tempKeys) do
-        local v = temp[k]
-        local rank = { id = v.id, name = v.name }
-        table.insert(ranks, rank)
-    end
-
-    return ranks
 end
 
 WD.GuildRosterModule = WDGuildRosterModule

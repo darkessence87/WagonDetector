@@ -1,7 +1,7 @@
 ﻿## Interface: 10000
 ## Title: Wagon Detector
 ## Author: DarkEssence
-## Version: v0.0.60
+## Version: v0.0.62
 ## Notes: Addon for automatic control fines by events in combatlog during encounter
 ## SavedVariables: WD_DB
 ## SavedVariablesPerCharacter: WD_DB_Char

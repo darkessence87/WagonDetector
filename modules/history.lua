@@ -273,7 +273,7 @@ local function initExportWindow()
     r:EnableMouse(true)
     r:SetPoint("CENTER", UIParent, "CENTER")
     r:SetSize(800, 600)
-    r.bg = WdLib.gui:createColorTexture(r, "TEXTURE", 0, 0, 0, 1)
+    r.bg = WdLib.gui:createColorTexture(r, "BACKGROUND", 0, 0, 0, 1)
     r.bg:SetAllPoints()
 
     WdLib.gui:createXButton(r, -1)

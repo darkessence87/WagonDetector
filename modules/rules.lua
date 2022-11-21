@@ -1108,7 +1108,7 @@ local function initRangeRuleMenu()
     r:EnableMouse(true)
     r:SetPoint("TOPLEFT", parent, "TOPLEFT", 1, -1)
     r:SetSize(xSize + 2, 3 * 21 + 1)
-    r.bg = WdLib.gui:createColorTexture(r, "TEXTURE", 0, 0, .15, 1)
+    r.bg = WdLib.gui:createColorTexture(r, "ARTWORK", 0, 0, .15, 1)
     r.bg.color = {0, 0, .15, 1}
     r.bg:SetAllPoints()
 
@@ -1239,7 +1239,7 @@ local function initNewRuleWindow()
     r:SetSize(700, 230)
     r:SetScript("OnHide", function() for _,v in pairs(r.hiddenMenus) do v:Hide() end r.menus["preview"]:SetText("") end)
 
-    r.bg = WdLib.gui:createColorTexture(r, "TEXTURE", 0, 0, 0, .9)
+    r.bg = WdLib.gui:createColorTexture(r, "ARTWORK", 0, 0, 0, .9)
     r.bg:SetAllPoints()
 
     initSelectedRuleMenu()

@@ -1,6 +1,6 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.63"
+WD.Version = "v0.0.64"
 WD.MaxPullsToBeSaved = 25
 WD.DebugEnabled = false
 
@@ -92,17 +92,21 @@ WD.Spells.controlEffects = {
     [179057] = "DH - chaos-nova",
     [217832] = "DH - prison",
     [211881] = "DH - talent fel-eruption",
+
     [207167] = "DK - talent blinding-sleet",
      [91800] = "DK - pet gnaw",
      [91797] = "DK - pet monstrous-blow",
     [212337] = "DK - pet powerful-smash",
     [212332] = "DK - pet smash",
+
       [2637] = "Druid - hibernate",
         [99] = "Druid - incapacitating-roar",
       [5211] = "Druid - mighty-bash",
     [236748] = "Druid - talent intimidating-roar",
+
     [187650] = "Hunter - trap",
      [24394] = "Hunter - intimidation",
+
      [31661] = "Mage - dragon breath",
        [118] = "Mage - poly",
      [28271] = "Mage - poly",
@@ -117,22 +121,28 @@ WD.Spells.controlEffects = {
     [161372] = "Mage - poly",
     [277787] = "Mage - poly",
     [277792] = "Mage - poly",
+
     [119381] = "Monk - leg-sweep",
     [115078] = "Monk - paralysis",
+
      [31935] = "Paladin - avengers-shield",
        [853] = "Paladin - hammer-of-justice",
      [20066] = "Paladin - talent",
     [115750] = "Paladin - talent",
+    [105421] = "Paladin - Blinding Light",
+
        [605] = "Priest - mind control",
       [8122] = "Priest - psychic-scream",
       [9484] = "Priest - shackles",
      [15487] = "Priest - silence",
      [64044] = "Priest - talent psychic-horror",
+
     [199804] = "Rogue - between-the-eyes",
       [2094] = "Rogue - blind",
       [1833] = "Rogue - cheap-shot",
       [1776] = "Rogue - gouge",
        [408] = "Rogue - kidney-shot",
+
      [51514] = "Shaman - hex",
     [210873] = "Shaman - hex",
     [211004] = "Shaman - hex",
@@ -143,6 +153,7 @@ WD.Spells.controlEffects = {
     [277784] = "Shaman - hex",
     [118345] = "Shaman - pet pulverize",
     [197214] = "Shaman - talent sundering",
+
        [710] = "Warlock - banish",
     [171017] = "Warlock - pet meteor-strike",
     [171018] = "Warlock - pet meteor-strike",
@@ -151,7 +162,9 @@ WD.Spells.controlEffects = {
     [118699] = "Warlock - fear",
       [6789] = "Warlock - talent mortal-coil",
      [30283] = "Warlock - shadowfury",
+
       [5246] = "Warrior - intimidating-shout",
+
     [107079] = "Racial Pandaren - quaking-palm",
      [20549] = "Racial Tauren - war-stomp",
 }

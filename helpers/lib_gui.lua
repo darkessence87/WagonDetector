@@ -68,6 +68,7 @@ function lib:createColorTexture(parent, level, r, g, b, a, blendMode)
     --local t = parent:CreateTexture(nil, level)
     local t = parent:CreateTexture()
     t:SetColorTexture(r, g, b, a)
+    t:SetDrawLayer(level)
     if blendMode then
         t:SetBlendMode(blendMode)
     end
@@ -109,7 +110,7 @@ function lib:createCheckButton(parent)
     button.ct:SetAllPoints()
     button:SetCheckedTexture(button.ct)
 
-    button.h = lib:createColorTexture(button, "HIGHLIGHT", 1, 1, 1, .3)
+    button.h = lib:createColorTexture(button, "OVERLAY", 1, 1, 1, .3)
     button.h:SetAllPoints()
     button:SetHighlightTexture(button.h)
 
@@ -124,7 +125,7 @@ function lib:createButton(parent)
     button.t = lib:createColorTexture(button, "BACKGROUND", .2, .2, .2, 1)
     button.t:SetAllPoints()
 
-    button.h = lib:createColorTexture(button, "BACKGROUND", 0, 1, 0, .2, "MOD")
+    button.h = lib:createColorTexture(button, "HIGHLIGHT", 0, 1, 0, .2, "MOD")
     button.h:SetAllPoints()
     button:SetHighlightTexture(button.h)
 

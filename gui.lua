@@ -43,7 +43,7 @@ function WD:CreateGuiFrame()
     WDGF.icon:SetVertexColor(0, 1, 0, 1)
 
     -- temp, santa hat
-    WDGF.iconex = WdLib.gui:createTexture(WDGF, [[Interface\AddOns\WagonDetector\media\textures\santa_hat]], "OVERLAY")
+    WDGF.iconex = WdLib.gui:createTexture(WDGF, [[Interface\AddOns\WagonDetector\media\textures\santa_hat]], "ARTWORK")
     WDGF.iconex:SetPoint("BOTTOM", WDGF.icon, "TOP", 4, -13)
     WDGF.iconex:SetSize(35, 35)
     WDGF.iconex:SetVertexColor(1, 0, 0, 1)

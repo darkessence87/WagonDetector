@@ -627,6 +627,7 @@ end
 
 local function interruptCast(self, unit, unit_name, timestamp, source_spell_id, target_spell_id, interrupter)
     if unit.casts.current_spell_id == 0 then return end
+    if unit.casts.current_timestamp == 0 then return end
     if unit.casts.current_spell_id == target_spell_id and unit.casts.current_spell_interrupted == 0 then
         local parent = findParent(interrupter)
         if parent then
@@ -678,6 +679,7 @@ end
 
 local function finishCast(self, unit, timestamp, spell_id, result)
     if unit.casts.current_spell_id == 0 then return end
+    if unit.casts.current_timestamp == 0 then return end
     if unit.casts.current_spell_id == spell_id then
         if result ~= "FAILED" then
             local diff = (timestamp - unit.casts.current_timestamp) * 1000
@@ -701,6 +703,7 @@ local function finishCast(self, unit, timestamp, spell_id, result)
         end
         unit.casts.current_spell_id = 0
         unit.casts.current_spell_interrupted = 0
+        unit.casts.current_timestamp = 0
     end
 end
 

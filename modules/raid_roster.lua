@@ -391,11 +391,11 @@ function WDRaidRosterModule:init(parent, yOffset)
     WDRO.unknown.headers = {}
     WDRO.unknown.members = {}
 
-    table.insert(WDRO.tanks.headers,    WdLib.gui:createTableHeader(WDRO, "Tanks",    0,   -30, 200, 20))
+    table.insert(WDRO.tanks.headers,    WdLib.gui:createTableHeader(WDRO, "Tanks",      0, -30, 200, 20))
     table.insert(WDRO.healers.headers,  WdLib.gui:createTableHeader(WDRO, "Healers",  201, -30, 200, 20))
     table.insert(WDRO.melees.headers,   WdLib.gui:createTableHeader(WDRO, "Melee",    402, -30, 200, 20))
     table.insert(WDRO.ranged.headers,   WdLib.gui:createTableHeader(WDRO, "Ranged",   603, -30, 200, 20))
-    table.insert(WDRO.unknown.headers,   WdLib.gui:createTableHeader(WDRO, "Unknown", 804, -30, 200, 20))
+    table.insert(WDRO.unknown.headers,  WdLib.gui:createTableHeader(WDRO, "Unknown",  804, -30, 200, 20))
 
     WDRO:RegisterEvent("GROUP_ROSTER_UPDATE")
     WDRO:RegisterEvent("INSPECT_READY")

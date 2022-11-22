@@ -14,7 +14,7 @@ WDMF.MRTCache.oils2 = {}
 CreateFrame("GameTooltip", "WdPetScanner", nil, "GameTooltipTemplate")
 WDMF.scanner = _G.WdPetScanner
 WDMF.scanner.line1 = _G["WdPetScannerTextLeft1"]
---WDMF.scanner.line2 = _G["WdPetScannerTextLeft3"]
+WDMF.scanner.line2 = _G["WdPetScannerTextLeft2"]
 
 CreateFrame("GameTooltip", "WdItemScanner", nil, "GameTooltipTemplate")
 WDMF.itemScanner = _G.WdItemScanner

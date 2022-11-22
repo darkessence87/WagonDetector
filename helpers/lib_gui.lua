@@ -65,7 +65,6 @@ function lib:getRaidTargetTextureLink(rt)
 end
 
 function lib:createColorTexture(parent, level, r, g, b, a, blendMode)
-    --local t = parent:CreateTexture(nil, level)
     local t = parent:CreateTexture()
     t:SetColorTexture(r, g, b, a)
     t:SetDrawLayer(level)
@@ -323,7 +322,7 @@ function lib:onClickDropDown(self, v, onClick)
     end
 end
 
-function lib:updateDropDownMenu(self, name, items, parent)
+function lib:updateDropDownMenu(self, name, items, parent, callback)
     self.selected = nil
     self.txt:SetText(name)
     if #self.items > 0 then lib:dropDownHide(self) end
@@ -358,7 +357,7 @@ function lib:updateDropDownMenu(self, name, items, parent)
                 self.items[i].item.locked = nil
                 self.items[i].item.data = v
                 self.items[i].item.txt:SetText(v.name)
-                self.items[i].item:SetScript("OnClick", function() lib:onClickDropDown(parent or self, self.items[i], v.func) end)
+                self.items[i].item:SetScript("OnClick", function() lib:onClickDropDown(parent or self, self.items[i], v.func or callback) end)
                 if v.hover then
                     lib:generateHover(self.items[i].item, v.hover)
                 else
@@ -403,7 +402,7 @@ function lib:resetDropDownMenu(self, name)
     lib:dropDownHide(self)
 end
 
-function lib:createDropDownMenu(parent, name, items, grandParent)
+function lib:createDropDownMenu(parent, name, items, grandParent, callback)
     local dropFrame = createListButton(parent, name)
     dropFrame:SetFrameStrata("FULLSCREEN_DIALOG")
     dropFrame:SetScript("OnClick", function(self)
@@ -433,7 +432,7 @@ function lib:createDropDownMenu(parent, name, items, grandParent)
     dropFrame:SetScript("OnHide", function() lib:resetDropDownMenu(dropFrame, name) end)
     dropFrame.items = {}
 
-    lib:updateDropDownMenu(dropFrame, name, items, grandParent or dropFrame)
+    lib:updateDropDownMenu(dropFrame, name, items, grandParent or dropFrame, callback)
     lib:resetDropDownMenu(dropFrame, name)
 
     return dropFrame
@@ -659,6 +658,7 @@ function lib:updateScrollableTable(parent, maxHeight, topLeftPosition, rowsN, co
 
             for index=1,columnsN do
                 member.column[index] = createFn(member, k, index)
+                member.column[index].grandParent = member
             end
 
             table.insert(parent.members, member)

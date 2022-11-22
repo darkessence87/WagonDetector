@@ -30,6 +30,7 @@ modules\monitor_3.lua
 modules\raid_roster.lua
 modules\rules.lua
 modules\simple_rules.lua
+modules\spell_db.lua
 gui.lua
 modules\core.lua
 modules\tracker.lua

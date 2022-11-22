@@ -45,6 +45,135 @@ local function loadDefaultRules(self)
     end
 end
 
+local function loadDefaultSpells(self)
+    local sz = 0
+    for _ in pairs(self.db.profile.spell_db) do
+        sz = sz + 1
+    end
+
+    if sz == 0 then
+        self.db.profile.spell_db = {
+            [307496] = {["id"] = 307496,["group"] = "POTION",["category"] = "General",},
+            [853] = {["id"] = 853,["group"] = "CONTROL",["category"] = "PALADIN",},
+            [307497] = {["id"] = 307497,["group"] = "POTION",["category"] = "General",},
+            [91797] = {["id"] = 91797,["group"] = "CONTROL",["category"] = "DEATHKNIGHT",},
+            [308514] = {["id"] = 308514,["group"] = "FOOD",["category"] = "General",},
+            [20066] = {["id"] = 20066,["group"] = "CONTROL",["category"] = "PALADIN",},
+            [157980] = {["id"] = 157980,["group"] = "KNOCKBACK",["category"] = "MAGE",},
+            [115078] = {["id"] = 115078,["group"] = "CONTROL",["category"] = "MONK",},
+            [24394] = {["id"] = 24394,["group"] = "CONTROL",["category"] = "HUNTER",},
+            [5211] = {["id"] = 5211,["group"] = "CONTROL",["category"] = "DRUID",},
+            [212337] = {["id"] = 212337,["group"] = "CONTROL",["category"] = "DEATHKNIGHT",},
+            [157997] = {["id"] = 157997,["group"] = "ROOT",["category"] = "MAGE",},
+            [33395] = {["id"] = 33395,["group"] = "ROOT",["category"] = "MAGE",},
+            [49576] = {["id"] = 49576,["group"] = "KNOCKBACK",["category"] = "DEATHKNIGHT",},
+            [211004] = {["id"] = 211004,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [89766] = {["id"] = 89766,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [61780] = {["id"] = 61780,["group"] = "CONTROL",["category"] = "MAGE",},
+            [277778] = {["id"] = 277778,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [307185] = {["id"] = 307185,["group"] = "FLASK",["category"] = "General",},
+            [31661] = {["id"] = 31661,["group"] = "CONTROL",["category"] = "MAGE",},
+            [1098] = {["id"] = 1098,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [163505] = {["id"] = 163505,["group"] = "CONTROL",["category"] = "DRUID",},
+            [198813] = {["id"] = 198813,["group"] = "KNOCKBACK",["category"] = "DEMONHUNTER",},
+            [308488] = {["id"] = 308488,["group"] = "FOOD",["category"] = "General",},
+            [307495] = {["id"] = 307495,["group"] = "POTION",["category"] = "General",},
+            [360806] = {["id"] = 360806,["group"] = "CONTROL",["category"] = "EVOKER",},
+            [307187] = {["id"] = 307187,["group"] = "FLASK",["category"] = "General",},
+            [126819] = {["id"] = 126819,["group"] = "CONTROL",["category"] = "MAGE",},
+            [217832] = {["id"] = 217832,["group"] = "CONTROL",["category"] = "DEMONHUNTER",},
+            [347008] = {["id"] = 347008,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [5484] = {["id"] = 5484,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [20549] = {["id"] = 20549,["group"] = "CONTROL",["category"] = "General",},
+            [61721] = {["id"] = 61721,["group"] = "CONTROL",["category"] = "MAGE",},
+            [322302] = {["id"] = 322302,["group"] = "POTION",["category"] = "General",},
+            [372245] = {["id"] = 372245,["group"] = "CONTROL",["category"] = "EVOKER",},
+            [107079] = {["id"] = 107079,["group"] = "CONTROL",["category"] = "General",},
+            [91800] = {["id"] = 91800,["group"] = "CONTROL",["category"] = "DEATHKNIGHT",},
+            [210873] = {["id"] = 210873,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [327701] = {["id"] = 327701,["group"] = "FOOD",["category"] = "General",},
+            [307159] = {["id"] = 307159,["group"] = "POTION",["category"] = "General",},
+            [327705] = {["id"] = 327705,["group"] = "FOOD",["category"] = "General",},
+            [2094] = {["id"] = 2094,["group"] = "CONTROL",["category"] = "ROGUE",},
+            [152175] = {["id"] = 152175,["group"] = "KNOCKBACK",["category"] = "MONK",},
+            [211881] = {["id"] = 211881,["group"] = "CONTROL",["category"] = "DEMONHUNTER",},
+            [307192] = {["id"] = 307192,["group"] = "POTION",["category"] = "General",},
+            [51490] = {["id"] = 51490,["group"] = "KNOCKBACK",["category"] = "SHAMAN",},
+            [277792] = {["id"] = 277792,["group"] = "CONTROL",["category"] = "MAGE",},
+            [307161] = {["id"] = 307161,["group"] = "POTION",["category"] = "General",},
+            [307193] = {["id"] = 307193,["group"] = "POTION",["category"] = "General",},
+            [105421] = {["id"] = 105421,["group"] = "CONTROL",["category"] = "PALADIN",},
+            [327704] = {["id"] = 327704,["group"] = "FOOD",["category"] = "General",},
+            [307162] = {["id"] = 307162,["group"] = "POTION",["category"] = "General",},
+            [307194] = {["id"] = 307194,["group"] = "POTION",["category"] = "General",},
+            [186387] = {["id"] = 186387,["group"] = "KNOCKBACK",["category"] = "HUNTER",},
+            [117526] = {["id"] = 117526,["group"] = "ROOT",["category"] = "HUNTER",},
+            [307163] = {["id"] = 307163,["group"] = "POTION",["category"] = "General",},
+            [1833] = {["id"] = 1833,["group"] = "CONTROL",["category"] = "ROGUE",},
+            [710] = {["id"] = 710,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [327706] = {["id"] = 327706,["group"] = "FOOD",["category"] = "General",},
+            [204263] = {["id"] = 204263,["group"] = "KNOCKBACK",["category"] = "PRIEST",},
+            [161353] = {["id"] = 161353,["group"] = "CONTROL",["category"] = "MAGE",},
+            [197214] = {["id"] = 197214,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [327707] = {["id"] = 327707,["group"] = "FOOD",["category"] = "General",},
+            [307165] = {["id"] = 307165,["group"] = "POTION",["category"] = "General",},
+            [33786] = {["id"] = 33786,["group"] = "CONTROL",["category"] = "DRUID",},
+            [28272] = {["id"] = 28272,["group"] = "CONTROL",["category"] = "MAGE",},
+            [327708] = {["id"] = 327708,["group"] = "FOOD",["category"] = "General",},
+            [307166] = {["id"] = 307166,["group"] = "FLASK",["category"] = "General",},
+            [2637] = {["id"] = 2637,["group"] = "CONTROL",["category"] = "DRUID",},
+            [28271] = {["id"] = 28271,["group"] = "CONTROL",["category"] = "MAGE",},
+            [327709] = {["id"] = 327709,["group"] = "FOOD",["category"] = "General",},
+            [118] = {["id"] = 118,["group"] = "CONTROL",["category"] = "MAGE",},
+            [64044] = {["id"] = 64044,["group"] = "CONTROL",["category"] = "PRIEST",},
+            [118699] = {["id"] = 118699,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [61305] = {["id"] = 61305,["group"] = "CONTROL",["category"] = "MAGE",},
+            [211010] = {["id"] = 211010,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [5246] = {["id"] = 5246,["group"] = "CONTROL",["category"] = "WARRIOR",},
+            [118345] = {["id"] = 118345,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [269352] = {["id"] = 269352,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [102359] = {["id"] = 102359,["group"] = "ROOT",["category"] = "DRUID",},
+            [277787] = {["id"] = 277787,["group"] = "CONTROL",["category"] = "MAGE",},
+            [308434] = {["id"] = 308434,["group"] = "FOOD",["category"] = "General",},
+            [187650] = {["id"] = 187650,["group"] = "CONTROL",["category"] = "HUNTER",},
+            [203123] = {["id"] = 203123,["group"] = "CONTROL",["category"] = "DRUID",},
+            [51514] = {["id"] = 51514,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [161372] = {["id"] = 161372,["group"] = "CONTROL",["category"] = "MAGE",},
+            [119381] = {["id"] = 119381,["group"] = "CONTROL",["category"] = "MONK",},
+            [179057] = {["id"] = 179057,["group"] = "CONTROL",["category"] = "DEMONHUNTER",},
+            [605] = {["id"] = 605,["group"] = "CONTROL",["category"] = "PRIEST",},
+            [9484] = {["id"] = 9484,["group"] = "CONTROL",["category"] = "PRIEST",},
+            [15487] = {["id"] = 15487,["group"] = "CONTROL",["category"] = "PRIEST",},
+            [30283] = {["id"] = 30283,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [358385] = {["id"] = 358385,["group"] = "ROOT",["category"] = "EVOKER",},
+            [308506] = {["id"] = 308506,["group"] = "FOOD",["category"] = "General",},
+            [99] = {["id"] = 99,["group"] = "CONTROL",["category"] = "DRUID",},
+            [212332] = {["id"] = 212332,["group"] = "CONTROL",["category"] = "DEATHKNIGHT",},
+            [277784] = {["id"] = 277784,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [161355] = {["id"] = 161355,["group"] = "CONTROL",["category"] = "MAGE",},
+            [408] = {["id"] = 408,["group"] = "CONTROL",["category"] = "ROGUE",},
+            [161354] = {["id"] = 161354,["group"] = "CONTROL",["category"] = "MAGE",},
+            [211015] = {["id"] = 211015,["group"] = "CONTROL",["category"] = "SHAMAN",},
+            [10326] = {["id"] = 10326,["group"] = "CONTROL",["category"] = "PALADIN",},
+            [347901] = {["id"] = 347901,["group"] = "RUNE",["category"] = "General",},
+            [78675] = {["id"] = 78675,["group"] = "CONTROL",["category"] = "DRUID",},
+            [307164] = {["id"] = 307164,["group"] = "POTION",["category"] = "General",},
+            [207167] = {["id"] = 207167,["group"] = "CONTROL",["category"] = "DEATHKNIGHT",},
+            [339] = {["id"] = 339,["group"] = "ROOT",["category"] = "DRUID",},
+            [357214] = {["id"] = 357214,["group"] = "KNOCKBACK",["category"] = "EVOKER",},
+            [1776] = {["id"] = 1776,["group"] = "CONTROL",["category"] = "ROGUE",},
+            [307494] = {["id"] = 307494,["group"] = "POTION",["category"] = "General",},
+            [6358] = {["id"] = 6358,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [22703] = {["id"] = 22703,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [122] = {["id"] = 122,["group"] = "ROOT",["category"] = "MAGE",},
+            [8122] = {["id"] = 8122,["group"] = "CONTROL",["category"] = "PRIEST",},
+            [6789] = {["id"] = 6789,["group"] = "CONTROL",["category"] = "WARLOCK",},
+            [61391] = {["id"] = 61391,["group"] = "KNOCKBACK",["category"] = "DRUID",},
+            [368970] = {["id"] = 368970,["group"] = "KNOCKBACK",["category"] = "EVOKER",}
+        }
+    end
+end
+
 function WD:OnUpdate()
     WD:LoadTiers()
 
@@ -67,6 +196,7 @@ function WD:OnUpdate()
 
     if self.guiFrame then
         loadDefaultRules(self)
+        loadDefaultSpells(self)
         self.guiFrame:OnUpdate()
     end
     if self.mainFrame then
@@ -93,6 +223,7 @@ function WD:LoadDefaults()
                 selected = 0,
                 selectedRule = "TOTAL_DONE",
             },
+            spell_db = {},
         }
     }
 end

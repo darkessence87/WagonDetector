@@ -198,7 +198,7 @@ end
 local function initFiltersTab()
     WDHM.filters = { [0] = "", [1] = "", [2] = "", [3] = "", }
 
-    WDHM.filtersTxt = WdLib.gui:createFontDefault(WDHM, "RIGHT", WD_BUTTON_HISTORY_FILTER)
+    WDHM.filtersTxt = WdLib.gui:createFontDefault(WDHM, "RIGHT", WD_BUTTON_FILTERS)
     WDHM.filtersTxt:SetSize(WDHM.headers[1]:GetSize())
     WDHM.filtersTxt:SetPoint("BOTTOMLEFT", WDHM.headers[1], "TOPLEFT", 0, 5)
 

@@ -107,9 +107,9 @@ local function scanPetOwners(petGuid)
     end
 
     local ownerGuid, ownerName = scanLine(WDMF.scanner.line1)
-    --[[if not ownerGuid then
+    if not ownerGuid then
         ownerGuid, ownerName = scanLine(WDMF.scanner.line2)
-    end]]
+    end
     return ownerGuid, ownerName
 end
 

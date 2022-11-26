@@ -27,6 +27,8 @@ local function getInterruptStatusText(v)
         return string.format(WD_TRACKER_INTERRUPTED_BY, interrupterName, WdLib.gui:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
         return string.format(WD_TRACKER_CASTED_IN, v.timediff)
+    elseif v.status == "CANCELLED" then
+        return string.format(WD_TRACKER_CAST_CANCELLED)
     end
 
     return v.status

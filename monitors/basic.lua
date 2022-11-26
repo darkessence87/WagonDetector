@@ -157,6 +157,34 @@ function WDMonitor:findEntityByGUID(guid)
     return nil
 end
 
+function WDMonitor:findParentPet(parentGuid, pet)
+    local parent = self:findEntityByGUID(parentGuid)
+    if not parent then return pet end
+    if parent.type == "pet" then
+        return self:findParentPet(parent.parentGuid, parent)
+    end
+    return pet
+end
+
+function WDMonitor:updatePetName(pet)
+    local petAsParent = self:findParentPet(pet.parentGuid, pet)
+    local newName = pet.name
+    if petAsParent.guid ~= pet.guid then
+        if petAsParent.type == "pet" then
+            local currId = WdLib.gen:getUnitNumber(petAsParent.name)
+            if currId then
+                newName = newName.."-"..currId
+            end
+        end
+    end
+    local parent = self:findEntityByGUID(pet.parentGuid)
+    if parent then
+        local parentName = WdLib.gen:getColoredName("("..WdLib.gen:getShortName(parent.name, "norealm")..")", parent.class)
+        newName = newName.." "..parentName
+    end
+    return newName
+end
+
 local WDMB = {}
 WDMB.monitors = {}
 

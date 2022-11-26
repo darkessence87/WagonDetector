@@ -23,15 +23,6 @@ function WDStatsMonitor:mergeSpells()
     print('WDStatsMonitor:mergeSpells() is not overriden')
 end
 
-function WDStatsMonitor:findParentPet(parentGuid, pet)
-    local parent = self:findEntityByGUID(parentGuid)
-    if not parent then return pet end
-    if parent.type == "pet" then
-        return self:findParentPet(parent.parentGuid, parent)
-    end
-    return pet
-end
-
 function WDStatsMonitor:getSelectedRuleType()
     local pull = self.frame:GetParent():GetSelectedPull()
     if not pull then return nil end
@@ -263,25 +254,6 @@ function WDStatsMonitor:findUnitByGuid(mode, guid)
         end
     end
     return nil
-end
-
-function WDStatsMonitor:updatePetName(pet)
-    local petAsParent = self:findParentPet(pet.parentGuid, pet)
-    local newName = pet.name
-    if petAsParent.guid ~= pet.guid then
-        if petAsParent.type == "pet" then
-            local currId = WdLib.gen:getUnitNumber(petAsParent.name)
-            if currId then
-                newName = newName.."-"..currId
-            end
-        end
-    end
-    local parent = self:findEntityByGUID(pet.parentGuid)
-    if parent then
-        local parentName = WdLib.gen:getColoredName("("..WdLib.gen:getShortName(parent.name, "norealm")..")", parent.class)
-        newName = newName.." "..parentName
-    end
-    return newName
 end
 
 function WDStatsMonitor:getTablesNameByRule(mode, rule)

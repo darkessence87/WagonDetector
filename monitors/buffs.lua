@@ -42,7 +42,11 @@ local function getCasterName(v)
     local casterName = UNKNOWNOBJECT
     local caster = WDBAM.parent:findEntityByGUID(v.caster)
     if caster then
-        casterName = WdLib.gen:getColoredName(WdLib.gen:getShortName(caster.name), caster.class)
+        casterName = caster.name
+        if caster.type == "pet" then
+            casterName = WDDAM.parent:updatePetName(caster)
+        end
+        casterName = WdLib.gen:getColoredName(WdLib.gen:getShortName(casterName), caster.class)
     else
         casterName = "|cffffffffEnvironment|r"
     end

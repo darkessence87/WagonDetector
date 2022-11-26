@@ -154,17 +154,35 @@ function WDMF:OnUpdate()
     end
 end
 
+local NAMEPLATE_EVENTS = {
+    ["NAME_PLATE_CREATED"] = "",
+    ["FORBIDDEN_NAME_PLATE_CREATED"] = "",
+    ["NAME_PLATE_UNIT_ADDED"] = "",
+    ["FORBIDDEN_NAME_PLATE_UNIT_ADDED"] = "",
+    ["NAME_PLATE_UNIT_REMOVED"] = "",
+    ["FORBIDDEN_NAME_PLATE_UNIT_REMOVED"] = "",
+    --["PLAYER_SOFT_INTERACT_CHANGED"] = "",
+    --["PLAYER_SOFT_FRIEND_CHANGED"] = "",
+    --["PLAYER_SOFT_ENEMY_CHANGED"] = "",
+}
+
 function WDMF:OnEvent(event, ...)
     if event == "ENCOUNTER_START" then
         debugEvent(event, ...)
-        local encounterID, name, difficulty, raidSz = ...
+        local encounterID, name, difficulty = ...
         self:ResetEncounter()
-        self:StartEncounter(encounterID, name, raidSz, difficulty)
+        self:StartEncounter(encounterID, name, difficulty)
         self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         self:RegisterEvent("UNIT_PET")
+        for ev in pairs(NAMEPLATE_EVENTS) do
+            self:RegisterEvent(ev)
+        end
     elseif event == "ENCOUNTER_END" then
         debugEvent(event, ...)
         local _,_,_,_,isKill = ...
+        for ev in pairs(NAMEPLATE_EVENTS) do
+            self:UnregisterEvent(ev)
+        end
         self:UnregisterEvent("UNIT_PET")
         self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         self:StopEncounter(isKill)
@@ -181,6 +199,8 @@ function WDMF:OnEvent(event, ...)
     elseif event == "UNIT_PET" then
         local petUnitId = ...
         self:UpdateRaidMember(petUnitId)
+    elseif NAMEPLATE_EVENTS[event] then
+        self:Tracker_OnNameplateEvent(event, ...)
     end
 end
 
@@ -190,7 +210,7 @@ function WDMF:IsEncounterValid(encounterId)
     return true
 end
 
-function WDMF:StartEncounter(encounterID, encounterName, raidSz, difficulty)
+function WDMF:StartEncounter(encounterID, encounterName, difficulty)
     local pullId = 1
     if WD.db.profile.encounters[encounterName] and
        type(WD.db.profile.encounters[encounterName]) == "table" and
@@ -216,7 +236,7 @@ function WDMF:StartEncounter(encounterID, encounterName, raidSz, difficulty)
         self.encounter.name = date("%d/%m").." "..encounterName.." ("..pullId..")"
         self.encounter.startTime = GetTime()
 
-        self:Tracker_OnStartEncounter(raidSz)
+        self:Tracker_OnStartEncounter()
     end
 end
 

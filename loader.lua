@@ -237,6 +237,10 @@ function WD:LoadDefaults()
                 selectedRule = "TOTAL_DONE",
             },
             spell_db = {},
+            minGuildRank = {
+                ["id"] = 0,
+                ["name"] = "Unknown",
+            },
         }
     }
 end

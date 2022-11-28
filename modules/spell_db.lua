@@ -24,6 +24,7 @@ WD.Spells.potions = {}
 WD.Spells.rootEffects = {}
 WD.Spells.controlEffects = {}
 WD.Spells.knockbackEffects = {}
+WD.Spells.silenceEffects = {}
 
 local SPELL_GROUPS = {
     "FLASK",
@@ -33,6 +34,7 @@ local SPELL_GROUPS = {
     "ROOT",
     "CONTROL",
     "KNOCKBACK",
+    "SILENCE",
 }
 
 local CATEGORIES_LIST = {
@@ -69,9 +71,9 @@ local function refreshFrame()
     if not WDSDM.members then WDSDM.members = {} end
 
     local maxHeight = 520
-    local topLeftPosition = { x = 30, y = -51 }
+    local topLeftPosition = { x = 30, y = -49 }
     local rowsN = #WD.cache.spell_db
-    local columnsN = 10
+    local columnsN = 11
 
     -- sort by category > group > id
     local func = function(a, b)
@@ -160,6 +162,11 @@ local function refreshFrame()
             f.check:SetScript("OnClick", function() setSpellGroup(parent, index, vProfile, "KNOCKBACK") end)
             return f
         elseif index == 10 then
+            local f = createCheckCell(parent, index)
+            f.check:SetChecked(v.group == "SILENCE")
+            f.check:SetScript("OnClick", function() setSpellGroup(parent, index, vProfile, "SILENCE") end)
+            return f
+        elseif index == 11 then
             local f = WdLib.gui:addNextColumn(WDSDM, parent, index, "CENTER", WD_BUTTON_DELETE)
             f:EnableMouse(true)
             f.t:SetColorTexture(.6, .2, .2, .7)
@@ -198,6 +205,9 @@ local function refreshFrame()
             frame.check:SetChecked(v.group == "KNOCKBACK")
             frame.check:SetScript("OnClick", function() setSpellGroup(frame.grandParent, index, vProfile, "KNOCKBACK") end)
         elseif index == 10 then
+            frame.check:SetChecked(v.group == "SILENCE")
+            frame.check:SetScript("OnClick", function() setSpellGroup(frame.grandParent, index, vProfile, "SILENCE") end)
+        elseif index == 11 then
             frame:SetScript("OnClick", function() deleteSpellDBEntry(v) end)
         end
     end
@@ -246,6 +256,7 @@ function WDSpellDatabaseModule:applyFilters()
     WdLib.table:wipe(WD.Spells.rootEffects)
     WdLib.table:wipe(WD.Spells.controlEffects)
     WdLib.table:wipe(WD.Spells.knockbackEffects)
+    WdLib.table:wipe(WD.Spells.silenceEffects)
     for k,v in pairs(WD.db.profile.spell_db) do
         if type(v.id) == string then
             v.id = tonumber(v.id)
@@ -259,7 +270,8 @@ function WDSpellDatabaseModule:applyFilters()
            matchGroupFilter(v.group == "POTION", WDSDM.filters[5]) and
            matchGroupFilter(v.group == "ROOT", WDSDM.filters[6]) and
            matchGroupFilter(v.group == "CONTROL", WDSDM.filters[7]) and
-           matchGroupFilter(v.group == "KNOCKBACK", WDSDM.filters[8])
+           matchGroupFilter(v.group == "KNOCKBACK", WDSDM.filters[8]) and
+           matchGroupFilter(v.group == "SILENCE", WDSDM.filters[9])
         then
             WD.cache.spell_db[#WD.cache.spell_db+1] = WdLib.table:deepcopy(v)
         end
@@ -285,6 +297,9 @@ function WDSpellDatabaseModule:applyFilters()
         if v.group == "KNOCKBACK" then
             WD.Spells.knockbackEffects[v.id] = ""
         end
+        if v.group == "SILENCE" then
+            WD.Spells.silenceEffects[v.id] = ""
+        end
     end
 
     refreshFrame()
@@ -298,7 +313,7 @@ local function initFiltersTab()
         WD.SpellDBModule:applyFilters()
     end)
     WDSDM.categoryFilter:SetSize(WDSDM.headers[1]:GetSize())
-    WDSDM.categoryFilter:SetPoint("BOTTOMLEFT", WDSDM.headers[1], "TOPLEFT", 0, 25)
+    WDSDM.categoryFilter:SetPoint("BOTTOMLEFT", WDSDM.headers[1], "TOPLEFT", 0, 5)
 
     WDSDM.spellFilter = WdLib.gui:createEditBox(WDSDM)
     WDSDM.spellFilter:SetSize(WDSDM.headers[2]:GetSize())
@@ -326,8 +341,6 @@ local function initFiltersTab()
         f:SetScript("OnClick", function() WDSDM.filters[i+1] = WDSDM.groupFilters[i].check:GetChecked(); WD.SpellDBModule:applyFilters() end)
         WDSDM.groupFilters[i].check = f
     end
-
-    WD.SpellDBModule:applyFilters()
 end
 
 local function initAddSpellTab()
@@ -335,8 +348,8 @@ local function initAddSpellTab()
     WDSDM.add_spell.entries = { ["id"] = 0, ["category"] = "", ["group"] = "" }
 
     local add_button = WdLib.gui:createButton(WDSDM)
-    add_button:SetPoint("BOTTOMLEFT", WDSDM.headers[1], "TOPLEFT", 0, 3)
-    add_button:SetSize(WDSDM.headers[1]:GetSize())
+    add_button:SetPoint("TOPLEFT", WDSDM.headers[11], "TOPRIGHT", 1, 0)
+    add_button:SetSize(150, 20)
     add_button:SetScript("OnClick", function()
         if not WDSDM.category_entry.selected then
             print("Could not save spell without category")
@@ -355,9 +368,9 @@ local function initAddSpellTab()
     WDSDM.add_spell.button = add_button
 
     WDSDM.spell_entry = WdLib.gui:createEditBox(WDSDM)
-    WDSDM.spell_entry:SetSize(WDSDM.headers[2]:GetSize())
+    WDSDM.spell_entry:SetSize(150, 20)
     WDSDM.spell_entry:EnableMouse(true)
-    WDSDM.spell_entry:SetPoint("TOPLEFT", WDSDM.add_spell.button, "TOPRIGHT", 1, 0)
+    WDSDM.spell_entry:SetPoint("TOPLEFT", WDSDM.add_spell.button, "BOTTOMLEFT", 0, -1)
     WDSDM.spell_entry:SetJustifyH("CENTER")
     WDSDM.spell_entry:SetMaxLetters(15)
     WDSDM.spell_entry:SetScript("OnChar", function() WDSDM.add_spell.entries["id"] = WDSDM.spell_entry:GetNumber() end)
@@ -366,9 +379,24 @@ local function initAddSpellTab()
     
     WDSDM.category_entry = WdLib.gui:createDropDownMenu(WDSDM, "Select category", WdLib.gui:convertTypesToItems(CATEGORIES_LIST))
     WDSDM.category_entry:SetSize(150, 20)
-    WDSDM.category_entry:SetPoint("TOPLEFT", WDSDM.spell_entry, "TOPRIGHT", 1, 0)
+    WDSDM.category_entry:SetPoint("TOPLEFT", WDSDM.spell_entry, "BOTTOMLEFT", 0, -1)
+end
 
-    WD.SpellDBModule:applyFilters()
+local function initResetSpellsButton()
+    WDSDM.reset_spells = {}
+    WDSDM.reset_spells.entries = { ["id"] = 0, ["category"] = "", ["group"] = "" }
+
+    local button = WdLib.gui:createButton(WDSDM)
+    button:SetPoint("TOPLEFT", WDSDM.category_entry, "BOTTOMLEFT", 0, -21)
+    button:SetSize(150, 20)
+    button:SetScript("OnClick", function()
+        WD:LoadDefaultSpells("reload")
+        WD.SpellDBModule:applyFilters()
+    end)
+    button.t:SetColorTexture(.2, .2, .4, 1)
+    button.txt = WdLib.gui:createFont(button, "CENTER", "Reset Spell DB")
+    button.txt:SetAllPoints()
+    WDSDM.reset_spells.button = button
 end
 
 function WDSpellDatabaseModule:init(parent, yOffset)
@@ -376,14 +404,14 @@ function WDSpellDatabaseModule:init(parent, yOffset)
 
     WDSDM = self.frame
 
-    local x, y = 0, -56
+    local x, y = 0, -35
 
     WDSDM.headers = {}
     local h = WdLib.gui:createTableHeader(WDSDM, "Category", x, y, 120, 20)
     table.insert(WDSDM.headers, h)
     h = WdLib.gui:createTableHeaderNext(WDSDM, h, "Spell", 350, 20)
     table.insert(WDSDM.headers, h)
-    -- groups: flask,food,rune,potion,root,control,knockback,ignoreDispel
+    -- groups: flask,food,rune,potion,root,control,knockback,silence
     local groupWidth = 40
     h = WdLib.gui:createTableHeaderNext(WDSDM, h, "Flask", groupWidth, 20)
     table.insert(WDSDM.headers, h)
@@ -399,11 +427,16 @@ function WDSpellDatabaseModule:init(parent, yOffset)
     table.insert(WDSDM.headers, h)
     h = WdLib.gui:createTableHeaderNext(WDSDM, h, "Knock", groupWidth, 20)
     table.insert(WDSDM.headers, h)
+    h = WdLib.gui:createTableHeaderNext(WDSDM, h, "Silence", groupWidth, 20)
+    table.insert(WDSDM.headers, h)
     h = WdLib.gui:createTableHeaderNext(WDSDM, h, "", 45, 20)
     table.insert(WDSDM.headers, h)
 
     initFiltersTab()
     initAddSpellTab()
+    initResetSpellsButton()
+
+    WD.SpellDBModule:applyFilters()
 
     WDSDM:SetScript("OnShow", function()
         WDSDM.categoryFilter.selected = WDSDM.filters[0]

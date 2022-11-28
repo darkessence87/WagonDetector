@@ -28,7 +28,7 @@ local function getInterruptStatusText(v)
     elseif v.status == "SUCCESS" then
         return string.format(WD_TRACKER_CASTED_IN, v.timediff)
     elseif v.status == "CANCELLED" then
-        return string.format(WD_TRACKER_CAST_CANCELLED)
+        return string.format(WD_TRACKER_CAST_CANCELLED, v.cancelReason)
     end
 
     return v.status

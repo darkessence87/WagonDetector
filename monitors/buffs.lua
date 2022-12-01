@@ -44,7 +44,7 @@ local function getCasterName(v)
     if caster then
         casterName = caster.name
         if caster.type == "pet" then
-            casterName = WDDAM.parent:updatePetName(caster)
+            casterName = WDBAM.parent:updatePetName(caster)
         end
         casterName = WdLib.gen:getColoredName(WdLib.gen:getShortName(casterName), caster.class)
     else

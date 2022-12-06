@@ -808,7 +808,7 @@ local function startCast(unit, startedAt, spell_id, isChannelling)
         return
     end
 
-    local unitFrame = findUnitFrame(unit.guid)
+    --[[local unitFrame = findUnitFrame(unit.guid)
     if unitFrame and not isChannelling then
         local _,_,_,startTime,endTime,_,_,notInterruptible,spellId = UnitCastingInfo(unitFrame.unit)
         if spellId then
@@ -818,7 +818,7 @@ local function startCast(unit, startedAt, spell_id, isChannelling)
             onCastStart(unit, startedAtInSec, castTimeInMsec, spell_id, notInterruptible)
             return
         end
-    end
+    end]]
 
     local haste = 1
     if unit.guid ~= UnitGUID("player") then

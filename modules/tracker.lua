@@ -784,10 +784,14 @@ local function startCast(unit, startedAt, spell_id, isChannelling)
             local actualEndTime = nil
             if not isChannelling then
                 local _,_,_,startTime,endTime,_,_,notInterruptible,spellId = UnitCastingInfo(unit.unit)
-                actualEndTime = endTime / 1000
+                if spellId then
+                    actualEndTime = endTime / 1000
+                end
             else
                 local _,_,_,startTimeMS,endTimeMS,_,_,spellId = UnitChannelInfo(unit.unit)
-                actualEndTime = endTimeMS / 1000
+                if spellId then
+                    actualEndTime = endTimeMS / 1000
+                end
             end
             local expectedEndTime = cast.startedAt + cast.castTimeInMsec / 1000
             if not actualEndTime or expectedEndTime < actualEndTime then
@@ -2170,8 +2174,8 @@ function WDMF:Tracker_OnUnitEvent(frame, event, ...)
     or event == "UNIT_SPELLCAST_CHANNEL_STOP"
     --or event == "UNIT_SPELLCAST_CHANNEL_UPDATE"
     then
-        if self.cache_nameplates[unit] or self.cache_unitframes[unit] then
-            local data = self.cache_nameplates[unit] or self.cache_unitframes[unit]
+        if self.cache_nameplates[unit] --[[or self.cache_unitframes[unit]] then
+            local data = self.cache_nameplates[unit] --[[or self.cache_unitframes[unit]]
             if data.guid then
                 local src = findEntityByGUID(data.guid)
                 if not src then return end

@@ -43,7 +43,11 @@ function reloadGuildRanksMenu(parent)
         end }
         table.insert(items3, item)
     end
-    WdLib.gui:updateDropDownMenu(parent, "GuildRanks", items3)
+    if not WD.db.profile.minGuildRank.id then
+        WdLib.gui:updateDropDownMenu(parent, "GuildRanks", items3)
+    else
+        WdLib.gui:updateDropDownMenu(parent, WD.db.profile.minGuildRank.name, items3)
+    end
 end
 
 function WDMainModule:init(parent, yOffset)
@@ -75,18 +79,46 @@ function WDMainModule:init(parent, yOffset)
     mainF.enableButton.txt:SetSize(300, 20)
     mainF.enableButton.txt:SetPoint("LEFT", mainF.enableButton, "RIGHT", 5, 0)
 
-    -- check start tracking only by macro
+    -- check start tracking
+    local function onAutoTrackButtonsUpdate()
+        if WD.db.profile.autoTrack or WD.db.profile.autoTrackCombat then
+            WD.mainFrame:StartPull(WD.db.profile.autoTrackCombat)
+        else
+            WD.mainFrame:StopPull()
+        end
+        mainF:OnUpdate()
+    end
     mainF.autotrackButton = WdLib.gui:createCheckButton(mainF)
     mainF.autotrackButton:SetPoint("TOPLEFT", mainF.enableButton, "BOTTOMLEFT", 0, -5)
     mainF.autotrackButton:SetChecked(WD.db.profile.autoTrack)
-    mainF.autotrackButton:SetScript("OnClick", function() WD.db.profile.autoTrack = not WD.db.profile.autoTrack; if WD.db.profile.autoTrack then WD.mainFrame:StartPull() else WD.mainFrame:StopPull() end end)
-    mainF.autotrackButton.txt = WdLib.gui:createFont(mainF.autotrackButton, "LEFT", WD_BUTTON_AUTOTRACK)
+    mainF.autotrackButton:SetScript("OnClick", function()
+        WD.db.profile.autoTrack = not WD.db.profile.autoTrack
+        if WD.db.profile.autoTrackCombat and WD.db.profile.autoTrack then
+            WD.db.profile.autoTrackCombat = false
+        end
+        onAutoTrackButtonsUpdate()
+    end)
+    mainF.autotrackButton.txt = WdLib.gui:createFont(mainF.autotrackButton, "LEFT", WD_BUTTON_AUTOTRACK_ENCOUNTER)
     mainF.autotrackButton.txt:SetSize(300, 20)
     mainF.autotrackButton.txt:SetPoint("LEFT", mainF.autotrackButton, "RIGHT", 5, 0)
 
+    mainF.autotrackCombatButton = WdLib.gui:createCheckButton(mainF)
+    mainF.autotrackCombatButton:SetPoint("TOPLEFT", mainF.autotrackButton, "BOTTOMLEFT", 0, -5)
+    mainF.autotrackCombatButton:SetChecked(WD.db.profile.autoTrackCombat)
+    mainF.autotrackCombatButton:SetScript("OnClick", function()
+        WD.db.profile.autoTrackCombat = not WD.db.profile.autoTrackCombat
+        if WD.db.profile.autoTrackCombat and WD.db.profile.autoTrack then
+            WD.db.profile.autoTrack = false
+        end
+        onAutoTrackButtonsUpdate()
+    end)
+    mainF.autotrackCombatButton.txt = WdLib.gui:createFont(mainF.autotrackCombatButton, "LEFT", WD_BUTTON_AUTOTRACK_COMBAT)
+    mainF.autotrackCombatButton.txt:SetSize(300, 20)
+    mainF.autotrackCombatButton.txt:SetPoint("LEFT", mainF.autotrackCombatButton, "RIGHT", 5, 0)
+
     -- check immediate fail button
     mainF.immediateButton = WdLib.gui:createCheckButton(mainF)
-    mainF.immediateButton:SetPoint("TOPLEFT", mainF.autotrackButton, "BOTTOMLEFT", 0, -5)
+    mainF.immediateButton:SetPoint("TOPLEFT", mainF.autotrackCombatButton, "BOTTOMLEFT", 0, -5)
     mainF.immediateButton:SetChecked(WD.db.profile.sendFailImmediately)
     mainF.immediateButton:SetScript("OnClick", function() WD.db.profile.sendFailImmediately = not WD.db.profile.sendFailImmediately end)
     mainF.immediateButton.txt = WdLib.gui:createFont(mainF.immediateButton, "LEFT", WD_BUTTON_IMMEDIATE_NOTIFY)
@@ -136,6 +168,7 @@ function WDMainModule:init(parent, yOffset)
     function mainF:OnUpdate()
         WD:OnGuildRosterUpdate()
         mainF.autotrackButton:SetChecked(WD.db.profile.autoTrack)
+        mainF.autotrackCombatButton:SetChecked(WD.db.profile.autoTrackCombat)
         mainF.enableButton:SetChecked(WD.db.profile.isEnabled)
         mainF.dropFrame0.txt:SetText(WD.db.profile.chat)
         reloadGuildRanksMenu(mainF.dropFrame1)

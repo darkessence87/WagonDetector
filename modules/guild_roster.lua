@@ -284,7 +284,7 @@ function WD:OnGuildRosterUpdate(needGUIupdate)
         if officernote and officernote == "" then
             officernote = "0,0"
         end
-        if officernote and rankIndex <= WD.db.profile.minGuildRank.id and level == 60 and isLongOffline == false then
+        if officernote and rankIndex <= WD.db.profile.minGuildRank.id and level == 70 and isLongOffline == false then
             local info = {}
             info.index = i
             info.name, info.class, info.rank, info.rankIndex = name, class, rank, rankIndex

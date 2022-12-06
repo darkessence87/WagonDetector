@@ -9,6 +9,18 @@ local function log(data)
     end
 end
 
+local function hookUnitFrameCastBar(f, unit)
+    if not f or (f.hooked and f.hooked == true) then
+        return
+    end
+
+    --print('hooked '..unit)
+    f.hooked = true
+    hooksecurefunc(f, "OnEvent", function(self, event, ...)
+        WDMF:Tracker_OnUnitEvent(self, event, ...)
+    end)
+end
+
 local callbacks = {}
 local function registerCallback(callback, ...)
     local events = {...}
@@ -28,8 +40,6 @@ local function createEntity(guid, name, unit_type, parentGuid, parentName)
     v.parentName = parentName
     v.auras = {}
     v.casts = {}
-    v.casts.current_spell_id = 0
-    v.casts.current_result = ""
     v.stats = {}
     v.spawnedAt = WDMF.tracker.startTime
     return v
@@ -38,11 +48,25 @@ end
 local function createExistingEntity(v)
     v.auras = {}
     v.casts = {}
-    v.casts.current_spell_id = 0
-    v.casts.current_result = ""
     v.stats = {}
     v.spawnedAt = WDMF.tracker.startTime
     return v
+end
+
+local function createInternalEntity(unitId)
+    if not UnitIsVisible(unitId) then return nil end
+    local name = WdLib.gen:getUnitName(unitId)
+    if name == UNKNOWNOBJECT then return nil end
+    local _,class = UnitClass(unitId)
+
+    local p = {}
+    p.name = name
+    p.unit = unitId
+    p.class = class
+    p.guid = UnitGUID(p.unit)
+    p.rt = 0
+
+    return p
 end
 
 local function findNpc(guid)
@@ -92,6 +116,14 @@ end
 
 local function findNameplate(guid)
     for k,v in pairs(WDMF.cache_nameplates) do
+        if v.guid and v.unit and v.guid == guid then
+            return v
+        end
+    end
+end
+
+local function findUnitFrame(guid)
+    for k,v in pairs(WDMF.cache_unitframes) do
         if v.guid and v.unit and v.guid == guid then
             return v
         end
@@ -293,7 +325,17 @@ local function updatePet(pet, newGuid)
     end
 end
 
-local function updatePlayer(player)
+local function updatePlayer(playerData, unitId)
+    if playerData.unit == unitId then
+        local newGuid = UnitGUID(unitId)
+        local name = WdLib.gen:getUnitName(unitId)
+        if name ~= UNKNOWNOBJECT then
+            playerData.name = name
+        end
+        if playerData.guid ~= newGuid then
+            playerData.guid = newGuid
+        end
+    end
 end
 
 local function getEntities(timestamp, src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
@@ -395,7 +437,14 @@ local function findLastAuraByCaster(unit, auraId, caster)
 end
 
 local function isCasting(unit, spell_id)
-    if unit.casts.current_spell_id == spell_id then return true end
+    if unit.current_cast then
+        if not spell_id then
+            return unit.current_cast
+        end
+        if unit.current_cast.spell_id == spell_id then
+            return unit.current_cast
+        end
+    end
     return nil
 end
 
@@ -622,28 +671,33 @@ local function processRulesByEventType(timestamp, unit, eventType, ...)
     end
 end
 
-local function onCastStart(unit, startedAt, castTimeInMsec, spell_id, notInterruptible)
+local function onCastStart(unit, startedAt, castTimeInMsec, spell_id, notInterruptible, isChannelled)
     processRulesByEventType(startedAt, unit, "EV_CAST_START", spell_id, WdLib.gen:getShortName(unit.name))
 
     if castTimeInMsec >= WD.MIN_CAST_TIME_TRACKED then
-        unit.casts.current_spell_id = spell_id
-        unit.casts.current_spell_notInterruptible = notInterruptible
-        unit.casts.current_startedAt = startedAt
-        unit.casts.current_castTimeInMsec = castTimeInMsec
+        local cast = {}
+        cast.spell_id = spell_id
+        cast.castTimeInMsec = castTimeInMsec
+        cast.notInterruptible = notInterruptible
+        cast.startedAt = startedAt
+        cast.result = ""
+        cast.isChannelled = isChannelled
+        unit.current_cast = cast
     end
 end
 
 local function onCastFinish(unit, finishedAt, spell_id, result, interrupter, interrupt_spell_id)
-    if unit.casts.current_spell_id == 0 then return end
+    local cast = isCasting(unit)
+    if not cast then return end
 
-    if unit.casts.current_spell_id ~= spell_id then
-        --print(spell_id..' finished, but current spell is: '..unit.casts.current_spell_id)
+    if cast.spell_id ~= spell_id then
+        --print(spell_id..' finished, but current spell is: '..cast.spell_id)
         return
     end
 
     local i = 1
     if unit.casts[spell_id] then
-        if unit.casts.current_result == "CANCELLING" then
+        if cast.result == "CANCELLING" then
             i = unit.casts[spell_id].count
         else
             i = unit.casts[spell_id].count + 1
@@ -652,13 +706,14 @@ local function onCastFinish(unit, finishedAt, spell_id, result, interrupter, int
         unit.casts[spell_id] = {}
     end
 
-    local actualCastTimeInMsec = (finishedAt - unit.casts.current_startedAt) * 1000
+    local actualCastTimeInMsec = (finishedAt - cast.startedAt) * 1000
     --print('finished', spell_id, result)
     unit.casts[spell_id].count = i
     unit.casts[spell_id][i] = {}
     unit.casts[spell_id][i].status = result
     unit.casts[spell_id][i].timestamp = WdLib.gen:getTimedDiff(WDMF.tracker.startTime, finishedAt)
     unit.casts[spell_id][i].timediff = WdLib.gen:float_round_to(actualCastTimeInMsec / 1000, 2)
+    unit.casts[spell_id][i].isChannelled = cast.isChannelled
 
     if result == "CANCELLED" then
         unit.casts[spell_id][i].cancelReason = interrupter
@@ -683,7 +738,11 @@ local function onCastFinish(unit, finishedAt, spell_id, result, interrupter, int
         end
         --print('interrupted')
 
-        unit.casts[spell_id][i].percent = WdLib.gen:float_round_to(actualCastTimeInMsec / unit.casts.current_castTimeInMsec, 2) * 100
+        unit.casts[spell_id][i].percent = WdLib.gen:float_round_to(actualCastTimeInMsec / cast.castTimeInMsec, 2) * 100
+        if cast.isChannelled then
+            unit.casts[spell_id][i].percent = 100 - unit.casts[spell_id][i].percent
+        end
+
         unit.casts[spell_id][i].interrupter = interrupter.guid
         unit.casts[spell_id][i].spell_id = interrupt_spell_id
 
@@ -710,30 +769,55 @@ local function onCastFinish(unit, finishedAt, spell_id, result, interrupter, int
     end
 
     if result ~= "CANCELLING" then
-        unit.casts.current_spell_id = 0
-        unit.casts.current_result = ""
-        unit.casts.current_spell_notInterruptible = nil
+        unit.current_cast = nil
     else
-        unit.casts.current_result = result
+        cast.result = result
     end
 end
 
-local function startCast(unit, startedAt, spell_id)
-    if unit.casts.current_spell_id ~= 0 and unit.unit ~= "Unknown" then
-        local _,_,_,startTimeMS,endTimeMS,_,_,spellId = UnitChannelInfo(unit.unit)
-        if not spellId then
-            onCastFinish(unit, unit.casts.current_startedAt, unit.casts.current_spell_id, "CANCELLED", "another spell cast or movement")
+local function startCast(unit, startedAt, spell_id, isChannelling)
+    local cast = isCasting(unit)
+    if cast and unit.unit ~= "Unknown" then
+        if spell_id ~= cast.spell_id then
+            onCastFinish(unit, cast.startedAt, cast.spell_id, "CANCELLED", "another spell cast or movement")
+        else
+            local actualEndTime = nil
+            if not isChannelling then
+                local _,_,_,startTime,endTime,_,_,notInterruptible,spellId = UnitCastingInfo(unit.unit)
+                actualEndTime = endTime / 1000
+            else
+                local _,_,_,startTimeMS,endTimeMS,_,_,spellId = UnitChannelInfo(unit.unit)
+                actualEndTime = endTimeMS / 1000
+            end
+            local expectedEndTime = cast.startedAt + cast.castTimeInMsec / 1000
+            if not actualEndTime or expectedEndTime < actualEndTime then
+                onCastFinish(unit, cast.startedAt, cast.spell_id, "CANCELLED", "another spell cast or movement")
+            else
+                return
+            end
         end
     end
 
     local nameplate = findNameplate(unit.guid)
-    if nameplate then
+    if nameplate and not isChannelling then
         local _,_,_,startTime,endTime,_,_,notInterruptible = UnitCastingInfo(nameplate.unit)
         local castTimeInMsec = endTime - startTime
         local startedAtInSec = startTime / 1000
-        --print('UnitCastingInfo:', unit.guid)
+        --print('findNameplate, UnitCastingInfo:', unitFrame.unit)
         onCastStart(unit, startedAtInSec, castTimeInMsec, spell_id, notInterruptible)
         return
+    end
+
+    local unitFrame = findUnitFrame(unit.guid)
+    if unitFrame and not isChannelling then
+        local _,_,_,startTime,endTime,_,_,notInterruptible,spellId = UnitCastingInfo(unitFrame.unit)
+        if spellId then
+            local castTimeInMsec = endTime - startTime
+            local startedAtInSec = startTime / 1000
+            --print('findUnitFrame, UnitCastingInfo:', unitFrame.unit)
+            onCastStart(unit, startedAtInSec, castTimeInMsec, spell_id, notInterruptible)
+            return
+        end
     end
 
     local haste = 1
@@ -742,7 +826,7 @@ local function startCast(unit, startedAt, spell_id)
     end
     local castTimeInMsec = haste * select(4, GetSpellInfo(spell_id))
     --print('SPELL_CAST_START:', unit.guid)
-    onCastStart(unit, startedAt, castTimeInMsec, spell_id, false)
+    onCastStart(unit, startedAt, castTimeInMsec, spell_id, false, isChannelling)
 end
 
 local function onDeath(timestamp, unit)
@@ -757,8 +841,9 @@ local function onDeath(timestamp, unit)
         end
     end
 
-    if unit.casts.current_result == "CANCELLING" then
-        onCastFinish(unit, unit.casts.current_startedAt, unit.casts.current_spell_id, "CANCELLED", "death")
+    local cast = isCasting(unit)
+    if cast and cast.result == "CANCELLING" then
+        onCastFinish(unit, cast.startedAt, cast.spell_id, "CANCELLED", "death")
     end
 
     processRulesByEventType(timestamp, unit, "EV_DEATH_UNIT", WdLib.gen:getShortName(dst_name))
@@ -1156,18 +1241,6 @@ end
 local function synchNameplates(self, frame, removedUnit)
     if not self.cache_nameplates then self.cache_nameplates = {} end
 
-    local function hookNameplate(f, unit)
-        if not f or (f.hooked and f.hooked == true) then
-            return
-        end
-
-        --print('hooked '..unit)
-        f.hooked = true
-        hooksecurefunc(f, "OnEvent", function(self, event, ...)
-            WDMF:onUnitEvent(self, event, ...)
-        end)
-    end
-
     local function updateNameplate(f)
         local unit = f.namePlateUnitToken
         if not unit then return end
@@ -1176,14 +1249,22 @@ local function synchNameplates(self, frame, removedUnit)
             data.frame = f
             data.guid = UnitGUID(unit)
             data.unit = unit
-            hookNameplate(f.unitFrame.castBar, unit)
+            hookUnitFrameCastBar(f.unitFrame.castBar, unit)
             self.cache_nameplates[data.unit] = data
         else
             local data = self.cache_nameplates[unit]
             data.frame = f
             data.guid = UnitGUID(unit)
             data.unit = unit
-            hookNameplate(f.unitFrame.castBar, unit)
+            hookUnitFrameCastBar(f.unitFrame.castBar, unit)
+        end
+        local guid = self.cache_nameplates[unit].guid
+        if not findEntityByGUID(guid) then
+            local e = loadEntity(guid, UnitName(unit), "creature")
+            if e then
+                e.spawnedAt = GetTime()
+                e.rt = GetRaidTargetIndex(unit) or 0
+            end
         end
     end
 
@@ -1200,6 +1281,86 @@ local function synchNameplates(self, frame, removedUnit)
             if f.namePlateUnitToken then
                 updateNameplate(f)
             end
+        end
+    end
+end
+
+local function synchUnitFrames(self, frame, removedUnit)
+    if not self.cache_unitframes then self.cache_unitframes = {} end
+
+    local function registerUnitFrame(f, unit)
+        if not f or (f.registered and f.registered == true) then
+            return
+        end
+
+        --print('registered '..unit)
+        f.registered = true
+        f:SetScript("OnEvent", function(self, event, ...)
+            --print(event, ...)
+            WDMF:Tracker_OnUnitEvent(self, event, ...)
+        end)
+    end
+
+    local function updateUnitFrame(f)
+        local unit = f.unitToken
+        if not unit then return end
+        if self.cache_unitframes[unit] then
+            local data = self.cache_unitframes[unit]
+            data.frame = f
+            data.guid = UnitGUID(unit)
+            data.unit = unit
+            registerUnitFrame(f, unit)
+        end
+        local guid = self.cache_unitframes[unit].guid
+        if not findEntityByGUID(guid) then
+            local e = loadEntity(guid, UnitName(unit), "creature")
+            if e then
+                e.spawnedAt = GetTime()
+                e.rt = GetRaidTargetIndex(unit) or 0
+            end
+        end
+    end
+
+    if frame then
+        updateUnitFrame(frame)
+    elseif removedUnit then
+        local data = self.cache_unitframes[removedUnit]
+        if data then
+            data.guid = nil
+        end
+    else
+        local function createUnitFrame(unitToken, frameName)
+            if self.cache_unitframes[unitToken] then
+                return
+            end
+
+            local f = CreateFrame("Frame", frameName)
+            f.unit = unitToken
+            local data = {}
+            data.frame = f
+            data.guid = UnitGUID(unitToken)
+            data.unit = unitToken
+            registerUnitFrame(f, unitToken)
+            self.cache_unitframes[data.unit] = data
+        end
+
+        for i=1,8 do
+            createUnitFrame("boss"..i, "WD_BossFrame_"..i)
+        end
+
+        if UnitInRaid("player") ~= nil then
+            for i=1, GetNumGroupMembers() do
+                createUnitFrame("raid"..i, "WD_RaidFrame_"..i)
+                createUnitFrame("raidpet"..i, "WD_RaidPetFrame_"..i)
+            end
+        elseif UnitInParty("player") ~= false then
+            for i=1, GetNumGroupMembers() do
+                createUnitFrame("party"..i, "WD_PartyFrame_"..i)
+                createUnitFrame("partypet"..i, "WD_PartyPetFrame_"..i)
+            end
+        else
+            createUnitFrame("player", "WD_PlayerFrame")
+            createUnitFrame("pet", "WD_PlayerPetFrame")
         end
     end
 end
@@ -1237,20 +1398,22 @@ function WDMF:ProcessAuras(src, dst, ...)
         end
 
         -- interrupts
-        if WD.Spells.knockbackEffects[spell_id] --[[and not hasAnyAura(dst, WD.Spells.rootEffects)]] then
-            onCastFinish(dst, timestamp, dst.casts.current_spell_id, "INTERRUPTED", src, spell_id)
-        end
-        if WD.Spells.controlEffects[spell_id] then
-            onCastFinish(dst, timestamp, dst.casts.current_spell_id, "INTERRUPTED", src, spell_id)
-        end
-        if WD.Spells.silenceEffects[spell_id] then
-            local nameplate = findNameplate(dst.guid)
-            if nameplate then
-                local name,_,_,_,_,_,castId,notInterruptible = UnitCastingInfo(nameplate.unit)
-                if name and notInterruptible == false then
-                    onCastFinish(dst, timestamp, dst.casts.current_spell_id, "INTERRUPTED", src, spell_id)
-                elseif dst.casts.current_spell_notInterruptible == false then
-                    onCastFinish(dst, timestamp, dst.casts.current_spell_id, "INTERRUPTED", src, spell_id)
+        if dst.current_cast then
+            if WD.Spells.knockbackEffects[spell_id] --[[and not hasAnyAura(dst, WD.Spells.rootEffects)]] then
+                onCastFinish(dst, timestamp, dst.current_cast.spell_id, "INTERRUPTED", src, spell_id)
+            end
+            if WD.Spells.controlEffects[spell_id] then
+                onCastFinish(dst, timestamp, dst.current_cast.spell_id, "INTERRUPTED", src, spell_id)
+            end
+            if WD.Spells.silenceEffects[spell_id] then
+                local nameplate = findNameplate(dst.guid)
+                if nameplate then
+                    local name,_,_,_,_,_,castId,notInterruptible = UnitCastingInfo(nameplate.unit)
+                    if name and notInterruptible == false then
+                        onCastFinish(dst, timestamp, dst.current_cast.spell_id, "INTERRUPTED", src, spell_id)
+                    elseif dst.current_cast.notInterruptible == false then
+                        onCastFinish(dst, timestamp, dst.current_cast.spell_id, "INTERRUPTED", src, spell_id)
+                    end
                 end
             end
         end
@@ -1320,13 +1483,13 @@ function WDMF:ProcessCasts(src, dst, ...)
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_CAST_SUCCESS" then
-        --print('SPELL_CAST_SUCCESS:', src.guid)
-        onCastFinish(src, timestamp, spell_id, "SUCCESS")
-    end
-    -----------------------------------------------------------------------------------------------------------------------
-    if event == "SPELL_CAST_FAILED" then
-        --print('SPELL_CAST_FAILED:', src.guid)
-        onCastFinish(src, timestamp, spell_id, "FAILED")
+        --print('SPELL_CAST_SUCCESS:', src.guid, spell_id)
+        local _,_,_,startTimeMS,endTimeMS,_,notInterruptible,spellId = UnitChannelInfo(src.unit)
+        if not spellId then
+            onCastFinish(src, timestamp, spell_id, "SUCCESS")
+        elseif spellId == spell_id then
+            startCast(src, timestamp, spell_id, true)
+        end
     end
     -----------------------------------------------------------------------------------------------------------------------
     if event == "SPELL_INTERRUPT" then
@@ -1392,7 +1555,7 @@ function WDMF:ProcessSpellDamage(src, dst, ...)
     if event == "SPELL_DAMAGE" then
         -- interrupts
         --[[if WD.Spells.knockbackEffects[spell_id] and not hasAnyAura(dst, WD.Spells.rootEffects) then
-            onCastFinish(dst, timestamp, dst.casts.current_spell_id, "INTERRUPTED", src, spell_id)
+            onCastFinish(dst, timestamp, dst.current_cast.spell_id, "INTERRUPTED", src, spell_id)
         end]]
 
         local function processRules(deathRule, damageTakenRule)
@@ -1797,7 +1960,7 @@ function WDMF:Init()
     WdLib.table:wipe(callbacks)
     registerCallback(self.ProcessSummons,           "SPELL_SUMMON")
     registerCallback(self.ProcessAuras,             "SPELL_AURA_APPLIED", "SPELL_AURA_REMOVED", "SPELL_AURA_APPLIED_DOSE", "SPELL_AURA_REMOVED_DOSE")
-    registerCallback(self.ProcessCasts,             "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_CAST_FAILED", "SPELL_INTERRUPT")
+    registerCallback(self.ProcessCasts,             "SPELL_CAST_START", "SPELL_CAST_SUCCESS", "SPELL_INTERRUPT")
     registerCallback(self.ProcessEnvironmentDamage, "ENVIRONMENTAL_DAMAGE")
     registerCallback(self.ProcessWhiteDamage,       "SWING_DAMAGE", "RANGE_DAMAGE")
     registerCallback(self.ProcessSpellDamage,       "SPELL_DAMAGE", "DAMAGE_SHIELD", "SPELL_PERIODIC_DAMAGE", "SPELL_BUILDING_DAMAGE")
@@ -1812,22 +1975,6 @@ function WDMF:Init()
 end
 
 function WDMF:CreateRaidMember(unitId, petUnitId)
-    local function createInternalEntity(unitId)
-        if not UnitIsVisible(unitId) then return nil end
-        local name = WdLib.gen:getUnitName(unitId)
-        if name == UNKNOWNOBJECT then return nil end
-        local _,class = UnitClass(unitId)
-
-        local p = {}
-        p.name = name
-        p.unit = unitId
-        p.class = class
-        p.guid = UnitGUID(p.unit)
-        p.rt = 0
-
-        return p
-    end
-
     local player = createInternalEntity(unitId)
     local pet = createInternalEntity(petUnitId)
 
@@ -1885,22 +2032,6 @@ function WDMF:UpdateRaidMember(unitId)
 end
 
 function WDMF:CreateBoss(unitId)
-    local function createInternalEntity(unitId)
-        if not UnitIsVisible(unitId) then return nil end
-        local name = WdLib.gen:getUnitName(unitId)
-        if name == UNKNOWNOBJECT then return nil end
-        local _,class = UnitClass(unitId)
-
-        local p = {}
-        p.name = name
-        p.unit = unitId
-        p.class = class
-        p.guid = UnitGUID(p.unit)
-        p.rt = 0
-
-        return p
-    end
-
     local boss = createInternalEntity(unitId)
     if boss then
         boss.type = "creature"
@@ -1928,8 +2059,6 @@ function WDMF:ProcessPull()
 end
 
 function WDMF:Tracker_OnStartEncounter()
-    synchNameplates(self)
-
     self.tracker = {}
     self.tracker.pullName = self.encounter.pullName
     self.tracker.startTime = self.encounter.startTime
@@ -1945,6 +2074,18 @@ function WDMF:Tracker_OnStartEncounter()
 
     self:LoadRules()
     self:ProcessPull()
+
+    synchNameplates(self)
+    --[[synchUnitFrames(self)
+    for k,v in pairs(self.cache_unitframes) do
+        if v.frame then
+            v.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+            v.frame:RegisterUnitEvent("UNIT_SPELLCAST_START", k)
+            v.frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", k)
+            v.frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", k)
+            v.frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", k)
+        end
+    end]]
 
     WD:RefreshTrackerPulls()
     WD:RefreshBasicMonitors()
@@ -1962,9 +2103,18 @@ function WDMF:Tracker_OnStopEncounter()
                 local t = (aura.removed - aura.applied) / 1000
                 aura.duration = WdLib.gen:float_round_to(t * 1000, 2)
             end
-            onCastFinish(src, src.casts.current_startedAt, src.casts.current_spell_id, "CANCELLED", "stop encounter")
+            local cast = isCasting(src)
+            if cast then
+                onCastFinish(src, cast.startedAt, cast.spell_id, "CANCELLED", "stop encounter")
+            end
         end
     end
+
+    --[[for k,v in pairs(self.cache_unitframes) do
+        if v.frame then
+            v.frame:UnregisterAllEvents()
+        end
+    end]]
 
     if not WD.db.profile.tracker or #WD.db.profile.tracker == 0 then return end
     local n = WD.db.profile.tracker[#WD.db.profile.tracker].pullName
@@ -1974,8 +2124,6 @@ function WDMF:Tracker_OnStopEncounter()
     WD:RefreshTrackerPulls()
     WD:RefreshBasicMonitors()
     WD:RefreshBasicStatsMonitors()
-
-    collectgarbage("collect")
 end
 
 function WDMF:Tracker_OnEvent(...)
@@ -1990,6 +2138,110 @@ function WDMF:Tracker_OnEvent(...)
         else
             local src, dst = getEntities(GetTime(), src_guid, src_name, src_flags, src_raid_flags, dst_guid, dst_name, dst_flags, dst_raid_flags)
             callbacks[event](self, src, dst, ...)
+        end
+    end
+end
+
+function WDMF:Tracker_OnUnitEvent(frame, event, ...)
+    if self.isActive == 0 then return end
+
+    local arg1 = ...
+    local unit = frame.unit
+    --print(event, unit)
+    if event == "PLAYER_ENTERING_WORLD" then
+        if UnitChannelInfo(unit) then
+            event = "UNIT_SPELLCAST_CHANNEL_START"
+            arg1 = unit
+        elseif UnitCastingInfo(unit) then
+            event = "UNIT_SPELLCAST_START"
+            arg1 = unit
+        else
+            return
+        end
+    end
+
+	if arg1 ~= unit then
+		return
+	end
+
+    if event == "UNIT_SPELLCAST_START"
+    or event == "UNIT_SPELLCAST_STOP"
+    or event == "UNIT_SPELLCAST_CHANNEL_START"
+    or event == "UNIT_SPELLCAST_CHANNEL_STOP"
+    --or event == "UNIT_SPELLCAST_CHANNEL_UPDATE"
+    then
+        if self.cache_nameplates[unit] or self.cache_unitframes[unit] then
+            local data = self.cache_nameplates[unit] or self.cache_unitframes[unit]
+            if data.guid then
+                local src = findEntityByGUID(data.guid)
+                if not src then return end
+
+                if event == "UNIT_SPELLCAST_START" then
+                    if not frame.spellID then
+                        local _,_,_,startTimeMS,endTimeMS,_,_,notInterruptible,spellId = UnitCastingInfo(unit)
+                        frame.spellStartTime = startTimeMS / 1000
+                        frame.spellEndTime = endTimeMS / 1000
+                        frame.notInterruptible = notInterruptible
+                        frame.spellID = spellId
+                    end
+                    local cast = isCasting(src)
+                    if cast then
+                        local _,_,_,startTimeMS,endTimeMS,_,_,spellId = UnitChannelInfo(unit)
+                        if not spellId then
+                            --print(event, 'onCastFinish', 'CANCELLED')
+                            onCastFinish(src, cast.startedAt, cast.spell_id, "CANCELLED", "another spell cast or movement")
+                        end
+                    end
+                    if not isCasting(src) then
+                        local castTimeInMsec = (frame.spellEndTime - frame.spellStartTime) * 1000
+                        --print(event, data.guid, frame.spellID, 'onCastStart')
+                        onCastStart(src, frame.spellStartTime, castTimeInMsec, frame.spellID, frame.notInterruptible)
+                    end
+                elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
+                    if not frame.spellID then
+                        local _,_,_,startTimeMS,endTimeMS,_,notInterruptible,spellId = UnitChannelInfo(unit)
+                        frame.spellStartTime = startTimeMS / 1000
+                        frame.spellEndTime = endTimeMS / 1000
+                        frame.notInterruptible = notInterruptible
+                        frame.spellID = spellId
+                    end
+                    local cast = isCasting(src)
+                    if cast then
+                        local _,_,_,startTimeMS,endTimeMS,_,_,spellId = UnitChannelInfo(unit)
+                        if not spellId or spellId ~= frame.spellID then
+                            onCastFinish(src, cast.startedAt, cast.spell_id, "CANCELLED", "another spell cast or movement")
+                        end
+                    end
+                    if not isCasting(src) then
+                        local castTimeInMsec = (frame.spellEndTime - frame.spellStartTime) * 1000
+                        --print(event, data.guid, frame.spellID, castTimeInMsec)
+                        onCastStart(src, frame.spellStartTime, castTimeInMsec, frame.spellID, frame.notInterruptible, true)
+                    end
+                elseif event == "UNIT_SPELLCAST_STOP" then
+                    local _,_,spell_id = ...
+                    local cast = isCasting(src, spell_id)
+                    if cast then
+                        --print(event, data.guid, spell_id, 'CANCELLING')
+                        onCastFinish(src, cast.startedAt, cast.spell_id, "CANCELLING")
+                    end
+                    if frame.spellID then
+                        frame.spellID = nil
+                    end
+                elseif event == "UNIT_SPELLCAST_CHANNEL_STOP" then
+                    local _,_,spell_id = ...
+                    local cast = isCasting(src, spell_id)
+                    if cast then
+                        --print(event, data.guid, spell_id, cast.castTimeInMsec)
+                        onCastFinish(src, GetTime(), cast.spell_id, "SUCCESS")
+                    end
+                    if frame.spellID then
+                        frame.spellID = nil
+                    end
+                --[[
+                else
+                    print(event, data.guid)]]
+                end
+            end
         end
     end
 end
@@ -2069,78 +2321,6 @@ function WDMF:LoadExistingNpc(npc)
         holder[#holder+1] = npc
         loadAuras(npc)
         return
-    end
-end
-
-function WDMF:onUnitEvent(frame, event, ...)
-    if self.isActive == 0 then return end
-
-    local arg1 = ...
-    local unit = frame.unit
-    --print(event, unit)
-    if event == "PLAYER_ENTERING_WORLD" then
-        if UnitChannelInfo(unit) then
-            event = "UNIT_SPELLCAST_CHANNEL_START"
-            arg1 = unit
-        elseif UnitCastingInfo(unit) then
-            event = "UNIT_SPELLCAST_START"
-            arg1 = unit
-        else
-            return
-        end
-    end
-
-	if arg1 ~= unit then
-		return
-	end
-
-    if event == "UNIT_SPELLCAST_START"
-    or event == "UNIT_SPELLCAST_STOP"
-    or event == "UNIT_SPELLCAST_CHANNEL_START"
-    or event == "UNIT_SPELLCAST_CHANNEL_STOP"
-    or event == "UNIT_SPELLCAST_CHANNEL_UPDATE"
-    or event == "UNIT_SPELLCAST_SUCCEEDED"
-    or event == "UNIT_SPELLCAST_INTERRUPTED"
-    then
-        if self.cache_nameplates[unit] then
-            local data = self.cache_nameplates[unit]
-            if data.guid then
-                local src = findEntityByGUID(data.guid)
-                if not src then return end
-
-                if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
-                    if src.casts.current_spell_id ~= 0 then
-                        local _,_,_,startTimeMS,endTimeMS,_,_,spellId = UnitChannelInfo(unit)
-                        if not spellId then
-                            onCastFinish(src, src.casts.current_startedAt, src.casts.current_spell_id, "CANCELLED", "another spell cast or movement")
-                        end
-                    end
-                    if src.casts.current_spell_id == 0 then
-                        local castTimeInMsec = (frame.spellEndTime - frame.spellStartTime) * 1000
-                        --print(event, data.guid, frame.spellID)
-                        onCastStart(src, frame.spellStartTime, castTimeInMsec, frame.spellID, frame.notInterruptible)
-                    end
-                elseif event == "UNIT_SPELLCAST_STOP" --[[or event == "UNIT_SPELLCAST_CHANNEL_STOP"]] then
-                    local _,_,spell_id = ...
-                    if src.casts.current_spell_id == spell_id then
-                        --print(event, data.guid, spell_id)
-                        onCastFinish(src, src.casts.current_startedAt, src.casts.current_spell_id, "CANCELLING")
-                    end
-                --[[elseif event == "UNIT_SPELLCAST_INTERRUPTED" then
-                    local _,_,spell_id = ...
-                    if src.casts.current_spell_id ~= 0 then
-                        print(event, data.guid, spell_id)
-                    end
-                elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-                    local _,_,spell_id = ...
-                    if src.casts.current_spell_id ~= 0 then
-                        print(event, data.guid, spell_id)
-                    end
-                else
-                    print(event, data.guid)]]
-                end
-            end
-        end
     end
 end
 

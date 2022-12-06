@@ -232,6 +232,7 @@ function WD:LoadDefaults()
             maxDeaths = 5,
             encounters = {},
             autoTrack = true,
+            autoTrackCombat = false,
             tracker = {
                 selected = 0,
                 selectedRule = "TOTAL_DONE",
@@ -292,12 +293,12 @@ function WD:SlashHandler(msg, box)
         self.mainFrame.encounter.interrupted = 1
         print(WD_ENCOUNTER_INTERRUPTED)
     elseif cmd == "pull" then
-        if WD.db.profile.autoTrack == false then
+        if WD.db.profile.autoTrack == false and WD.db.profile.autoTrackCombat == false then
             self.mainFrame:StartPull()
         end
         WD:SendAddonMessage("block_encounter")
     elseif cmd == "pullstop" then
-        if WD.db.profile.autoTrack == false then
+        if WD.db.profile.autoTrack == false and WD.db.profile.autoTrackCombat == false then
             self.mainFrame:StopPull()
         end
         WD:SendAddonMessage("reset_encounter")

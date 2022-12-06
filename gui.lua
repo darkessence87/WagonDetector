@@ -2,7 +2,7 @@
 local WDGF = nil
 
 WD.options.args.configButton = {
-    name = "/cd config",
+    name = "/wd config",
     type = "execute",
     func = function() WD:OpenConfig() end,
 }
@@ -88,6 +88,7 @@ function WD:CreateGuiFrame()
         end
     end)
     WDGF:SetScript("OnShow", function(self)
+        collectgarbage("collect")
         if self:IsEventRegistered("GUILD_ROSTER_UPDATE") then
             C_GuildInfo.GuildRoster()
         end

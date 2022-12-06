@@ -328,7 +328,7 @@ function WDDmgStatsMonitor:refreshInfo()
         parent.info = v
         if index == 1 then
             local unitName = WdLib.gen:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
+            if v.rt and v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
             local percent = 0
             if total > 0 then percent = v.total * 100 / total end
             local amount = WdLib.gen:shortNumber(v.total).." ("..WdLib.gen:float_round_to(percent, 1).."%)"
@@ -364,7 +364,7 @@ function WDDmgStatsMonitor:refreshInfo()
         f:GetParent().info = v
         if index == 1 then
             local unitName = WdLib.gen:getColoredName(v.name, v.class)
-            if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
+            if v.rt and v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
             local percent = 0
             if total > 0 then percent = v.total * 100 / total end
             local amount = WdLib.gen:shortNumber(v.total).." ("..WdLib.gen:float_round_to(percent, 1).."%)"

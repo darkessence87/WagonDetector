@@ -124,7 +124,7 @@ end
 
 function WDInterruptMonitor:getMainTableRowText(v)
     local unitName = WdLib.gen:getColoredName(v.name, v.class)
-    if v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
+    if v.rt and v.rt > 0 then unitName = WdLib.gui:getRaidTargetTextureLink(v.rt).." "..unitName end
     return unitName
 end
 

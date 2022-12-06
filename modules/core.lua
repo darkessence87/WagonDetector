@@ -143,8 +143,8 @@ function WDMF:OnUpdate()
     if WD.db.profile.isEnabled == true then
         self:RegisterEvent("CHAT_MSG_ADDON")
 
-        if WD.db.profile.autoTrack == true then
-            self:StartPull()
+        if WD.db.profile.autoTrack == true or WD.db.profile.autoTrackCombat == true then
+            self:StartPull(WD.db.profile.autoTrackCombat)
         else
             self:StopPull()
         end
@@ -160,10 +160,7 @@ local NAMEPLATE_EVENTS = {
     ["NAME_PLATE_UNIT_ADDED"] = "",
     ["FORBIDDEN_NAME_PLATE_UNIT_ADDED"] = "",
     ["NAME_PLATE_UNIT_REMOVED"] = "",
-    ["FORBIDDEN_NAME_PLATE_UNIT_REMOVED"] = "",
-    --["PLAYER_SOFT_INTERACT_CHANGED"] = "",
-    --["PLAYER_SOFT_FRIEND_CHANGED"] = "",
-    --["PLAYER_SOFT_ENEMY_CHANGED"] = "",
+    ["FORBIDDEN_NAME_PLATE_UNIT_REMOVED"] = ""
 }
 
 function WDMF:OnEvent(event, ...)
@@ -201,6 +198,27 @@ function WDMF:OnEvent(event, ...)
         self:UpdateRaidMember(petUnitId)
     elseif NAMEPLATE_EVENTS[event] then
         self:Tracker_OnNameplateEvent(event, ...)
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        debugEvent(event, ...)
+        self:ResetEncounter()
+        self:StartEncounter(0, "Combat", 10)
+        self:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        self:RegisterEvent("UNIT_PET")
+        for ev in pairs(NAMEPLATE_EVENTS) do
+            self:RegisterEvent(ev)
+        end
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        debugEvent(event, ...)
+        for ev in pairs(NAMEPLATE_EVENTS) do
+            self:UnregisterEvent(ev)
+        end
+        self:UnregisterEvent("UNIT_PET")
+        self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        self:StopEncounter()
+
+        if WD.db.profile.autoTrackCombat == false then
+            self:StopPull()
+        end
     end
 end
 
@@ -240,7 +258,7 @@ function WDMF:StartEncounter(encounterID, encounterName, difficulty)
     end
 end
 
-function WDMF:StopEncounter(isKill)
+function WDMF:StopEncounter()
     if self.isActive == 0 then return end
 
     self.encounter.endTime = GetTime()
@@ -260,7 +278,7 @@ function WDMF:StopEncounter(isKill)
         WD:RefreshGuildRosterFrame()
     end
 
-    self:Tracker_OnStopEncounter(isKill)
+    self:Tracker_OnStopEncounter()
 
     self.isActive = 0
     self.isBlockedByAnother = 0
@@ -285,16 +303,27 @@ function WDMF:ResetEncounter()
     self.encounter.interrupted = 0
 end
 
-function WDMF:StartPull()
+function WDMF:StartPull(isCombatTrack)
     self:Init()
-    self:RegisterEvent("ENCOUNTER_START")
-    self:RegisterEvent("ENCOUNTER_END")
+    if not isCombatTrack or isCombatTrack == false then
+        self:RegisterEvent("ENCOUNTER_START")
+        self:RegisterEvent("ENCOUNTER_END")
+        self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+        self:UnregisterEvent("PLAYER_REGEN_DISABLED")
+    else
+        self:RegisterEvent("PLAYER_REGEN_ENABLED")
+        self:RegisterEvent("PLAYER_REGEN_DISABLED")
+        self:UnregisterEvent("ENCOUNTER_START")
+        self:UnregisterEvent("ENCOUNTER_END")
+    end
 end
 
 function WDMF:StopPull()
     self:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     self:UnregisterEvent("ENCOUNTER_START")
     self:UnregisterEvent("ENCOUNTER_END")
+    self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    self:UnregisterEvent("PLAYER_REGEN_DISABLED")
 end
 
 function WDMF:OnMRTMessage(sender, cmd, type, ver, ...)
@@ -445,12 +474,12 @@ function WDMF:OnAddonMessage(msgId, msg, channel, sender)
         if cmd == "block_encounter" then
             self.isBlockedByAnother = 1
             print(string.format(WD_LOCKED_BY, sender))
-            if WD.db.profile.autoTrack == false then
-                self:StartPull()
+            if WD.db.profile.autoTrack == false and WD.db.profile.autoTrackCombat == false then
+                self:StartPull(false)
             end
         elseif cmd == "reset_encounter" then
             self.isBlockedByAnother = 0
-            if WD.db.profile.autoTrack == false then
+            if WD.db.profile.autoTrack == false and WD.db.profile.autoTrackCombat == false then
                 self:StopPull()
             end
         elseif cmd == "request_share_encounter" then
@@ -488,8 +517,8 @@ function WD:EnableConfig()
     if WD.db.profile.isEnabled == false then
         WDMF:RegisterEvent("CHAT_MSG_ADDON")
 
-        if WD.db.profile.autoTrack == true then
-            WDMF:StartPull()
+        if WD.db.profile.autoTrack == true or WD.db.profile.autoTrackCombat == true then
+            WDMF:StartPull(WD.db.profile.autoTrackCombat)
         end
 
         WD.db.profile.isEnabled = true

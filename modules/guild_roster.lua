@@ -264,7 +264,7 @@ function WD:OnGuildRosterUpdate(needGUIupdate)
     local tempRanks = {}
     local tempRanksKeys = {}
     for i=1,GetNumGuildMembers() do
-        local name, rank, rankIndex, level, _, _, _, officernote, _, _, class = GetGuildRosterInfo(i)
+        local name, rank, rankIndex, level, _, _, _, officernote, isOnline, _, class = GetGuildRosterInfo(i)
 
         -- ranks
         local rankInfo = { id = rankIndex, name = rank }
@@ -276,7 +276,7 @@ function WD:OnGuildRosterUpdate(needGUIupdate)
         -- last online
         local yearsOffline, monthsOffline, daysOffline, hoursOffline = GetGuildRosterLastOnline(i)
         local isLongOffline = true
-        if (daysOffline) and (monthsOffline and monthsOffline < 2) and (yearsOffline and yearsOffline < 1) then
+        if isOnline or ((hoursOffline) and (daysOffline) and (monthsOffline and monthsOffline < 2) and (yearsOffline and yearsOffline < 1)) then
             isLongOffline = false
         end
 
@@ -284,6 +284,7 @@ function WD:OnGuildRosterUpdate(needGUIupdate)
         if officernote and officernote == "" then
             officernote = "0,0"
         end
+
         if officernote and rankIndex <= WD.db.profile.minGuildRank.id and level == 70 and isLongOffline == false then
             local info = {}
             info.index = i
@@ -329,24 +330,6 @@ function WD:OnGuildRosterUpdate(needGUIupdate)
         table.insert(WD.cache.guildranks, rankInfo)
     end
 
-    if WD.db.profile.minGuildRank and #WD.cache.guildranks ~= 0 then
-        local needRankUpdate = true
-        for k,v in pairs(WD.cache.guildranks) do
-            if v.name == WD.db.profile.minGuildRank.name then
-                needRankUpdate = false
-                break
-            end
-        end
-        if needRankUpdate == true then WD.db.profile.minGuildRank = nil end
-    end
-    if not WD.db.profile.minGuildRank or not WD.db.profile.minGuildRank.name then
-        for k,v in pairs(WD.cache.guildranks) do
-            if v.id == 0 then
-                WD.db.profile.minGuildRank = v
-                break
-            end
-        end
-    end
     if needGUIupdate and needGUIupdate == false then
         reloadGuildRanksMenu(WD.MainModule.frame.dropFrame1)
     end

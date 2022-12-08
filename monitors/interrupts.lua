@@ -26,7 +26,11 @@ local function getInterruptStatusText(v)
         end
         return string.format(WD_TRACKER_INTERRUPTED_BY, interrupterName, WdLib.gui:getSpellLinkByIdWithTexture(v.spell_id), v.timediff)
     elseif v.status == "SUCCESS" then
-        return string.format(WD_TRACKER_CASTED_IN, v.timediff)
+        if v.isChannelled then
+            return string.format(WD_TRACKER_CHANNELLED_IN, v.timediff, 100 - v.percent)
+        else
+            return string.format(WD_TRACKER_CASTED_IN, v.timediff)
+        end
     elseif v.status == "CANCELLED" then
         return string.format(WD_TRACKER_CAST_CANCELLED, v.cancelReason)
     end
@@ -101,7 +105,7 @@ function WDInterruptMonitor:getMainTableData()
                     end
                 end
             end
-        --[[elseif k == "players" then
+        elseif k == "players" and self.playersFilter:GetChecked() then
             for guid,pl in pairs(v) do
                 if type(pl) == "table" then
                     if isCastedNpc(pl) then
@@ -110,7 +114,7 @@ function WDInterruptMonitor:getMainTableData()
                         creatures[#creatures+1] = plCopy
                     end
                 end
-            end]]
+            end
         end
     end
     return creatures

@@ -24,10 +24,13 @@ local playerName = UnitName("player") .. "-" .. WD.CurrentRealmName
 
 local function printFuckups()
     for _,v in pairs(WDMF.encounter.fuckers) do
-        if v.points >= 0 then
+        if v.points then
             local fuckerName = WdLib.gen:getShortName(v.name)
             if v.mark > 0 then fuckerName = WdLib.gui:getRaidTargetTextureLink(v.mark).." "..fuckerName end
             if v.points == 0 then
+                local msg = string.format(WD_PRINT_INFO, v.timestamp, fuckerName, v.reason)
+                WdLib.gen:sendMessage(msg)
+            elseif v.points < 0 then
                 local msg = string.format(WD_PRINT_INFO, v.timestamp, fuckerName, v.reason)
                 WdLib.gen:sendMessage(msg)
             else

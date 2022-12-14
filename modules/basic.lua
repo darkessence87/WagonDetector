@@ -21,8 +21,8 @@ function WDModule:init(buttonName, parent, yOffset)
     self.button:SetSize(158, 20)
     self.button:SetScript("OnClick", function()
         if not self.frame:IsVisible() then
-            parent:HideModules();
-            self.frame:Show();
+            parent:HideModules()
+            self.frame:Show()
             self.button.t:SetColorTexture(.2, .6, .2, 1);
         end
     end)

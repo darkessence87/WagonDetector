@@ -179,7 +179,7 @@ end
 
 local function loadAuras(p)
     for index=1,40 do
-        local _, _, _, _, duration, expirationTime, casterUnitId, _, _, spellId = UnitBuff(p.unit, index)
+        local _, _, stacks, _, duration, expirationTime, casterUnitId, _, _, spellId = UnitBuff(p.unit, index)
         if spellId then
             if not p.auras[spellId] then p.auras[spellId] = {} end
             local appliedAt = expirationTime - duration
@@ -188,11 +188,15 @@ local function loadAuras(p)
             end
             local guid = p.guid
             if casterUnitId then guid = UnitGUID(casterUnitId) end
-            p.auras[spellId][#p.auras[spellId]+1] = { caster = guid, applied = appliedAt, isBuff = true }
+            if stacks == 0 then stacks = 1 end
+            local aura = { caster = guid, applied = appliedAt, isBuff = true }
+            aura.stacks = {}
+            aura.stacks[#aura.stacks+1] = { applied = appliedAt, stack = stacks }
+            p.auras[spellId][#p.auras[spellId]+1] = aura
         end
     end
     for index=1,40 do
-        local _, _, _, _, duration, expirationTime, casterUnitId, _, _, spellId = UnitDebuff(p.unit, index)
+        local _, _, stacks, _, duration, expirationTime, casterUnitId, _, _, spellId = UnitDebuff(p.unit, index)
         if spellId then
             if not p.auras[spellId] then p.auras[spellId] = {} end
             local appliedAt = expirationTime - duration
@@ -201,7 +205,11 @@ local function loadAuras(p)
             end
             local guid = p.guid
             if casterUnitId then guid = UnitGUID(casterUnitId) end
-            p.auras[spellId][#p.auras[spellId]+1] = { caster = guid, applied = appliedAt, isBuff = false }
+            if stacks == 0 then stacks = 1 end
+            local aura = { caster = guid, applied = appliedAt, isBuff = false }
+            aura.stacks = {}
+            aura.stacks[#aura.stacks+1] = { applied = appliedAt, stack = stacks }
+            p.auras[spellId][#p.auras[spellId]+1] = aura
         end
     end
 end
@@ -1490,11 +1498,15 @@ function WDMF:ProcessAuras(src, dst, ...)
         -- auras
         if not dst.auras[spell_id] then dst.auras[spell_id] = {} end
         local auras = dst.auras[spell_id]
+        local aura = { caster = src.guid, applied = timestamp, isBuff = auraType == "BUFF" }
         if src then
-            auras[#auras+1] = { caster = src.guid, applied = timestamp, isBuff = auraType == "BUFF", stacks = 1 }
+            aura.caster = src.guid
         else
-            auras[#auras+1] = { caster = "Environment", applied = timestamp, isBuff = auraType == "BUFF", stacks = 1 }
+            aura.caster = "Environment"
         end
+        aura.stacks = {}
+        aura.stacks[#aura.stacks+1] = { applied = timestamp, stack = 1 }
+        auras[#auras+1] = aura
 
         -- interrupts
         if dst.current_cast then
@@ -1551,7 +1563,14 @@ function WDMF:ProcessAuras(src, dst, ...)
         if dst.auras[spell_id] then
             local aura = findActiveAuraByCaster(dst, spell_id, src)
             if aura then
-                aura.stacks = stacks
+                local prevStacks = aura.stacks[#aura.stacks]
+                if prevStacks and prevStacks.stack then
+                    if stacks - prevStacks.stack ~= 1 then
+                        --print('update stack info')
+                        prevStacks.stack = stacks - 1
+                    end
+                end
+                aura.stacks[#aura.stacks+1] = { applied = timestamp, stack = stacks }
             end
         end
 
@@ -1564,7 +1583,14 @@ function WDMF:ProcessAuras(src, dst, ...)
         if dst.auras[spell_id] then
             local aura = findActiveAuraByCaster(dst, spell_id, src)
             if aura then
-                aura.stacks = stacks
+                local prevStacks = aura.stacks[#aura.stacks]
+                if prevStacks and prevStacks.stack then
+                    if prevStacks.stack - stacks ~= 1 then
+                        --print('update stack info')
+                        prevStacks.stack = stacks + 1
+                    end
+                end
+                aura.stacks[#aura.stacks+1] = { applied = timestamp, stack = stacks }
             end
         end
     end

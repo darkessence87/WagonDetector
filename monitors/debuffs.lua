@@ -73,7 +73,17 @@ local function getFilteredDebuffs(unit, filter)
                             duration = maxDuration
                         end
                     end
-                    local stacks = auraInfo[i].stacks or 0
+                    local stacks = 0
+                    if type(auraInfo[i].stacks) == "number" then
+                        local n = auraInfo[i].stacks
+                        auraInfo[i].stacks = {}
+                        auraInfo[i].stacks[#auraInfo[i].stacks+1] = { applied = auraInfo[i].applied, stack = n }
+                    end
+                    if auraInfo[i].stacks then
+                        for k in pairs(auraInfo[i].stacks) do
+                            stacks = max(stacks, auraInfo[i].stacks[k].stack)
+                        end
+                    end
 
                     if not byCaster[caster] then byCaster[caster] = {duration=0, count=0, maxStacks=0} end
                     if duration > 0 then

@@ -37,6 +37,7 @@ modules\tracker.lua
 
 monitors\basic.lua
 monitors\basic_stats.lua
+monitors\graphic.lua
 monitors\buffs.lua
 monitors\debuffs.lua
 monitors\dispels.lua

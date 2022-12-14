@@ -91,6 +91,19 @@ function lib:getColoredName(name, class)
     return name
 end
 
+function lib:getTimeString(dt)
+    if dt == nil then return end
+    local m = floor(dt / 60)
+    dt = dt - m * 60
+    local s = floor(dt)
+    dt = dt - s
+    local ms = dt * 1000
+    local MIN = string.format("%02d", m)
+    local SEC = string.format("%02d", s)
+    local MSC = string.format("%003d", ms)
+    return MIN .. ":" .. SEC .. "." .. MSC
+end
+
 function lib:getTimedDiff(startTime, endTime)
     if startTime == nil or endTime == nil then return end
     local dt = endTime - startTime

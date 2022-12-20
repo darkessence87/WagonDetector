@@ -1,6 +1,13 @@
 
 local WDDAM = nil
 
+local DEFAULT_ZOOM_VALUE = 0
+local MAX_ZOOM_VALUE = 90
+local DEFAULT_DELTA_VALUE = 0
+local DELTA_UPDATE_RATIO = 0.05
+local DELTA_SPEED_RATIO = 0.5
+local GRAPHIC_COORDS = { x0=15, y0=15, x=370, y=140 }
+
 local WDDebuffMonitor = {}
 WDDebuffMonitor.__index = WDDebuffMonitor
 
@@ -12,6 +19,12 @@ setmetatable(WDDebuffMonitor, {
         return self
     end,
 })
+
+local function displayGraphicInfo()
+    local l = WDDAM.deltaValue
+    local r = WDDAM.deltaValue + (100 - WDDAM.zoomValue)
+    return 'zoom=['..WdLib.gen:float_round_to(l,1)..'%;'..WdLib.gen:float_round_to(r,1)..'%]'
+end
 
 local function calculateLifetime(pull, unit)
     local fromTime = unit.spawnedAt or pull.startTime or 0
@@ -113,14 +126,202 @@ local function hasDebuff(unit)
     return nil
 end
 
+local function calculateTimelineCoordinates(l, percentValue, isVertical)
+    if not l then return nil end
+    local _,_,fx,fy = l:GetStartPoint()
+    if isVertical then
+        local h = l:GetHeight()
+        return fy + (h * percentValue / 100)
+    else
+        local w = l:GetWidth()
+        return fx + (w * percentValue / 100)
+    end
+end
+
+local function addSteps(parent, l, steps, isVertical)
+    if not steps or steps == 0 then
+        return
+    end
+
+    local _,_,fx,fy = l:GetStartPoint()
+    local stepLines = {}
+    for i=1,steps do
+        if isVertical then
+            local step = l:GetHeight() / steps
+            stepLines[#stepLines+1] = parent:DrawLineXY(fx-2, fy+i*step, fx+2, fy+i*step)
+        else
+            local step = l:GetWidth() / steps
+            stepLines[#stepLines+1] = parent:DrawLineXY(fx+i*step, fy-2, fx+i*step, fy+2)
+        end
+    end
+    return stepLines
+end
+
+local function drawTimeline(parent, steps)
+    local l = parent:DrawLineXY(GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0, GRAPHIC_COORDS.x, GRAPHIC_COORDS.y0)
+    l.steps = addSteps(parent, l, steps)
+
+    local pull = WDDAM:GetParent().GetSelectedPull()
+    if pull then
+        local totalTime = (pull.endTime or GetTime()) - pull.startTime
+        if totalTime and steps and steps > 0 then
+            local step = 100 / steps
+            local zoomedStep = step * (100 - WDDAM.zoomValue) / 100
+            for k,v in pairs(l.steps) do
+                if not v.txt then
+                    v.txt = WdLib.gui:createFontDefault(parent, "CENTER", "0")
+                end
+                v.txt:SetFont([[Interface\AddOns\WagonDetector\media\fonts\Noto.ttf]], 9, "")
+                v.txt:SetSize(70, 20)
+                v.txt:SetPoint("CENTER", v, "CENTER", 0, -7)
+                local perc = k * zoomedStep + WDDAM.deltaValue
+                v.txt:SetText(WdLib.gen:getTimeString(perc * totalTime / 100))
+                --v.txt:SetText(perc)
+            end
+        end
+    end
+    return l
+end
+
+local function drawNumberLine(parent, steps)
+    local l = parent:DrawLineXY(GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0, GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y)
+    l.steps = addSteps(parent, l, steps, true)
+
+    if steps and steps > 0 then
+        for k,v in pairs(l.steps) do
+            if not v.txt then
+                v.txt = WdLib.gui:createFontDefault(parent, "CENTER", "0")
+            end
+            v.txt:SetFont([[Interface\AddOns\WagonDetector\media\fonts\Noto.ttf]], 9, "")
+            v.txt:SetSize(70, 20)
+            v.txt:SetPoint("CENTER", v, "CENTER", -7, 0)
+            v.txt:SetText(k)
+        end
+    end
+    return l
+end
+
 function WDDebuffMonitor:init(parent, name)
     WD.Monitor.init(self, parent, name)
     WDDAM = self.frame
     WDDAM.parent = self
+    WDDAM.zoomValue = DEFAULT_ZOOM_VALUE
+    WDDAM.deltaValue = DEFAULT_DELTA_VALUE
+    WDDAM.cached_auras = {}
 end
 
 function WDDebuffMonitor:initMainTable()
     WD.Monitor.initMainTable(self, "debuffs", "Gained debuffs info", 1, -310, 300, 20)
+
+    self.showGraphicCheck = WdLib.gui:createCheckButton(self.frame:GetParent())
+    self.showGraphicCheck:SetPoint("TOPLEFT", self.npcFilter.txt, "TOPRIGHT", 1, 0)
+    self.showGraphicCheck:SetChecked(false)
+    self.showGraphicCheck:SetScript("OnClick", function(s)
+        local isChecked = self.showGraphicCheck:GetChecked()
+        if isChecked and WDDAM:GetParent().GetSelectedPull() then
+            self.graphicFrame:Show()
+        else
+            self.graphicFrame:Hide()
+        end
+    end)
+    self.showGraphicCheck.txt = WdLib.gui:createFont(self.showGraphicCheck, "LEFT", "show graphic")
+    self.showGraphicCheck.txt:SetSize(70, 20)
+    self.showGraphicCheck.txt:SetPoint("LEFT", self.showGraphicCheck, "RIGHT", 5, 0)
+
+    self.graphicCore = WD:CreateGraphic("debuffs")
+    self.graphicCore.zoomTxt = WdLib.gui:createFontDefault(self.graphicCore, "LEFT", "")
+    self.graphicCore.zoomTxt:SetFont([[Interface\AddOns\WagonDetector\media\fonts\Noto.ttf]], 9, "")
+    self.graphicCore.zoomTxt:SetSize(100, 20)
+    self.graphicCore.zoomTxt:SetPoint("TOPLEFT", 2, -2)
+    self.graphicCore.zoomTxt:SetText(displayGraphicInfo())
+
+    self.graphicFrame = CreateFrame("Frame", nil, self.frame)
+    self.graphicFrame:EnableMouse(true)
+    self.graphicFrame:RegisterForDrag("LeftButton")
+    local buffSelf = self
+    local function updateDelta(delta, dontNotify)
+        local valueCap = WDDAM.zoomValue
+        local value = WDDAM.deltaValue + delta * (DELTA_SPEED_RATIO * (100 - WDDAM.zoomValue) / 100)
+        if value > valueCap then
+            value = valueCap
+        elseif value < 0 then
+            value = 0
+        end
+        if value ~= WDDAM.deltaValue then
+            WDDAM.deltaValue = WdLib.gen:float_round_to(value, 2)
+            --print(WDDAM.deltaValue)
+            if not dontNotify then
+                buffSelf:showGraphic()
+            end
+        end
+        buffSelf.graphicCore.zoomTxt:SetText(displayGraphicInfo())
+    end
+    local function onDragStart(self)
+        local x = GetCursorPosition()
+        self.xPos = x
+        self.isDragging = true
+        local timeElapsed = 0
+        self:HookScript("OnUpdate", function(self, elapsed)
+            if not self.isDragging then
+                return
+            end
+
+            timeElapsed = timeElapsed + elapsed
+            if timeElapsed > DELTA_UPDATE_RATIO then
+                timeElapsed = 0
+
+                local x = GetCursorPosition()
+                local delta = self.xPos - x
+                updateDelta(delta)
+                self.xPos = x
+            end
+        end)
+    end
+    local function onDragStop(self)
+        local x = GetCursorPosition()
+        local delta = self.xPos - x
+        updateDelta(delta)
+        self.xPos = x
+        self.isDragging = false
+    end
+    local function zoomFn(self, delta)
+        local speed = 10 * delta
+        if IsControlKeyDown() then
+            speed = 5 * delta
+        end
+        if IsShiftKeyDown() then
+            speed = 20 * delta
+        end
+        local value = WDDAM.zoomValue + speed
+        if value < 0 then
+            value = 0
+        elseif value > MAX_ZOOM_VALUE then
+            value = MAX_ZOOM_VALUE
+        end
+        if value ~= WDDAM.zoomValue then
+            WDDAM.zoomValue = value
+            updateDelta(0, false)
+            buffSelf:showGraphic()
+        end
+        buffSelf.graphicCore.zoomTxt:SetText(displayGraphicInfo())
+    end
+    self.graphicFrame:SetScript("OnMouseWheel", zoomFn)
+    self.graphicFrame:SetScript("OnDragStart", onDragStart)
+    self.graphicFrame:SetScript("OnDragStop", onDragStop)
+    self.graphicFrame:SetPoint("BOTTOMLEFT", self.graphicCore, "BOTTOMLEFT", GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0)
+    self.graphicFrame:SetPoint("TOPRIGHT", self.graphicCore, "BOTTOMLEFT", GRAPHIC_COORDS.x, GRAPHIC_COORDS.y)
+    self.graphicFrame.bg = WdLib.gui:createColorTexture(self.graphicFrame, "BACKGROUND", .3, .3, .3, .8)
+    self.graphicFrame.bg:SetAllPoints()
+    self.graphicFrame:Hide()
+
+    self.graphicCore:SetParent(self.graphicFrame)
+
+    self.graphicFrame:HookScript("OnShow", function()
+        self:showGraphic()
+    end)
+    self.graphicFrame:HookScript("OnHide", function()
+        self:hideGraphic()
+    end)
 end
 
 function WDDebuffMonitor:initDataTable()
@@ -192,12 +393,17 @@ end
 function WDDebuffMonitor:updateDataTable()
     for _,v in pairs(WDDAM.dataTable.members) do
         v:Hide()
+        v.column[1].t:SetColorTexture(.2, .2, .2, 1)
     end
 
-    local auras = {}
+    if WDDAM.lastSelectedAura then
+        WDDAM.lastSelectedAura.t:SetColorTexture(.2, .6, .2, 1)
+    end
+
+    WdLib.table:wipe(WDDAM.cached_auras)
     if WDDAM.lastSelectedButton then
-        local v = WDDAM.lastSelectedButton:GetParent().info
-        auras = getFilteredDebuffs(v, self.nameFilter:GetText())
+        local unit = WDDAM.lastSelectedButton:GetParent().info
+        WDDAM.cached_auras = getFilteredDebuffs(unit, self.nameFilter:GetText())
     end
 
     local func = function(a, b)
@@ -209,22 +415,24 @@ function WDDebuffMonitor:updateDataTable()
         end
         return a.id < b.id
     end
-    table.sort(auras, func)
+    table.sort(WDDAM.cached_auras, func)
 
 
     local maxHeight = 210
     local topLeftPosition = { x = 30, y = -51 }
-    local rowsN = #auras
+    local rowsN = #WDDAM.cached_auras
     local columnsN = 5
 
     local function createFn(parent, row, index)
-        local auraId = auras[row].id
-        local N = auras[row].N
-        local M = auras[row].M
-        local v = auras[row].data
+        local auraId = WDDAM.cached_auras[row].id
+        local N = WDDAM.cached_auras[row].N
+        local M = WDDAM.cached_auras[row].M
+        local v = WDDAM.cached_auras[row].data
+        parent.info = auraId
         if index == 1 then
             local f = WdLib.gui:addNextColumn(WDDAM.dataTable, parent, index, "LEFT", WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+            f:SetScript("OnClick", function(rowFrame) WDDAM.lastSelectedAura = rowFrame; self:updateDataTable(); self:showGraphic() end)
             WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             return f
         elseif index == 2 then
@@ -241,12 +449,14 @@ function WDDebuffMonitor:updateDataTable()
     end
 
     local function updateFn(f, row, index)
-        local auraId = auras[row].id
-        local N = auras[row].N
-        local M = auras[row].M
-        local v = auras[row].data
+        local auraId = WDDAM.cached_auras[row].id
+        local N = WDDAM.cached_auras[row].N
+        local M = WDDAM.cached_auras[row].M
+        local v = WDDAM.cached_auras[row].data
+        f:GetParent().info = auraId
         if index == 1 then
             f.txt:SetText(WdLib.gui:getSpellLinkByIdWithTexture(auraId))
+            f:SetScript("OnClick", function(rowFrame) WDDAM.lastSelectedAura = rowFrame; self:updateDataTable(); self:showGraphic() end)
             WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId))
         elseif index == 2 then
             f.txt:SetText(v.uptime.." %")
@@ -263,6 +473,235 @@ function WDDebuffMonitor:updateDataTable()
     WdLib.gui:updateScrollableTable(WDDAM.dataTable, maxHeight, topLeftPosition, rowsN, columnsN, createFn, updateFn)
 
     WDDAM.dataTable:Show()
+
+    if not WDDAM:GetParent().GetSelectedPull() then
+        self.graphicFrame:Hide()
+    elseif self.showGraphicCheck:GetChecked() and not self.graphicFrame:IsVisible() then
+        self.graphicFrame:Show()
+    else
+        self:showGraphic()
+    end
+end
+
+function WDDebuffMonitor:showGraphic()
+    if not self.showGraphicCheck:GetChecked() or not self.graphicFrame:IsVisible() then
+        return
+    end
+
+    local pull = WDDAM:GetParent().GetSelectedPull()
+    if not pull then
+        return
+    end
+
+    self.graphicCore:SetSize(400, 180)
+    self.graphicCore:SetPoint("TOPLEFT", self.nameFilter, "TOPRIGHT", 28, -41)
+
+    self.graphicCore:Reset()
+    self.graphicCore:ReserveLines(1000)
+
+    -- timeline + zoom processing
+    local timeL = drawTimeline(self.graphicCore, 5)
+
+    -- auras processing
+    local function applyZoom(perc)
+        return (perc - WDDAM.deltaValue) * 100 / (100 - WDDAM.zoomValue)
+    end
+
+    local maxStacks = 1
+    local data = {}
+    if WDDAM.lastSelectedButton and WDDAM.lastSelectedAura then
+        local unit = WDDAM.lastSelectedButton:GetParent().info
+        local auraId = WDDAM.lastSelectedAura:GetParent().info
+        local auraInfo = unit.auras[auraId]
+        if auraInfo then
+            local maxDuration = calculateLifetime(pull, unit)
+            local totalTime = (pull.endTime or GetTime()) - pull.startTime
+
+            for i=1,#auraInfo do
+                if auraInfo[i].isBuff == false then
+                    self.graphicCore.txt:SetText(self:getMainTableRowText(unit)..'\n'..getCasterName(auraInfo[i])..'\'s '..WdLib.gui:getSpellLinkByIdWithTexture(auraId))
+
+                    local duration = auraInfo[i].duration
+                    if not duration then
+                        duration = calculateAuraDuration(pull, unit, auraInfo[i], i)
+                        if not duration then
+                            duration = maxDuration
+                        end
+                    end
+                    if duration > maxDuration then
+                        duration = maxDuration
+                    end
+
+                    data[i] = {}
+                    data[i].applied = auraInfo[i].applied - pull.startTime
+                    data[i].removed = data[i].applied + duration
+                    data[i].appliedPerc = applyZoom(WdLib.gen:float_round_to(data[i].applied * 100 / totalTime, 1))
+                    data[i].removedPerc = applyZoom(WdLib.gen:float_round_to(data[i].removed * 100 / totalTime, 1))
+
+                    local auraStacks = {}
+                    local stacks = 1
+                    if auraInfo[i].stacks then
+                        for k in pairs(auraInfo[i].stacks) do
+                            stacks = max(stacks, auraInfo[i].stacks[k].stack)
+
+                            local st = {}
+                            st.applied = auraInfo[i].stacks[k].applied - pull.startTime
+                            st.appliedPerc = applyZoom(WdLib.gen:float_round_to(st.applied * 100 / totalTime, 1))
+                            st.stack = auraInfo[i].stacks[k].stack
+                            auraStacks[#auraStacks+1] = st
+                        end
+                    end
+                    maxStacks = max(maxStacks, stacks)
+                    data[i].stacks = auraStacks
+                end
+            end
+        end
+    end
+    -- draw auras
+    local stacksL = drawNumberLine(self.graphicCore, maxStacks)
+    for i=1,#data do
+        local function calcStackPerc(stack)
+            return WdLib.gen:float_round_to(stack * 100 / maxStacks, 1)
+        end
+
+        local function findClosestStacksToZoom(aura)
+            local lStack = nil
+            local rStack = nil
+            for k,v in pairs(aura.stacks) do
+                if v.appliedPerc < 0 then
+                    lStack = v
+                elseif v.appliedPerc > 100 then
+                    rStack = v
+                    break
+                end
+            end
+            return lStack, rStack
+        end
+
+        local function generatePolyline(aura)
+            local X0 = calculateTimelineCoordinates(timeL, 0)
+            local X100 = calculateTimelineCoordinates(timeL, 100)
+            local Y0 = calculateTimelineCoordinates(stacksL, 0, true)
+
+            local startP = nil
+            local midPoints = {}
+            local endP = nil
+            for k,v in pairs(aura.stacks) do
+                if not startP then
+                    if v.appliedPerc >= 0 and v.appliedPerc <= 100 then
+                        if k > 1 then
+                            local prevStack = aura.stacks[k-1]
+                            startP = {}
+                            startP.x = X0
+                            startP.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
+
+                            local midP1 = {}
+                            midP1.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
+                            midP1.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
+                            midPoints[#midPoints+1] = midP1
+
+                            if prevStack.stack ~= v.stack then
+                                local midP2 = {}
+                                midP2.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
+                                midP2.y = calculateTimelineCoordinates(stacksL, calcStackPerc(v.stack), true)
+                                midPoints[#midPoints+1] = midP2
+                            end
+                        else
+                            startP = {}
+                            startP.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
+                            startP.y = Y0
+
+                            local midP1 = {}
+                            midP1.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
+                            midP1.y = calculateTimelineCoordinates(stacksL, calcStackPerc(v.stack), true)
+                            midPoints[#midPoints+1] = midP1
+                        end
+                    end
+                elseif not endP then
+                    local prevStack = aura.stacks[k-1]
+                    if v.appliedPerc <= 100 then
+                        local midP1 = {}
+                        midP1.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
+                        midP1.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
+                        midPoints[#midPoints+1] = midP1
+
+                        if prevStack.stack ~= v.stack then
+                            local midP2 = {}
+                            midP2.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
+                            midP2.y = calculateTimelineCoordinates(stacksL, calcStackPerc(v.stack), true)
+                            midPoints[#midPoints+1] = midP2
+                        end
+                    else
+                        endP = {}
+                        endP.x = X100
+                        endP.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
+                        break
+                    end
+                end
+            end
+
+            if not startP then
+                local l,r = findClosestStacksToZoom(aura)
+                if l then
+                    startP = {}
+                    startP.x = X0
+                    startP.y = calculateTimelineCoordinates(stacksL, calcStackPerc(l.stack), true)
+                end
+            end
+
+            if not endP then
+                local _,r = findClosestStacksToZoom(aura)
+                local l = midPoints[#midPoints] or startP
+                if r and l then
+                    endP = {}
+                    endP.x = X100
+                    endP.y = l.y
+                elseif l then
+                    if aura.removedPerc >= 0 and aura.removedPerc <= 100 then
+                        local midP1 = {}
+                        midP1.x = calculateTimelineCoordinates(timeL, aura.removedPerc)
+                        midP1.y = l.y
+                        midPoints[#midPoints+1] = midP1
+
+                        endP = {}
+                        endP.x = calculateTimelineCoordinates(timeL, aura.removedPerc)
+                        endP.y = Y0
+                    elseif aura.removedPerc > 100 then
+                        endP = {}
+                        endP.x = X100
+                        endP.y = l.y
+                    end
+                end
+            end
+
+            local points = {}
+
+            if startP then
+                points[#points+1] = startP
+                for k,v in pairs(midPoints) do
+                    points[#points+1] = v
+                end
+                points[#points+1] = endP
+            end
+
+            return points
+        end
+
+        local resultLines = self.graphicCore:DrawPolyline(generatePolyline(data[i]))
+        if resultLines then
+            for k,v in pairs(resultLines) do
+                v:SetColorTexture(0,1,0,1)
+            end
+        end
+    end
+    --print('zoom', WDDAM.zoomValue)
+
+    self.graphicCore:OnUpdate()
+    self.graphicCore:Show()
+end
+
+function WDDebuffMonitor:hideGraphic()
+    self.graphicCore:Hide()
 end
 
 WD.DebuffMonitor = WDDebuffMonitor

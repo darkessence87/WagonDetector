@@ -20,6 +20,12 @@ setmetatable(WDBuffMonitor, {
     end,
 })
 
+local function displayGraphicInfo()
+    local l = WDBAM.deltaValue
+    local r = WDBAM.deltaValue + (100 - WDBAM.zoomValue)
+    return 'zoom=['..WdLib.gen:float_round_to(l,1)..'%;'..WdLib.gen:float_round_to(r,1)..'%]'
+end
+
 local function calculateLifetime(pull, unit)
     local fromTime = unit.spawnedAt or pull.startTime or 0
     local toTime = unit.diedAt or pull.endTime or GetTime()
@@ -132,7 +138,7 @@ local function calculateTimelineCoordinates(l, percentValue, isVertical)
     end
 end
 
-local function addSteps(l, steps, isVertical)
+local function addSteps(parent, l, steps, isVertical)
     if not steps or steps == 0 then
         return
     end
@@ -142,18 +148,18 @@ local function addSteps(l, steps, isVertical)
     for i=1,steps do
         if isVertical then
             local step = l:GetHeight() / steps
-            stepLines[#stepLines+1] = WD.Graphic:DrawLineXY(fx-2, fy+i*step, fx+2, fy+i*step)
+            stepLines[#stepLines+1] = parent:DrawLineXY(fx-2, fy+i*step, fx+2, fy+i*step)
         else
             local step = l:GetWidth() / steps
-            stepLines[#stepLines+1] = WD.Graphic:DrawLineXY(fx+i*step, fy-2, fx+i*step, fy+2)
+            stepLines[#stepLines+1] = parent:DrawLineXY(fx+i*step, fy-2, fx+i*step, fy+2)
         end
     end
     return stepLines
 end
 
-local function drawTimeline(steps)
-    local l = WD.Graphic:DrawLineXY(GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0, GRAPHIC_COORDS.x, GRAPHIC_COORDS.y0)
-    l.steps = addSteps(l, steps)
+local function drawTimeline(parent, steps)
+    local l = parent:DrawLineXY(GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0, GRAPHIC_COORDS.x, GRAPHIC_COORDS.y0)
+    l.steps = addSteps(parent, l, steps)
 
     local pull = WDBAM:GetParent().GetSelectedPull()
     if pull then
@@ -163,7 +169,7 @@ local function drawTimeline(steps)
             local zoomedStep = step * (100 - WDBAM.zoomValue) / 100
             for k,v in pairs(l.steps) do
                 if not v.txt then
-                    v.txt = WdLib.gui:createFontDefault(WD.Graphic, "CENTER", "0")
+                    v.txt = WdLib.gui:createFontDefault(parent, "CENTER", "0")
                 end
                 v.txt:SetFont([[Interface\AddOns\WagonDetector\media\fonts\Noto.ttf]], 9, "")
                 v.txt:SetSize(70, 20)
@@ -177,14 +183,14 @@ local function drawTimeline(steps)
     return l
 end
 
-local function drawNumberLine(steps)
-    local l = WD.Graphic:DrawLineXY(GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0, GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y)
-    l.steps = addSteps(l, steps, true)
+local function drawNumberLine(parent, steps)
+    local l = parent:DrawLineXY(GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0, GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y)
+    l.steps = addSteps(parent, l, steps, true)
 
     if steps and steps > 0 then
         for k,v in pairs(l.steps) do
             if not v.txt then
-                v.txt = WdLib.gui:createFontDefault(WD.Graphic, "CENTER", "0")
+                v.txt = WdLib.gui:createFontDefault(parent, "CENTER", "0")
             end
             v.txt:SetFont([[Interface\AddOns\WagonDetector\media\fonts\Noto.ttf]], 9, "")
             v.txt:SetSize(70, 20)
@@ -222,6 +228,13 @@ function WDBuffMonitor:initMainTable()
     self.showGraphicCheck.txt:SetSize(70, 20)
     self.showGraphicCheck.txt:SetPoint("LEFT", self.showGraphicCheck, "RIGHT", 5, 0)
 
+    self.graphicCore = WD:CreateGraphic("buffs")
+    self.graphicCore.zoomTxt = WdLib.gui:createFontDefault(self.graphicCore, "LEFT", "")
+    self.graphicCore.zoomTxt:SetFont([[Interface\AddOns\WagonDetector\media\fonts\Noto.ttf]], 9, "")
+    self.graphicCore.zoomTxt:SetSize(100, 10)
+    self.graphicCore.zoomTxt:SetPoint("TOPLEFT", 2, -2)
+    self.graphicCore.zoomTxt:SetText(displayGraphicInfo())
+
     self.graphicFrame = CreateFrame("Frame", nil, self.frame)
     self.graphicFrame:EnableMouse(true)
     self.graphicFrame:RegisterForDrag("LeftButton")
@@ -241,6 +254,7 @@ function WDBuffMonitor:initMainTable()
                 buffSelf:showGraphic()
             end
         end
+        buffSelf.graphicCore.zoomTxt:SetText(displayGraphicInfo())
     end
     local function onDragStart(self)
         local x = GetCursorPosition()
@@ -289,23 +303,23 @@ function WDBuffMonitor:initMainTable()
             updateDelta(0, false)
             buffSelf:showGraphic()
         end
+        buffSelf.graphicCore.zoomTxt:SetText(displayGraphicInfo())
     end
     self.graphicFrame:SetScript("OnMouseWheel", zoomFn)
     self.graphicFrame:SetScript("OnDragStart", onDragStart)
     self.graphicFrame:SetScript("OnDragStop", onDragStop)
-    self.graphicFrame:SetPoint("BOTTOMLEFT", WD.Graphic, "BOTTOMLEFT", GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0)
-    self.graphicFrame:SetPoint("TOPRIGHT", WD.Graphic, "BOTTOMLEFT", GRAPHIC_COORDS.x, GRAPHIC_COORDS.y)
-    --self.graphicFrame:SetFrameStrata("WORLD")
+    self.graphicFrame:SetPoint("BOTTOMLEFT", self.graphicCore, "BOTTOMLEFT", GRAPHIC_COORDS.x0, GRAPHIC_COORDS.y0)
+    self.graphicFrame:SetPoint("TOPRIGHT", self.graphicCore, "BOTTOMLEFT", GRAPHIC_COORDS.x, GRAPHIC_COORDS.y)
     self.graphicFrame.bg = WdLib.gui:createColorTexture(self.graphicFrame, "BACKGROUND", .3, .3, .3, .8)
     self.graphicFrame.bg:SetAllPoints()
     self.graphicFrame:Hide()
 
+    self.graphicCore:SetParent(self.graphicFrame)
+
     self.graphicFrame:HookScript("OnShow", function()
-        WD.Graphic:SetParent(self.graphicFrame)
         self:showGraphic()
     end)
     self.graphicFrame:HookScript("OnHide", function()
-        WD.Graphic:SetParent(UIParent)
         self:hideGraphic()
     end)
 end
@@ -376,9 +390,14 @@ function WDBuffMonitor:getMainTableRowHover(v)
     return nil
 end
 
-function WDBuffMonitor:updateDataTable(filter)
+function WDBuffMonitor:updateDataTable()
     for _,v in pairs(WDBAM.dataTable.members) do
         v:Hide()
+        v.column[1].t:SetColorTexture(.2, .2, .2, 1)
+    end
+
+    if WDBAM.lastSelectedAura then
+        WDBAM.lastSelectedAura.t:SetColorTexture(.2, .6, .2, 1)
     end
 
     WdLib.table:wipe(WDBAM.cached_auras)
@@ -413,7 +432,7 @@ function WDBuffMonitor:updateDataTable(filter)
         if index == 1 then
             local f = WdLib.gui:addNextColumn(WDBAM.dataTable, parent, index, "LEFT", WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             f:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-            f:SetScript("OnClick", function(rowFrame) WDBAM.lastSelectedAura = rowFrame; self:showGraphic() end)
+            f:SetScript("OnClick", function(rowFrame) WDBAM.lastSelectedAura = rowFrame; self:updateDataTable(); self:showGraphic() end)
             WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId))
             return f
         elseif index == 2 then
@@ -437,7 +456,7 @@ function WDBuffMonitor:updateDataTable(filter)
         f:GetParent().info = auraId
         if index == 1 then
             f.txt:SetText(WdLib.gui:getSpellLinkByIdWithTexture(auraId))
-            f:SetScript("OnClick", function(rowFrame) WDBAM.lastSelectedAura = rowFrame; self:showGraphic() end)
+            f:SetScript("OnClick", function(rowFrame) WDBAM.lastSelectedAura = rowFrame; self:updateDataTable(); self:showGraphic() end)
             WdLib.gui:generateSpellHover(f, WdLib.gui:getSpellLinkByIdWithTexture(auraId))
         elseif index == 2 then
             f.txt:SetText(v.uptime.." %")
@@ -474,14 +493,14 @@ function WDBuffMonitor:showGraphic()
         return
     end
 
-    WD.Graphic:SetSize(400, 180)
-    WD.Graphic:SetPoint("TOPLEFT", self.nameFilter, "TOPRIGHT", 28, -41)
+    self.graphicCore:SetSize(400, 180)
+    self.graphicCore:SetPoint("TOPLEFT", self.nameFilter, "TOPRIGHT", 28, -41)
 
-    WD.Graphic:Reset()
-    WD.Graphic:ReserveLines(1000)
+    self.graphicCore:Reset()
+    self.graphicCore:ReserveLines(1000)
 
     -- timeline + zoom processing
-    local timeL = drawTimeline(4)
+    local timeL = drawTimeline(self.graphicCore, 5)
 
     -- auras processing
     local function applyZoom(perc)
@@ -499,9 +518,8 @@ function WDBuffMonitor:showGraphic()
             local totalTime = (pull.endTime or GetTime()) - pull.startTime
 
             for i=1,#auraInfo do
---if i == 1 then
                 if auraInfo[i].isBuff == true then
-                    WD.Graphic.txt:SetText(self:getMainTableRowText(unit)..'\n'..getCasterName(auraInfo[i])..'\'s '..WdLib.gui:getSpellLinkByIdWithTexture(auraId))
+                    self.graphicCore.txt:SetText(self:getMainTableRowText(unit)..'\n'..getCasterName(auraInfo[i])..'\'s '..WdLib.gui:getSpellLinkByIdWithTexture(auraId))
 
                     local duration = auraInfo[i].duration
                     if not duration then
@@ -535,19 +553,12 @@ function WDBuffMonitor:showGraphic()
                     end
                     maxStacks = max(maxStacks, stacks)
                     data[i].stacks = auraStacks
-                    --print('applied', data[i].applied)
-                    --print('appliedPerc', WdLib.gen:float_round_to(data[i].applied * 100 / totalTime, 1))
-                    --print('appliedPercZoommed', data[i].appliedPerc)
-                    --print('removed', data[i].removed)
-                    --print('removedPerc', WdLib.gen:float_round_to(data[i].removed * 100 / totalTime, 1))
-                    --print('removedPercZoommed', data[i].removedPerc)
                 end
---end
             end
         end
     end
     -- draw auras
-    local stacksL = drawNumberLine(maxStacks)
+    local stacksL = drawNumberLine(self.graphicCore, maxStacks)
     for i=1,#data do
         local function calcStackPerc(stack)
             return WdLib.gen:float_round_to(stack * 100 / maxStacks, 1)
@@ -572,8 +583,6 @@ function WDBuffMonitor:showGraphic()
             local X100 = calculateTimelineCoordinates(timeL, 100)
             local Y0 = calculateTimelineCoordinates(stacksL, 0, true)
 
-            --print('-aura-')
-
             local startP = nil
             local midPoints = {}
             local endP = nil
@@ -582,40 +591,29 @@ function WDBuffMonitor:showGraphic()
                     if v.appliedPerc >= 0 and v.appliedPerc <= 100 then
                         if k > 1 then
                             local prevStack = aura.stacks[k-1]
-                            --print('k > 1', 'prevStack', prevStack.appliedPerc, 'v', v.appliedPerc)
-                            --print('k > 1', 'prevStack', prevStack.stack, 'v', v.stack)
-
                             startP = {}
                             startP.x = X0
                             startP.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
-                            --startP.id = 's prev'
 
                             local midP1 = {}
                             midP1.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
                             midP1.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
-                            --midP1.id = 'midP1 v'..k
                             midPoints[#midPoints+1] = midP1
 
                             if prevStack.stack ~= v.stack then
                                 local midP2 = {}
                                 midP2.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
                                 midP2.y = calculateTimelineCoordinates(stacksL, calcStackPerc(v.stack), true)
-                                --midP2.id = 'midP2 v'..k
                                 midPoints[#midPoints+1] = midP2
                             end
                         else
-                            --print('k = 1', 'v', v.appliedPerc)
-                            --print('k = 1', 'v', v.stack)
-
                             startP = {}
                             startP.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
                             startP.y = Y0
-                            --startP.id = 's v'..k
 
                             local midP1 = {}
                             midP1.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
                             midP1.y = calculateTimelineCoordinates(stacksL, calcStackPerc(v.stack), true)
-                            --midP1.id = 'midP1 v'..k
                             midPoints[#midPoints+1] = midP1
                         end
                     end
@@ -625,21 +623,18 @@ function WDBuffMonitor:showGraphic()
                         local midP1 = {}
                         midP1.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
                         midP1.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
-                        --midP1.id = 'midP11 v'..k
                         midPoints[#midPoints+1] = midP1
 
                         if prevStack.stack ~= v.stack then
                             local midP2 = {}
                             midP2.x = calculateTimelineCoordinates(timeL, v.appliedPerc)
                             midP2.y = calculateTimelineCoordinates(stacksL, calcStackPerc(v.stack), true)
-                            --midP2.id = 'midP22 v'..k
                             midPoints[#midPoints+1] = midP2
                         end
                     else
                         endP = {}
                         endP.x = X100
                         endP.y = calculateTimelineCoordinates(stacksL, calcStackPerc(prevStack.stack), true)
-                        --endP.id = 'e v'..k
                         break
                     end
                 end
@@ -651,9 +646,6 @@ function WDBuffMonitor:showGraphic()
                     startP = {}
                     startP.x = X0
                     startP.y = calculateTimelineCoordinates(stacksL, calcStackPerc(l.stack), true)
-                    --startP.id = 's closest'
-                else
-                    --print('startP', 'nil')
                 end
             end
 
@@ -664,47 +656,38 @@ function WDBuffMonitor:showGraphic()
                     endP = {}
                     endP.x = X100
                     endP.y = l.y
-                    --endP.id = 'e closest'
                 elseif l then
                     if aura.removedPerc >= 0 and aura.removedPerc <= 100 then
                         local midP1 = {}
                         midP1.x = calculateTimelineCoordinates(timeL, aura.removedPerc)
                         midP1.y = l.y
-                        --midP1.id = 'midP1 L'
                         midPoints[#midPoints+1] = midP1
 
                         endP = {}
                         endP.x = calculateTimelineCoordinates(timeL, aura.removedPerc)
                         endP.y = Y0
-                        --endP.id = 'e L'
                     elseif aura.removedPerc > 100 then
                         endP = {}
                         endP.x = X100
                         endP.y = l.y
-                        --endP.id = 'e L._'
                     end
-                else
-                    --print('endP', 'nil')
                 end
             end
 
             local points = {}
 
             if startP then
-                --print('startP', startP.id)
                 points[#points+1] = startP
                 for k,v in pairs(midPoints) do
-                    --print(v.id)
                     points[#points+1] = v
                 end
-                --print('endP', endP and endP.id or 'failed')
                 points[#points+1] = endP
             end
 
             return points
         end
 
-        local resultLines = WD.Graphic:DrawPolyline(generatePolyline(data[i]))
+        local resultLines = self.graphicCore:DrawPolyline(generatePolyline(data[i]))
         if resultLines then
             for k,v in pairs(resultLines) do
                 v:SetColorTexture(0,1,0,1)
@@ -713,12 +696,12 @@ function WDBuffMonitor:showGraphic()
     end
     --print('zoom', WDBAM.zoomValue)
 
-    WD.Graphic:OnUpdate()
-    WD.Graphic:Show()
+    self.graphicCore:OnUpdate()
+    self.graphicCore:Show()
 end
 
 function WDBuffMonitor:hideGraphic()
-    WD.Graphic:Hide()
+    self.graphicCore:Hide()
 end
 
 WD.BuffMonitor = WDBuffMonitor

@@ -1,7 +1,7 @@
 
 WD.MinRulesVersion = "v0.0.24"
-WD.Version = "v0.0.75"
-WD.MaxPullsToBeSaved = 25
+WD.Version = "v0.0.76"
+WD.MaxPullsToBeSaved = 40
 WD.DebugEnabled = false
 
 WD.CurrentRealmName = string.gsub(GetRealmName(), "%s+", "")

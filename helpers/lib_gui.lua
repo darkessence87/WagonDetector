@@ -2,7 +2,7 @@
 WdLib.gui = {}
 local lib = WdLib.gui
 
-lib.MAX_DROP_DOWN_MENUS = 30
+lib.MAX_DROP_DOWN_MENUS = 40
 
 local function make_border(f, cR, cG, cB, cA, size, offsetX, offsetY)
     offsetX = offsetX or 0
